@@ -146,6 +146,28 @@
   margin-bottom: 0 !important;
 }
 
+.turnstileItem {
+  margin-bottom: 8px !important;
+
+  :global(.el-form-item__content) {
+    display: flex;
+    justify-content: center;
+    line-height: 0;
+  }
+
+  :global(.el-form-item__error) {
+    padding-top: 8px;
+    text-align: center;
+    width: 100%;
+  }
+}
+
+.turnstileWrap {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
 .submitBtn {
   width: 100%;
   height: 48px !important;

@@ -20,10 +20,21 @@ export default defineNuxtConfig({
   modules: [
     '@element-plus/nuxt',
     '@pinia/nuxt',
-    '@vueuse/nuxt'
+    '@vueuse/nuxt',
+    '@nuxtjs/turnstile'
   ],
   elementPlus: {
     // Config cho Element Plus nếu cần
+  },
+
+  turnstile: {
+    siteKey: process.env.NUXT_PUBLIC_TURNSTILE_SITE_KEY || ''
+  },
+
+  runtimeConfig: {
+    turnstile: {
+      secretKey: process.env.NUXT_TURNSTILE_SECRET_KEY || ''
+    }
   },
 
   nitro: {

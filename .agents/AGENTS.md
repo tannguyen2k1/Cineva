@@ -28,6 +28,7 @@
 - **Tenant Context**: Always extract `event.context.tenant_id` (from headers or JWT) and use it in Prisma queries to ensure strict data isolation.
 - **Error Handling**: Throw errors using `createError({ statusCode, statusMessage })`.
 - **Response Format**: APIs should consistently return `{ success: true, data: ..., total?: ... }`.
+- **System logs**: After successful mutating actions (create/update/delete/login/assign permissions), call `writeSystemLog` from `server/utils/systemLog.ts` in that API handler. Do not block the main response if logging fails.
 
 ## 5. Frontend Guidelines
 - **API Calls**: Use Nuxt's `$fetch` for client-side API requests. Include `Authorization: Bearer <token>` and `x-tenant-id` headers where necessary (usually handled via Pinia store data).
@@ -45,3 +46,11 @@
 - Always validate and sanitize user inputs to prevent Injection and XSS.
 - Secure file uploads (restrict mime types, size, and use safe paths).
 - Ensure strict multi-tenant data isolation on EVERY database query.
+
+## 8. Soft Delete (CRITICAL)
+- Models with `deletedAt DateTime?` (User, Role, Tenant, and any new soft-deletable model) must **not** be hard-deleted in normal CRUD.
+- Handle soft delete **inside that resource’s API** (e.g. `server/api/users/[id].delete.ts`). Do **not** create a shared `softDelete` util.
+- Delete = `updateMany` set `deletedAt: new Date()` (and `isActive: false` when the model has it).
+- List / count / auth must ignore soft-deleted rows (`deletedAt: null`). `getTenantPrisma` already filters this on read for soft-delete models; raw `prisma` queries (login, `me`, …) must also use `deletedAt: null`.
+- Business uniqueness (username, role name, …) is checked among **non-deleted** rows in the API. Avoid DB `@@unique` alone if soft-deleted rows would block reusing the same key.
+- New soft-deletable models: add `deletedAt DateTime?` + index; relation `_count` for “active” totals should filter `deletedAt: null`.

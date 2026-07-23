@@ -160,3 +160,19 @@ h1, h2, h3, h4, h5, h6 {
   border: none !important;
   font-weight: 500;
 }
+
+/* Toast góc phải + trượt từ phải sang */
+.el-message.is-center {
+  left: auto !important;
+  right: 16px !important;
+  transform: none !important;
+}
+
+.el-message-fade-enter-from.el-message.is-center,
+.el-message-fade-leave-to.el-message.is-center,
+.el-message-fade-enter-from.el-message.is-right,
+.el-message-fade-leave-to.el-message.is-right {
+  transform: translateX(120%) !important;
+}
+
+

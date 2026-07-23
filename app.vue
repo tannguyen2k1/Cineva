@@ -1,5 +1,5 @@
 <template>
-  <el-config-provider>
+  <el-config-provider :message="messageConfig">
     <NuxtLoadingIndicator color="#3b82f6" :height="3" />
     <NuxtLayout>
       <NuxtPage />
@@ -8,5 +8,7 @@
 </template>
 
 <script setup lang="ts">
-// Bọc toàn bộ app bằng config provider của Element Plus
+const messageConfig = {
+  placement: 'top-right' as const
+}
 </script>

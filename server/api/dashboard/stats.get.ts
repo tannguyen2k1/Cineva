@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
     db.systemLog.count(),
     db.systemLog.findMany({
       orderBy: { createdAt: 'desc' },
-      take: 4,
+      take: 20,
       include: {
         user: {
           select: { fullName: true, username: true }

@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { getTenantPrisma } from '../../utils/prisma';
+import { getActorUserId, writeSystemLog } from '../../utils/systemLog';
 
 export default defineEventHandler(async (event) => {
   const tenant_id = event.context.tenant_id;
@@ -80,6 +81,14 @@ export default defineEventHandler(async (event) => {
 
   const roles = user.userRoles.map(ur => ur.role?.name).filter(Boolean) as string[];
   const createdRoleIds = user.userRoles.map(ur => ur.role?.id).filter(Boolean) as string[];
+
+  await writeSystemLog({
+    tenant_id,
+    user_id: getActorUserId(event),
+    action: 'CREATE_USER',
+    resource: 'User',
+    details: { id: user.id, username: user.username }
+  });
 
   return {
     success: true,

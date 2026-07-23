@@ -11,27 +11,34 @@
 
       <nav :class="styles.nav">
         <el-menu
-          :default-active="route.path"
+          :key="activeMenu"
+          :default-active="activeMenu"
           :class="styles.menu"
           style="--el-menu-bg-color: transparent; --el-menu-text-color: var(--text-sidebar); --el-menu-active-color: var(--text-sidebar-active);"
           router
         >
           <div :class="styles.menuLabel">Tổng quan</div>
 
-          <el-menu-item index="/">
+          <el-menu-item
+            v-if="authStore.hasPermission('read:dashboard')"
+            index="/"
+          >
             <el-icon><Odometer /></el-icon>
             <span>Dashboard</span>
           </el-menu-item>
 
           <div :class="styles.menuLabel">Hệ thống</div>
 
-          <el-menu-item index="/systems/users">
+          <el-menu-item
+            v-if="authStore.hasPermission('read:users')"
+            index="/systems/users"
+          >
             <el-icon><User /></el-icon>
             <span>Người dùng</span>
           </el-menu-item>
 
           <el-menu-item
-            v-if="authStore.permissions.includes('admin:settings')"
+            v-if="authStore.hasPermission('read:roles')"
             index="/systems/roles"
           >
             <el-icon><Box /></el-icon>
@@ -39,7 +46,7 @@
           </el-menu-item>
 
           <el-menu-item
-            v-if="authStore.permissions.includes('admin:settings')"
+            v-if="authStore.hasPermission('read:tenants')"
             index="/systems/tenants"
           >
             <el-icon><House /></el-icon>
@@ -47,7 +54,7 @@
           </el-menu-item>
 
           <el-menu-item
-            v-if="authStore.permissions.includes('admin:settings')"
+            v-if="authStore.hasPermission('read:logs')"
             index="/systems/logs"
           >
             <el-icon><Document /></el-icon>
@@ -145,7 +152,19 @@ const pageTitles: Record<string, string> = {
   '/systems/logs': 'Nhật ký hệ thống'
 };
 
+const activeMenu = computed(() => {
+  if (route.path.startsWith('/systems/roles')) return '/systems/roles';
+  if (route.path.startsWith('/systems/users')) return '/systems/users';
+  if (route.path.startsWith('/systems/tenants')) return '/systems/tenants';
+  if (route.path.startsWith('/systems/logs')) return '/systems/logs';
+  if (route.path.startsWith('/profile')) return '/profile';
+  return route.path;
+});
+
 const pageTitle = computed(() => {
+  if (/^\/systems\/roles\/[^/]+\/permissions$/.test(route.path)) {
+    return 'Phân quyền vai trò';
+  }
   return pageTitles[route.path] || route.path.split('/').filter(Boolean).pop() || 'Admin Pro';
 });
 

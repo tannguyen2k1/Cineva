@@ -17,15 +17,16 @@
             <el-option label="Bị khóa" value="inactive" />
           </el-select>
         </div>
-        <el-button type="primary" :icon="Plus">Tạo Tenant mới</el-button>
+        <el-button type="primary" :icon="Plus" @click="openCreate">Tạo Tenant mới</el-button>
       </div>
 
-      <DataTable 
-        :data="apiResponse?.data || []" 
+      <DataTable
+        :data="apiResponse?.data || []"
         :total="apiResponse?.total || 0"
         :loading="pending"
         v-model:page-size="pageSize"
         v-model:current-page="currentPage"
+        row-key="id"
       >
         <el-table-column prop="name" label="Tên Tenant (Không gian làm việc)" min-width="250">
           <template #default="scope">
@@ -44,34 +45,94 @@
         </el-table-column>
         <el-table-column prop="isActive" label="Trạng thái" width="120">
           <template #default="scope">
-            <el-switch v-model="scope.row.isActive" />
+            <el-switch
+              :model-value="scope.row.isActive"
+              :disabled="scope.row.id === authStore.tenant_id || statusSavingId === scope.row.id"
+              @change="(val: string | number | boolean) => onToggleActive(scope.row, Boolean(val))"
+            />
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="Ngày tạo" width="150">
           <template #default="scope">
-            <span style="color: var(--text-secondary)">{{ new Date(scope.row.createdAt).toLocaleDateString('vi-VN') }}</span>
+            <span style="color: var(--text-secondary)">
+              {{ new Date(scope.row.createdAt).toLocaleDateString('vi-VN') }}
+            </span>
           </template>
         </el-table-column>
         <el-table-column label="Thao tác" width="120" align="right">
-          <template #default>
+          <template #default="scope">
             <el-tooltip content="Chỉnh sửa" placement="top">
-              <el-button type="primary" link :icon="Edit" />
+              <el-button type="primary" link :icon="Edit" @click="openEdit(scope.row)" />
             </el-tooltip>
             <el-tooltip content="Xóa" placement="top">
-              <el-button type="danger" link :icon="Delete" />
+              <el-button
+                type="danger"
+                link
+                :icon="Delete"
+                :disabled="scope.row.id === authStore.tenant_id"
+                @click="onDelete(scope.row)"
+              />
             </el-tooltip>
           </template>
         </el-table-column>
       </DataTable>
     </div>
+
+    <el-dialog
+      v-model="dialogVisible"
+      :title="isEdit ? 'Chỉnh sửa tenant' : 'Tạo tenant mới'"
+      width="480px"
+      destroy-on-close
+      @closed="resetForm"
+    >
+      <el-form
+        ref="formRef"
+        :model="form"
+        :rules="formRules"
+        label-position="top"
+        @submit.prevent
+      >
+        <el-form-item label="Tên workspace" prop="name">
+          <el-input v-model="form.name" placeholder="default, acme..." />
+        </el-form-item>
+        <el-form-item label="Domain / Slug" prop="domain">
+          <el-input v-model="form.domain" placeholder="acme.local (tuỳ chọn)" />
+        </el-form-item>
+        <el-form-item label="Trạng thái">
+          <el-switch
+            v-model="form.isActive"
+            active-text="Hoạt động"
+            inactive-text="Khóa"
+            :disabled="isEdit && form.id === authStore.tenant_id"
+          />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="dialogVisible = false">Hủy</el-button>
+        <el-button type="primary" :loading="saving" @click="onSubmit">
+          {{ isEdit ? 'Lưu thay đổi' : 'Tạo tenant' }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import styles from './tenants.module.scss';
-import { ref, watch, onMounted } from 'vue';
+import { ref, reactive, computed, watch, onMounted } from 'vue';
 import { Plus, Edit, Delete, Search } from '@element-plus/icons-vue';
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { useAuthStore } from '~/stores/auth';
+
+interface TenantRow {
+  id: string;
+  name: string;
+  domain?: string | null;
+  isActive: boolean;
+  userCount: number;
+  createdAt: string;
+}
 
 const authStore = useAuthStore();
 const currentPage = ref(1);
@@ -83,22 +144,50 @@ const apiResponse = ref<any>(null);
 const pending = ref(false);
 const error = ref<any>(null);
 
+const dialogVisible = ref(false);
+const saving = ref(false);
+const statusSavingId = ref<string | null>(null);
+const formRef = ref<FormInstance>();
+const editingId = ref<string | null>(null);
+
+const form = reactive({
+  id: '',
+  name: '',
+  domain: '',
+  isActive: true
+});
+
+const isEdit = computed(() => !!editingId.value);
+
+const formRules: FormRules = {
+  name: [
+    { required: true, message: 'Nhập tên workspace', trigger: 'blur' },
+    { min: 2, message: 'Ít nhất 2 ký tự', trigger: 'blur' }
+  ]
+};
+
+const authHeaders = () => {
+  const headers: Record<string, string> = {};
+  if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`;
+  if (authStore.tenant_id) headers['x-tenant-id'] = authStore.tenant_id;
+  return headers;
+};
+
 const fetchData = async () => {
   pending.value = true;
   error.value = null;
   try {
     const params: Record<string, any> = {
       page: currentPage.value,
-      pageSize: pageSize.value,
+      pageSize: pageSize.value
     };
     if (searchQuery.value) params.search = searchQuery.value;
     if (statusFilter.value) params.status = statusFilter.value;
-    
-    const headers: any = {};
-    if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`;
-    if (authStore.tenant_id) headers['x-tenant-id'] = authStore.tenant_id;
-    
-    const res = await $fetch<any>('/api/tenants', { params, headers });
+
+    const res = await $fetch<any>('/api/tenants', {
+      params,
+      headers: authHeaders()
+    });
     apiResponse.value = res;
   } catch (err: any) {
     error.value = err;
@@ -108,7 +197,136 @@ const fetchData = async () => {
   }
 };
 
+const resetForm = () => {
+  editingId.value = null;
+  form.id = '';
+  form.name = '';
+  form.domain = '';
+  form.isActive = true;
+  formRef.value?.clearValidate();
+};
+
+const openCreate = () => {
+  resetForm();
+  dialogVisible.value = true;
+};
+
+const openEdit = (row: TenantRow) => {
+  resetForm();
+  editingId.value = row.id;
+  form.id = row.id;
+  form.name = row.name;
+  form.domain = row.domain || '';
+  form.isActive = row.isActive;
+  dialogVisible.value = true;
+};
+
+const onSubmit = async () => {
+  const valid = await formRef.value?.validate().catch(() => false);
+  if (!valid) return;
+
+  saving.value = true;
+  try {
+    if (isEdit.value) {
+      await $fetch(`/api/tenants/${editingId.value}`, {
+        method: 'PUT',
+        body: {
+          name: form.name.trim(),
+          domain: form.domain.trim() || null,
+          isActive: form.isActive
+        },
+        headers: authHeaders()
+      });
+      ElMessage.success('Đã cập nhật tenant');
+    } else {
+      const created = await $fetch<any>('/api/tenants', {
+        method: 'POST',
+        body: {
+          name: form.name.trim(),
+          domain: form.domain.trim() || null,
+          isActive: form.isActive
+        },
+        headers: authHeaders()
+      });
+      const creds = created?.data?.defaultAdmin;
+      ElMessage.success(
+        creds
+          ? `Đã tạo tenant — đăng nhập: ${creds.username} / ${creds.password}`
+          : 'Đã tạo tenant'
+      );
+    }
+    dialogVisible.value = false;
+    await fetchData();
+  } catch (err: any) {
+    ElMessage.error(err?.data?.statusMessage || err?.message || 'Thao tác thất bại');
+  } finally {
+    saving.value = false;
+  }
+};
+
+const onToggleActive = async (row: TenantRow, next: boolean) => {
+  if (row.id === authStore.tenant_id) {
+    ElMessage.warning('Không thể khóa tenant đang đăng nhập');
+    return;
+  }
+
+  statusSavingId.value = row.id;
+  const prev = row.isActive;
+  row.isActive = next;
+  try {
+    await $fetch(`/api/tenants/${row.id}`, {
+      method: 'PUT',
+      body: { isActive: next },
+      headers: authHeaders()
+    });
+    ElMessage.success(next ? 'Đã mở khóa tenant' : 'Đã khóa tenant');
+  } catch (err: any) {
+    row.isActive = prev;
+    ElMessage.error(err?.data?.statusMessage || err?.message || 'Không thể cập nhật trạng thái');
+  } finally {
+    statusSavingId.value = null;
+  }
+};
+
+const onDelete = async (row: TenantRow) => {
+  if (row.id === authStore.tenant_id) {
+    ElMessage.warning('Không thể xóa tenant đang đăng nhập');
+    return;
+  }
+
+  if (row.userCount > 0) {
+    ElMessage.warning(
+      `Không thể xóa: còn ${row.userCount} người dùng trong tenant “${row.name}”`
+    );
+    return;
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `Xóa tenant “${row.name}”? Bản ghi sẽ được ẩn (soft delete).`,
+      'Xác nhận xóa',
+      {
+        type: 'warning',
+        confirmButtonText: 'Xóa',
+        cancelButtonText: 'Hủy'
+      }
+    );
+  } catch {
+    return;
+  }
+
+  try {
+    await $fetch(`/api/tenants/${row.id}`, {
+      method: 'DELETE',
+      headers: authHeaders()
+    });
+    ElMessage.success('Đã xóa tenant');
+    await fetchData();
+  } catch (err: any) {
+    ElMessage.error(err?.data?.statusMessage || err?.message || 'Không thể xóa tenant');
+  }
+};
+
 onMounted(() => fetchData());
 watch([currentPage, pageSize, searchQuery, statusFilter], () => fetchData());
-
 </script>

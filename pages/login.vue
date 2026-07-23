@@ -50,6 +50,17 @@
             />
           </el-form-item>
 
+          <el-form-item prop="turnstileToken" :class="styles.turnstileItem">
+            <div :class="styles.turnstileWrap">
+              <NuxtTurnstile
+                :key="turnstileTheme"
+                ref="turnstileRef"
+                v-model="form.turnstileToken"
+                :options="{ theme: turnstileTheme, size: 'normal' }"
+              />
+            </div>
+          </el-form-item>
+
           <el-form-item :class="styles.submitItem">
             <el-button
               type="primary"
@@ -62,16 +73,17 @@
           </el-form-item>
         </el-form>
 
-        <p :class="styles.formFooter">Bảo mật bởi Admin Pro</p>
+        <p :class="styles.formFooter">Bảo mật bởi Admin Pro · Cloudflare Turnstile</p>
       </div>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { ref, reactive, computed, watch } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { ElMessage } from 'element-plus';
+import { useDark } from '@vueuse/core';
 import styles from './login.module.scss';
 
 definePageMeta({
@@ -80,19 +92,33 @@ definePageMeta({
 
 const authStore = useAuthStore();
 const formRef = ref();
+const turnstileRef = ref<{ reset?: () => void } | null>(null);
 const loading = ref(false);
+const isDark = useDark();
+const turnstileTheme = computed<'light' | 'dark'>(() => (isDark.value ? 'dark' : 'light'));
 
 const form = reactive({
   tenant_id: 'default',
   username: '',
-  password: ''
+  password: '',
+  turnstileToken: ''
 });
 
 const rules = {
   tenant_id: [{ required: true, message: 'Vui lòng nhập Workspace', trigger: 'blur' }],
   username: [{ required: true, message: 'Vui lòng nhập tên đăng nhập', trigger: 'blur' }],
-  password: [{ required: true, message: 'Vui lòng nhập mật khẩu', trigger: 'blur' }]
+  password: [{ required: true, message: 'Vui lòng nhập mật khẩu', trigger: 'blur' }],
+  turnstileToken: [{ required: true, message: 'Vui lòng xác minh bảo mật', trigger: 'change' }]
 };
+
+const resetTurnstile = () => {
+  form.turnstileToken = '';
+  turnstileRef.value?.reset?.();
+};
+
+watch(turnstileTheme, () => {
+  form.turnstileToken = '';
+});
 
 const handleLogin = async () => {
   if (!formRef.value) return;
@@ -105,15 +131,18 @@ const handleLogin = async () => {
           body: {
             tenant_id: form.tenant_id,
             username: form.username,
-            password: form.password
+            password: form.password,
+            turnstileToken: form.turnstileToken
           }
         });
 
         authStore.setAuth(data.token, data.user, data.tenant_id, data.permissions);
-        ElMessage.success('Đăng nhập thành công!');
+        const displayName = data.user?.fullName || data.user?.username || form.username;
+        ElMessage.success(`Xin chào, ${displayName}!`);
         navigateTo('/');
       } catch (err: any) {
         ElMessage.error(err.data?.statusMessage || 'Đăng nhập thất bại');
+        resetTurnstile();
       } finally {
         loading.value = false;
       }

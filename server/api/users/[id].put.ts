@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { getTenantPrisma } from '../../utils/prisma';
+import { getActorUserId, writeSystemLog } from '../../utils/systemLog';
 
 export default defineEventHandler(async (event) => {
   const tenant_id = event.context.tenant_id;
@@ -95,6 +96,14 @@ export default defineEventHandler(async (event) => {
   const updatedRoleIds = user.userRoles
     .map((ur: { role?: { id?: string | null } | null }) => ur.role?.id)
     .filter(Boolean) as string[];
+
+  await writeSystemLog({
+    tenant_id,
+    user_id: getActorUserId(event),
+    action: 'UPDATE_USER',
+    resource: 'User',
+    details: { id: user.id, username: user.username, isActive: user.isActive }
+  });
 
   return {
     success: true,

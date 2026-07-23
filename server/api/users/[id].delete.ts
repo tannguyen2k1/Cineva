@@ -1,4 +1,5 @@
 import { getTenantPrisma } from '../../utils/prisma';
+import { getActorUserId, writeSystemLog } from '../../utils/systemLog';
 
 export default defineEventHandler(async (event) => {
   const tenant_id = event.context.tenant_id;
@@ -21,7 +22,7 @@ export default defineEventHandler(async (event) => {
 
   const existing = await db.user.findFirst({
     where: { id },
-    select: { id: true }
+    select: { id: true, username: true }
   });
 
   if (!existing) {
@@ -34,6 +35,14 @@ export default defineEventHandler(async (event) => {
       deletedAt: new Date(),
       isActive: false
     }
+  });
+
+  await writeSystemLog({
+    tenant_id,
+    user_id: getActorUserId(event),
+    action: 'DELETE_USER',
+    resource: 'User',
+    details: { id: existing.id, username: existing.username }
   });
 
   return {
