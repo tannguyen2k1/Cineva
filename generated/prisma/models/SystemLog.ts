@@ -323,16 +323,6 @@ export type SystemLogUncheckedUpdateManyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
-export type SystemLogListRelationFilter = {
-  every?: Prisma.SystemLogWhereInput
-  some?: Prisma.SystemLogWhereInput
-  none?: Prisma.SystemLogWhereInput
-}
-
-export type SystemLogOrderByRelationAggregateInput = {
-  _count?: Prisma.SortOrder
-}
-
 export type SystemLogCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   action?: Prisma.SortOrder
@@ -361,6 +351,16 @@ export type SystemLogMinOrderByAggregateInput = {
   tenant_id?: Prisma.SortOrder
   user_id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+}
+
+export type SystemLogListRelationFilter = {
+  every?: Prisma.SystemLogWhereInput
+  some?: Prisma.SystemLogWhereInput
+  none?: Prisma.SystemLogWhereInput
+}
+
+export type SystemLogOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
 }
 
 export type SystemLogCreateNestedManyWithoutTenantInput = {

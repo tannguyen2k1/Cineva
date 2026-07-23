@@ -1,0 +1,20 @@
+model Role {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  deletedAt   DateTime?
+
+  // Base fields
+  tenant_id String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  tenant    Tenant           @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  userRoles UserRole[]
+  rolePerms RolePermission[]
+
+  @@index([tenant_id])
+  @@index([tenant_id, name])
+  @@index([tenant_id, deletedAt])
+}

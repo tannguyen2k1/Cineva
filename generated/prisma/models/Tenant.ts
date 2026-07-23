@@ -347,6 +347,11 @@ export type TenantUncheckedUpdateManyInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+export type TenantScalarRelationFilter = {
+  is?: Prisma.TenantWhereInput
+  isNot?: Prisma.TenantWhereInput
+}
+
 export type TenantCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
@@ -377,43 +382,18 @@ export type TenantMinOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
 }
 
-export type TenantScalarRelationFilter = {
-  is?: Prisma.TenantWhereInput
-  isNot?: Prisma.TenantWhereInput
-}
-
-export type StringFieldUpdateOperationsInput = {
-  set?: string
-}
-
-export type NullableStringFieldUpdateOperationsInput = {
-  set?: string | null
-}
-
-export type BoolFieldUpdateOperationsInput = {
-  set?: boolean
-}
-
-export type NullableDateTimeFieldUpdateOperationsInput = {
-  set?: Date | string | null
-}
-
-export type DateTimeFieldUpdateOperationsInput = {
-  set?: Date | string
-}
-
-export type TenantCreateNestedOneWithoutUsersInput = {
-  create?: Prisma.XOR<Prisma.TenantCreateWithoutUsersInput, Prisma.TenantUncheckedCreateWithoutUsersInput>
-  connectOrCreate?: Prisma.TenantCreateOrConnectWithoutUsersInput
+export type TenantCreateNestedOneWithoutPermissionsInput = {
+  create?: Prisma.XOR<Prisma.TenantCreateWithoutPermissionsInput, Prisma.TenantUncheckedCreateWithoutPermissionsInput>
+  connectOrCreate?: Prisma.TenantCreateOrConnectWithoutPermissionsInput
   connect?: Prisma.TenantWhereUniqueInput
 }
 
-export type TenantUpdateOneRequiredWithoutUsersNestedInput = {
-  create?: Prisma.XOR<Prisma.TenantCreateWithoutUsersInput, Prisma.TenantUncheckedCreateWithoutUsersInput>
-  connectOrCreate?: Prisma.TenantCreateOrConnectWithoutUsersInput
-  upsert?: Prisma.TenantUpsertWithoutUsersInput
+export type TenantUpdateOneRequiredWithoutPermissionsNestedInput = {
+  create?: Prisma.XOR<Prisma.TenantCreateWithoutPermissionsInput, Prisma.TenantUncheckedCreateWithoutPermissionsInput>
+  connectOrCreate?: Prisma.TenantCreateOrConnectWithoutPermissionsInput
+  upsert?: Prisma.TenantUpsertWithoutPermissionsInput
   connect?: Prisma.TenantWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.TenantUpdateToOneWithWhereWithoutUsersInput, Prisma.TenantUpdateWithoutUsersInput>, Prisma.TenantUncheckedUpdateWithoutUsersInput>
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TenantUpdateToOneWithWhereWithoutPermissionsInput, Prisma.TenantUpdateWithoutPermissionsInput>, Prisma.TenantUncheckedUpdateWithoutPermissionsInput>
 }
 
 export type TenantCreateNestedOneWithoutRolesInput = {
@@ -430,20 +410,6 @@ export type TenantUpdateOneRequiredWithoutRolesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TenantUpdateToOneWithWhereWithoutRolesInput, Prisma.TenantUpdateWithoutRolesInput>, Prisma.TenantUncheckedUpdateWithoutRolesInput>
 }
 
-export type TenantCreateNestedOneWithoutPermissionsInput = {
-  create?: Prisma.XOR<Prisma.TenantCreateWithoutPermissionsInput, Prisma.TenantUncheckedCreateWithoutPermissionsInput>
-  connectOrCreate?: Prisma.TenantCreateOrConnectWithoutPermissionsInput
-  connect?: Prisma.TenantWhereUniqueInput
-}
-
-export type TenantUpdateOneRequiredWithoutPermissionsNestedInput = {
-  create?: Prisma.XOR<Prisma.TenantCreateWithoutPermissionsInput, Prisma.TenantUncheckedCreateWithoutPermissionsInput>
-  connectOrCreate?: Prisma.TenantCreateOrConnectWithoutPermissionsInput
-  upsert?: Prisma.TenantUpsertWithoutPermissionsInput
-  connect?: Prisma.TenantWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.TenantUpdateToOneWithWhereWithoutPermissionsInput, Prisma.TenantUpdateWithoutPermissionsInput>, Prisma.TenantUncheckedUpdateWithoutPermissionsInput>
-}
-
 export type TenantCreateNestedOneWithoutSystemLogsInput = {
   create?: Prisma.XOR<Prisma.TenantCreateWithoutSystemLogsInput, Prisma.TenantUncheckedCreateWithoutSystemLogsInput>
   connectOrCreate?: Prisma.TenantCreateOrConnectWithoutSystemLogsInput
@@ -458,7 +424,25 @@ export type TenantUpdateOneRequiredWithoutSystemLogsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TenantUpdateToOneWithWhereWithoutSystemLogsInput, Prisma.TenantUpdateWithoutSystemLogsInput>, Prisma.TenantUncheckedUpdateWithoutSystemLogsInput>
 }
 
-export type TenantCreateWithoutUsersInput = {
+export type BoolFieldUpdateOperationsInput = {
+  set?: boolean
+}
+
+export type TenantCreateNestedOneWithoutUsersInput = {
+  create?: Prisma.XOR<Prisma.TenantCreateWithoutUsersInput, Prisma.TenantUncheckedCreateWithoutUsersInput>
+  connectOrCreate?: Prisma.TenantCreateOrConnectWithoutUsersInput
+  connect?: Prisma.TenantWhereUniqueInput
+}
+
+export type TenantUpdateOneRequiredWithoutUsersNestedInput = {
+  create?: Prisma.XOR<Prisma.TenantCreateWithoutUsersInput, Prisma.TenantUncheckedCreateWithoutUsersInput>
+  connectOrCreate?: Prisma.TenantCreateOrConnectWithoutUsersInput
+  upsert?: Prisma.TenantUpsertWithoutUsersInput
+  connect?: Prisma.TenantWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TenantUpdateToOneWithWhereWithoutUsersInput, Prisma.TenantUpdateWithoutUsersInput>, Prisma.TenantUncheckedUpdateWithoutUsersInput>
+}
+
+export type TenantCreateWithoutPermissionsInput = {
   id?: string
   name: string
   domain?: string | null
@@ -466,12 +450,12 @@ export type TenantCreateWithoutUsersInput = {
   deletedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  users?: Prisma.UserCreateNestedManyWithoutTenantInput
   roles?: Prisma.RoleCreateNestedManyWithoutTenantInput
-  permissions?: Prisma.PermissionCreateNestedManyWithoutTenantInput
   systemLogs?: Prisma.SystemLogCreateNestedManyWithoutTenantInput
 }
 
-export type TenantUncheckedCreateWithoutUsersInput = {
+export type TenantUncheckedCreateWithoutPermissionsInput = {
   id?: string
   name: string
   domain?: string | null
@@ -479,28 +463,28 @@ export type TenantUncheckedCreateWithoutUsersInput = {
   deletedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  users?: Prisma.UserUncheckedCreateNestedManyWithoutTenantInput
   roles?: Prisma.RoleUncheckedCreateNestedManyWithoutTenantInput
-  permissions?: Prisma.PermissionUncheckedCreateNestedManyWithoutTenantInput
   systemLogs?: Prisma.SystemLogUncheckedCreateNestedManyWithoutTenantInput
 }
 
-export type TenantCreateOrConnectWithoutUsersInput = {
+export type TenantCreateOrConnectWithoutPermissionsInput = {
   where: Prisma.TenantWhereUniqueInput
-  create: Prisma.XOR<Prisma.TenantCreateWithoutUsersInput, Prisma.TenantUncheckedCreateWithoutUsersInput>
+  create: Prisma.XOR<Prisma.TenantCreateWithoutPermissionsInput, Prisma.TenantUncheckedCreateWithoutPermissionsInput>
 }
 
-export type TenantUpsertWithoutUsersInput = {
-  update: Prisma.XOR<Prisma.TenantUpdateWithoutUsersInput, Prisma.TenantUncheckedUpdateWithoutUsersInput>
-  create: Prisma.XOR<Prisma.TenantCreateWithoutUsersInput, Prisma.TenantUncheckedCreateWithoutUsersInput>
+export type TenantUpsertWithoutPermissionsInput = {
+  update: Prisma.XOR<Prisma.TenantUpdateWithoutPermissionsInput, Prisma.TenantUncheckedUpdateWithoutPermissionsInput>
+  create: Prisma.XOR<Prisma.TenantCreateWithoutPermissionsInput, Prisma.TenantUncheckedCreateWithoutPermissionsInput>
   where?: Prisma.TenantWhereInput
 }
 
-export type TenantUpdateToOneWithWhereWithoutUsersInput = {
+export type TenantUpdateToOneWithWhereWithoutPermissionsInput = {
   where?: Prisma.TenantWhereInput
-  data: Prisma.XOR<Prisma.TenantUpdateWithoutUsersInput, Prisma.TenantUncheckedUpdateWithoutUsersInput>
+  data: Prisma.XOR<Prisma.TenantUpdateWithoutPermissionsInput, Prisma.TenantUncheckedUpdateWithoutPermissionsInput>
 }
 
-export type TenantUpdateWithoutUsersInput = {
+export type TenantUpdateWithoutPermissionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -508,12 +492,12 @@ export type TenantUpdateWithoutUsersInput = {
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  users?: Prisma.UserUpdateManyWithoutTenantNestedInput
   roles?: Prisma.RoleUpdateManyWithoutTenantNestedInput
-  permissions?: Prisma.PermissionUpdateManyWithoutTenantNestedInput
   systemLogs?: Prisma.SystemLogUpdateManyWithoutTenantNestedInput
 }
 
-export type TenantUncheckedUpdateWithoutUsersInput = {
+export type TenantUncheckedUpdateWithoutPermissionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -521,8 +505,8 @@ export type TenantUncheckedUpdateWithoutUsersInput = {
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  users?: Prisma.UserUncheckedUpdateManyWithoutTenantNestedInput
   roles?: Prisma.RoleUncheckedUpdateManyWithoutTenantNestedInput
-  permissions?: Prisma.PermissionUncheckedUpdateManyWithoutTenantNestedInput
   systemLogs?: Prisma.SystemLogUncheckedUpdateManyWithoutTenantNestedInput
 }
 
@@ -594,74 +578,6 @@ export type TenantUncheckedUpdateWithoutRolesInput = {
   systemLogs?: Prisma.SystemLogUncheckedUpdateManyWithoutTenantNestedInput
 }
 
-export type TenantCreateWithoutPermissionsInput = {
-  id?: string
-  name: string
-  domain?: string | null
-  isActive?: boolean
-  deletedAt?: Date | string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  users?: Prisma.UserCreateNestedManyWithoutTenantInput
-  roles?: Prisma.RoleCreateNestedManyWithoutTenantInput
-  systemLogs?: Prisma.SystemLogCreateNestedManyWithoutTenantInput
-}
-
-export type TenantUncheckedCreateWithoutPermissionsInput = {
-  id?: string
-  name: string
-  domain?: string | null
-  isActive?: boolean
-  deletedAt?: Date | string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  users?: Prisma.UserUncheckedCreateNestedManyWithoutTenantInput
-  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutTenantInput
-  systemLogs?: Prisma.SystemLogUncheckedCreateNestedManyWithoutTenantInput
-}
-
-export type TenantCreateOrConnectWithoutPermissionsInput = {
-  where: Prisma.TenantWhereUniqueInput
-  create: Prisma.XOR<Prisma.TenantCreateWithoutPermissionsInput, Prisma.TenantUncheckedCreateWithoutPermissionsInput>
-}
-
-export type TenantUpsertWithoutPermissionsInput = {
-  update: Prisma.XOR<Prisma.TenantUpdateWithoutPermissionsInput, Prisma.TenantUncheckedUpdateWithoutPermissionsInput>
-  create: Prisma.XOR<Prisma.TenantCreateWithoutPermissionsInput, Prisma.TenantUncheckedCreateWithoutPermissionsInput>
-  where?: Prisma.TenantWhereInput
-}
-
-export type TenantUpdateToOneWithWhereWithoutPermissionsInput = {
-  where?: Prisma.TenantWhereInput
-  data: Prisma.XOR<Prisma.TenantUpdateWithoutPermissionsInput, Prisma.TenantUncheckedUpdateWithoutPermissionsInput>
-}
-
-export type TenantUpdateWithoutPermissionsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  users?: Prisma.UserUpdateManyWithoutTenantNestedInput
-  roles?: Prisma.RoleUpdateManyWithoutTenantNestedInput
-  systemLogs?: Prisma.SystemLogUpdateManyWithoutTenantNestedInput
-}
-
-export type TenantUncheckedUpdateWithoutPermissionsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  users?: Prisma.UserUncheckedUpdateManyWithoutTenantNestedInput
-  roles?: Prisma.RoleUncheckedUpdateManyWithoutTenantNestedInput
-  systemLogs?: Prisma.SystemLogUncheckedUpdateManyWithoutTenantNestedInput
-}
-
 export type TenantCreateWithoutSystemLogsInput = {
   id?: string
   name: string
@@ -728,6 +644,74 @@ export type TenantUncheckedUpdateWithoutSystemLogsInput = {
   users?: Prisma.UserUncheckedUpdateManyWithoutTenantNestedInput
   roles?: Prisma.RoleUncheckedUpdateManyWithoutTenantNestedInput
   permissions?: Prisma.PermissionUncheckedUpdateManyWithoutTenantNestedInput
+}
+
+export type TenantCreateWithoutUsersInput = {
+  id?: string
+  name: string
+  domain?: string | null
+  isActive?: boolean
+  deletedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  roles?: Prisma.RoleCreateNestedManyWithoutTenantInput
+  permissions?: Prisma.PermissionCreateNestedManyWithoutTenantInput
+  systemLogs?: Prisma.SystemLogCreateNestedManyWithoutTenantInput
+}
+
+export type TenantUncheckedCreateWithoutUsersInput = {
+  id?: string
+  name: string
+  domain?: string | null
+  isActive?: boolean
+  deletedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  roles?: Prisma.RoleUncheckedCreateNestedManyWithoutTenantInput
+  permissions?: Prisma.PermissionUncheckedCreateNestedManyWithoutTenantInput
+  systemLogs?: Prisma.SystemLogUncheckedCreateNestedManyWithoutTenantInput
+}
+
+export type TenantCreateOrConnectWithoutUsersInput = {
+  where: Prisma.TenantWhereUniqueInput
+  create: Prisma.XOR<Prisma.TenantCreateWithoutUsersInput, Prisma.TenantUncheckedCreateWithoutUsersInput>
+}
+
+export type TenantUpsertWithoutUsersInput = {
+  update: Prisma.XOR<Prisma.TenantUpdateWithoutUsersInput, Prisma.TenantUncheckedUpdateWithoutUsersInput>
+  create: Prisma.XOR<Prisma.TenantCreateWithoutUsersInput, Prisma.TenantUncheckedCreateWithoutUsersInput>
+  where?: Prisma.TenantWhereInput
+}
+
+export type TenantUpdateToOneWithWhereWithoutUsersInput = {
+  where?: Prisma.TenantWhereInput
+  data: Prisma.XOR<Prisma.TenantUpdateWithoutUsersInput, Prisma.TenantUncheckedUpdateWithoutUsersInput>
+}
+
+export type TenantUpdateWithoutUsersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  roles?: Prisma.RoleUpdateManyWithoutTenantNestedInput
+  permissions?: Prisma.PermissionUpdateManyWithoutTenantNestedInput
+  systemLogs?: Prisma.SystemLogUpdateManyWithoutTenantNestedInput
+}
+
+export type TenantUncheckedUpdateWithoutUsersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  roles?: Prisma.RoleUncheckedUpdateManyWithoutTenantNestedInput
+  permissions?: Prisma.PermissionUncheckedUpdateManyWithoutTenantNestedInput
+  systemLogs?: Prisma.SystemLogUncheckedUpdateManyWithoutTenantNestedInput
 }
 
 

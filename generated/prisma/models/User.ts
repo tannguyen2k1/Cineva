@@ -411,6 +411,11 @@ export type UserUncheckedUpdateManyInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+export type UserNullableScalarRelationFilter = {
+  is?: Prisma.UserWhereInput | null
+  isNot?: Prisma.UserWhereInput | null
+}
+
 export type UserListRelationFilter = {
   every?: Prisma.UserWhereInput
   some?: Prisma.UserWhereInput
@@ -419,6 +424,11 @@ export type UserListRelationFilter = {
 
 export type UserOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
+}
+
+export type UserScalarRelationFilter = {
+  is?: Prisma.UserWhereInput
+  isNot?: Prisma.UserWhereInput
 }
 
 export type UserCountOrderByAggregateInput = {
@@ -463,14 +473,20 @@ export type UserMinOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
 }
 
-export type UserScalarRelationFilter = {
-  is?: Prisma.UserWhereInput
-  isNot?: Prisma.UserWhereInput
+export type UserCreateNestedOneWithoutSystemLogsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSystemLogsInput, Prisma.UserUncheckedCreateWithoutSystemLogsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSystemLogsInput
+  connect?: Prisma.UserWhereUniqueInput
 }
 
-export type UserNullableScalarRelationFilter = {
-  is?: Prisma.UserWhereInput | null
-  isNot?: Prisma.UserWhereInput | null
+export type UserUpdateOneWithoutSystemLogsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSystemLogsInput, Prisma.UserUncheckedCreateWithoutSystemLogsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSystemLogsInput
+  upsert?: Prisma.UserUpsertWithoutSystemLogsInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutSystemLogsInput, Prisma.UserUpdateWithoutSystemLogsInput>, Prisma.UserUncheckedUpdateWithoutSystemLogsInput>
 }
 
 export type UserCreateNestedManyWithoutTenantInput = {
@@ -529,20 +545,80 @@ export type UserUpdateOneRequiredWithoutUserRolesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutUserRolesInput, Prisma.UserUpdateWithoutUserRolesInput>, Prisma.UserUncheckedUpdateWithoutUserRolesInput>
 }
 
-export type UserCreateNestedOneWithoutSystemLogsInput = {
-  create?: Prisma.XOR<Prisma.UserCreateWithoutSystemLogsInput, Prisma.UserUncheckedCreateWithoutSystemLogsInput>
-  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSystemLogsInput
-  connect?: Prisma.UserWhereUniqueInput
+export type UserCreateWithoutSystemLogsInput = {
+  id?: string
+  username: string
+  email?: string | null
+  password: string
+  fullName?: string | null
+  avatar?: string | null
+  isActive?: boolean
+  deletedAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  tenant: Prisma.TenantCreateNestedOneWithoutUsersInput
+  userRoles?: Prisma.UserRoleCreateNestedManyWithoutUserInput
 }
 
-export type UserUpdateOneWithoutSystemLogsNestedInput = {
-  create?: Prisma.XOR<Prisma.UserCreateWithoutSystemLogsInput, Prisma.UserUncheckedCreateWithoutSystemLogsInput>
-  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSystemLogsInput
-  upsert?: Prisma.UserUpsertWithoutSystemLogsInput
-  disconnect?: Prisma.UserWhereInput | boolean
-  delete?: Prisma.UserWhereInput | boolean
-  connect?: Prisma.UserWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutSystemLogsInput, Prisma.UserUpdateWithoutSystemLogsInput>, Prisma.UserUncheckedUpdateWithoutSystemLogsInput>
+export type UserUncheckedCreateWithoutSystemLogsInput = {
+  id?: string
+  username: string
+  email?: string | null
+  password: string
+  fullName?: string | null
+  avatar?: string | null
+  isActive?: boolean
+  deletedAt?: Date | string | null
+  tenant_id: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  userRoles?: Prisma.UserRoleUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutSystemLogsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutSystemLogsInput, Prisma.UserUncheckedCreateWithoutSystemLogsInput>
+}
+
+export type UserUpsertWithoutSystemLogsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutSystemLogsInput, Prisma.UserUncheckedUpdateWithoutSystemLogsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutSystemLogsInput, Prisma.UserUncheckedCreateWithoutSystemLogsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutSystemLogsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutSystemLogsInput, Prisma.UserUncheckedUpdateWithoutSystemLogsInput>
+}
+
+export type UserUpdateWithoutSystemLogsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  fullName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  tenant?: Prisma.TenantUpdateOneRequiredWithoutUsersNestedInput
+  userRoles?: Prisma.UserRoleUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutSystemLogsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  fullName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  tenant_id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  userRoles?: Prisma.UserRoleUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutTenantInput = {
@@ -692,82 +768,6 @@ export type UserUncheckedUpdateWithoutUserRolesInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   systemLogs?: Prisma.SystemLogUncheckedUpdateManyWithoutUserNestedInput
-}
-
-export type UserCreateWithoutSystemLogsInput = {
-  id?: string
-  username: string
-  email?: string | null
-  password: string
-  fullName?: string | null
-  avatar?: string | null
-  isActive?: boolean
-  deletedAt?: Date | string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  tenant: Prisma.TenantCreateNestedOneWithoutUsersInput
-  userRoles?: Prisma.UserRoleCreateNestedManyWithoutUserInput
-}
-
-export type UserUncheckedCreateWithoutSystemLogsInput = {
-  id?: string
-  username: string
-  email?: string | null
-  password: string
-  fullName?: string | null
-  avatar?: string | null
-  isActive?: boolean
-  deletedAt?: Date | string | null
-  tenant_id: string
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  userRoles?: Prisma.UserRoleUncheckedCreateNestedManyWithoutUserInput
-}
-
-export type UserCreateOrConnectWithoutSystemLogsInput = {
-  where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutSystemLogsInput, Prisma.UserUncheckedCreateWithoutSystemLogsInput>
-}
-
-export type UserUpsertWithoutSystemLogsInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutSystemLogsInput, Prisma.UserUncheckedUpdateWithoutSystemLogsInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutSystemLogsInput, Prisma.UserUncheckedCreateWithoutSystemLogsInput>
-  where?: Prisma.UserWhereInput
-}
-
-export type UserUpdateToOneWithWhereWithoutSystemLogsInput = {
-  where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutSystemLogsInput, Prisma.UserUncheckedUpdateWithoutSystemLogsInput>
-}
-
-export type UserUpdateWithoutSystemLogsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  username?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  password?: Prisma.StringFieldUpdateOperationsInput | string
-  fullName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  tenant?: Prisma.TenantUpdateOneRequiredWithoutUsersNestedInput
-  userRoles?: Prisma.UserRoleUpdateManyWithoutUserNestedInput
-}
-
-export type UserUncheckedUpdateWithoutSystemLogsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  username?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  password?: Prisma.StringFieldUpdateOperationsInput | string
-  fullName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  tenant_id?: Prisma.StringFieldUpdateOperationsInput | string
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  userRoles?: Prisma.UserRoleUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateManyTenantInput = {

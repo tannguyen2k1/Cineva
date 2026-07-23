@@ -1,0 +1,18 @@
+model SystemLog {
+  id       String  @id @default(uuid())
+  action   String // e.g. "CREATE_USER", "LOGIN"
+  resource String? // e.g. "User", "Role"
+  details  String? // JSON string format for extra data
+
+  // Base fields
+  tenant_id String
+  user_id   String?
+  createdAt DateTime @default(now())
+
+  // Relations
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@index([tenant_id])
+  @@index([tenant_id, createdAt])
+}

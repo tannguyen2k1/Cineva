@@ -18,37 +18,37 @@ export { Prisma }
 export * as $Enums from './enums.js'
 export * from './enums.js';
 /**
- * Model Tenant
- * 
- */
-export type Tenant = Prisma.TenantModel
-/**
- * Model User
- * 
- */
-export type User = Prisma.UserModel
-/**
- * Model Role
- * 
- */
-export type Role = Prisma.RoleModel
-/**
  * Model Permission
  * 
  */
 export type Permission = Prisma.PermissionModel
-/**
- * Model UserRole
- * 
- */
-export type UserRole = Prisma.UserRoleModel
 /**
  * Model RolePermission
  * 
  */
 export type RolePermission = Prisma.RolePermissionModel
 /**
+ * Model Role
+ * 
+ */
+export type Role = Prisma.RoleModel
+/**
  * Model SystemLog
  * 
  */
 export type SystemLog = Prisma.SystemLogModel
+/**
+ * Model Tenant
+ * 
+ */
+export type Tenant = Prisma.TenantModel
+/**
+ * Model UserRole
+ * 
+ */
+export type UserRole = Prisma.UserRoleModel
+/**
+ * Model User
+ * 
+ */
+export type User = Prisma.UserModel

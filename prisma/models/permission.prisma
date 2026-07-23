@@ -1,0 +1,19 @@
+model Permission {
+  id          String  @id @default(uuid())
+  action      String // e.g., "create", "read", "update", "delete"
+  resource    String // e.g., "users", "posts"
+  description String?
+
+  // Base fields
+  tenant_id String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  tenant    Tenant           @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  rolePerms RolePermission[]
+
+  @@unique([tenant_id, action, resource])
+  @@index([tenant_id])
+  @@index([tenant_id, resource]) // Optimize cho việc query tất cả action của 1 resource
+}

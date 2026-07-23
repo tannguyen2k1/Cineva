@@ -5,7 +5,7 @@
 - **UI Library**: Element Plus (`el-table`, `el-button`, `el-dialog`, etc.).
 - **Icons**: `@element-plus/icons-vue`.
 - **State Management**: Pinia (e.g., `stores/auth.ts`).
-- **Database / ORM**: Prisma (`prisma/schema.prisma`).
+- **Database / ORM**: Prisma (`prisma/schema.prisma` + `prisma/models/*.prisma`).
 - **Multi-tenancy**: RBAC (Role-Based Access Control) with Tenant data isolation.
 
 ## 2. File Modularity & Structure
