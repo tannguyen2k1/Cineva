@@ -5,21 +5,29 @@
       <el-button type="primary" :icon="Plus">Tạo Tenant mới</el-button>
     </div>
 
+    <el-alert v-if="error" type="error" :title="error.message || error" show-icon style="margin-bottom: 20px" />
+
     <div :class="styles.premiumCard">
       <DataTable 
-        :data="tenants" 
-        :total="tenants.length"
+        :data="apiResponse?.data || []" 
+        :total="apiResponse?.total || 0"
+        :loading="pending"
         v-model:page-size="pageSize"
         v-model:current-page="currentPage"
       >
-        <el-table-column prop="name" label="Tên Tenant" min-width="150">
+        <el-table-column prop="name" label="Tên Tenant (Không gian làm việc)" min-width="250">
           <template #default="scope">
-            <span class="fw-bold">{{ scope.row.name }}</span>
+            <span :class="styles.fwBold">{{ scope.row.name }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="domain" label="Domain / Slug" min-width="150">
           <template #default="scope">
-            <span style="color: var(--text-secondary)">{{ scope.row.domain }}</span>
+            <span style="color: var(--text-secondary)">{{ scope.row.domain || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="userCount" label="Số lượng User" width="150" align="center">
+          <template #default="scope">
+            <el-tag size="small" type="info">{{ scope.row.userCount }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="isActive" label="Trạng thái" width="120">
@@ -27,11 +35,19 @@
             <el-switch v-model="scope.row.isActive" />
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="Ngày tạo" width="150" />
-        <el-table-column label="Thao tác" width="150" align="right">
+        <el-table-column prop="createdAt" label="Ngày tạo" width="150">
+          <template #default="scope">
+            <span style="color: var(--text-secondary)">{{ new Date(scope.row.createdAt).toLocaleDateString('vi-VN') }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="Thao tác" width="120" align="right">
           <template #default>
-            <el-button type="primary" link icon="Edit">Sửa</el-button>
-            <el-button type="danger" link icon="Delete">Xóa</el-button>
+            <el-tooltip content="Chỉnh sửa" placement="top">
+              <el-button type="primary" link :icon="Edit" />
+            </el-tooltip>
+            <el-tooltip content="Xóa" placement="top">
+              <el-button type="danger" link :icon="Delete" />
+            </el-tooltip>
           </template>
         </el-table-column>
       </DataTable>
@@ -41,28 +57,44 @@
 
 <script setup lang="ts">
 import styles from './tenants.module.scss';
-import { ref } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { Plus, Edit, Delete } from '@element-plus/icons-vue';
+import { useAuthStore } from '~/stores/auth';
 
-// Mock data
-const tenants = ref([
-  { id: '1', name: 'Default Workspace', domain: 'default', isActive: true, createdAt: '2023-10-01' },
-  { id: '2', name: 'Công ty ABC', domain: 'cong-ty-abc', isActive: true, createdAt: '2023-10-15' },
-  { id: '3', name: 'Công ty XYZ', domain: 'cong-ty-xyz', isActive: false, createdAt: '2023-11-02' },
-]);
-
+const authStore = useAuthStore();
 const currentPage = ref(1);
 const pageSize = ref(10);
+const searchQuery = ref('');
+
+const apiResponse = ref<any>(null);
+const pending = ref(false);
+const error = ref<any>(null);
+
+const fetchData = async () => {
+  pending.value = true;
+  error.value = null;
+  try {
+    const params: Record<string, any> = {
+      page: currentPage.value,
+      pageSize: pageSize.value,
+    };
+    if (searchQuery.value) params.search = searchQuery.value;
+    
+    const headers: any = {};
+    if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`;
+    if (authStore.tenant_id) headers['x-tenant-id'] = authStore.tenant_id;
+    
+    const res = await $fetch<any>('/api/tenants', { params, headers });
+    apiResponse.value = res;
+  } catch (err: any) {
+    error.value = err;
+    console.error('Fetch Tenants Error:', err);
+  } finally {
+    pending.value = false;
+  }
+};
+
+onMounted(() => fetchData());
+watch([currentPage, pageSize, searchQuery], () => fetchData());
+
 </script>
-
-<style scoped>
-.page-container {
-  display: flex;
-  flex-direction: column;
-}
-
-.fw-bold {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-</style>

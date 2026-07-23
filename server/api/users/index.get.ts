@@ -1,29 +1,77 @@
 import { getTenantPrisma } from '../../utils/prisma';
 
 export default defineEventHandler(async (event) => {
-  // Lấy tenant_id từ context (đã được middleware parse từ header)
   const tenant_id = event.context.tenant_id;
   
   if (!tenant_id) {
     throw createError({ statusCode: 400, statusMessage: 'Missing tenant_id context' });
   }
 
-  // Khởi tạo prisma an toàn (chỉ lấy data của đúng tenant_id này)
+  const query = getQuery(event);
+  const page = Number(query.page) || 1;
+  const pageSize = Number(query.pageSize) || 10;
+  const search = query.search as string;
+  const status = query.status as string;
+
   const db = getTenantPrisma(tenant_id);
 
-  // Nhờ Prisma Client Extension, câu query findMany này sẽ TỰ ĐỘNG thêm điều kiện `where: { tenant_id }`
-  const users = await db.user.findMany({
-    select: {
-      id: true,
-      email: true,
-      fullName: true,
-      isActive: true,
-      createdAt: true
-    }
+  const whereCondition: any = {};
+  
+  if (search) {
+    whereCondition.OR = [
+      { username: { contains: search, mode: 'insensitive' } },
+      { fullName: { contains: search, mode: 'insensitive' } }
+    ];
+  }
+  
+  if (status === 'active') whereCondition.isActive = true;
+  if (status === 'inactive') whereCondition.isActive = false;
+
+  const [users, total] = await Promise.all([
+    db.user.findMany({
+      where: whereCondition,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        fullName: true,
+        isActive: true,
+        createdAt: true,
+        userRoles: {
+          include: {
+            role: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    }),
+    db.user.count({ where: whereCondition })
+  ]);
+  
+  // Format data
+  const formattedUsers = users.map(user => {
+    // Map all roles to an array of strings
+    const roles = user.userRoles.map(ur => ur.role?.name).filter(Boolean);
+    if (roles.length === 0) roles.push('User');
+    
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      fullName: user.fullName,
+      isActive: user.isActive,
+      createdAt: user.createdAt,
+      roles
+    };
   });
 
   return {
     success: true,
-    data: users
+    data: formattedUsers,
+    total,
+    page,
+    pageSize
   };
 });

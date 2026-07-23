@@ -34,3 +34,28 @@
     margin: 0;
   }
 }
+
+.filterSection {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 24px;
+}
+
+.searchInput {
+  width: 320px;
+}
+
+.filterSelect {
+  width: 160px;
+}
+
+.userCell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fwBold {
+  font-weight: 600;
+  color: var(--text-primary);
+}

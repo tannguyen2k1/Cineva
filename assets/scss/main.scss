@@ -12,11 +12,11 @@
   --text-primary: #111827;
   --text-secondary: #6b7280;
   --text-sidebar: #64748b;
-  --text-sidebar-active: #f38b6d;
-  --bg-sidebar-active: #fff1ed;
+  --text-sidebar-active: #3b82f6;
+  --bg-sidebar-active: #eff6ff;
   
-  --primary-color: #f38b6d;
-  --primary-hover: #e57656;
+  --primary-color: #3b82f6;
+  --primary-hover: #2563eb;
   
   --border-color: #e5e7eb;
   --sidebar-border: #e5e7eb;
@@ -25,7 +25,7 @@
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-glow: 0 4px 14px rgba(243, 139, 109, 0.4);
+  --shadow-glow: 0 4px 14px rgba(59, 130, 246, 0.4);
   
   /* Border Radius */
   --radius-sm: 6px;
@@ -44,7 +44,7 @@ html.dark {
   --text-secondary: #9ca3af;
   --text-sidebar: #9ca3af;
   --text-sidebar-active: #ffffff;
-  --bg-sidebar-active: rgba(243, 139, 109, 0.15);
+  --bg-sidebar-active: rgba(59, 130, 246, 0.15);
   
   --border-color: #262626;
   --sidebar-border: #262626;

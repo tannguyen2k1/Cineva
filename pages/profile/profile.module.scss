@@ -1,0 +1,54 @@
+.pageContainer {
+  display: flex;
+  flex-direction: column;
+}
+
+.pageHeader {
+  margin-bottom: 24px;
+}
+
+.premiumCard {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  margin-bottom: 24px;
+}
+
+.textCenter {
+  text-align: center;
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 14px;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .label {
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .value {
+    color: var(--text-primary);
+    font-weight: 600;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.formHint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  line-height: 1.4;
+}

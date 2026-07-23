@@ -55,16 +55,28 @@
           <el-switch
             v-model="isDark"
             inline-prompt
-            style="margin-right: 20px; --el-switch-on-color: #4b5563; --el-switch-off-color: #f38b6d;"
+            style="margin-right: 20px; --el-switch-on-color: #4b5563; --el-switch-off-color: #3b82f6;"
             :active-icon="Moon"
             :inactive-icon="Sunny"
           />
 
-          <div :class="styles.userProfile">
-            <el-avatar size="default" style="background-color: var(--primary-color)">{{ authStore.user?.username?.charAt(0).toUpperCase() }}</el-avatar>
-            <span :class="styles.userName">{{ authStore.user?.fullName || authStore.user?.username }}</span>
-          </div>
-          <el-button plain size="small" @click="handleLogout" style="margin-left: 10px;">Logout</el-button>
+          <el-dropdown trigger="click" @command="handleCommand">
+            <div :class="styles.userProfile">
+              <el-avatar size="default" style="background-color: var(--primary-color)">{{ authStore.user?.username?.charAt(0).toUpperCase() }}</el-avatar>
+              <span :class="styles.userName">{{ authStore.user?.fullName || authStore.user?.username }}</span>
+              <el-icon style="margin-left: 8px;"><ArrowDown /></el-icon>
+            </div>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="profile">
+                  <el-icon><User /></el-icon>Hồ sơ cá nhân
+                </el-dropdown-item>
+                <el-dropdown-item divided command="logout">
+                  <el-icon><SwitchButton /></el-icon>Đăng xuất
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </el-header>
       
@@ -82,7 +94,7 @@
 <script setup lang="ts">
 import { useAuthStore } from '../stores/auth';
 import { useRoute, useRouter } from 'vue-router';
-import { User, Box, House, Document, Sunny, Moon, Odometer } from '@element-plus/icons-vue';
+import { User, Box, House, Document, Sunny, Moon, Odometer, ArrowDown, SwitchButton } from '@element-plus/icons-vue';
 import { useDark } from '@vueuse/core';
 import styles from './default.module.scss'; // Import CSS Module
 
@@ -94,6 +106,14 @@ const isDark = useDark();
 const handleLogout = async () => {
   authStore.logout();
   await router.push('/login');
+};
+
+const handleCommand = (command: string) => {
+  if (command === 'logout') {
+    handleLogout();
+  } else if (command === 'profile') {
+    router.push('/profile');
+  }
 };
 </script>
 
