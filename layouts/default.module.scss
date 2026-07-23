@@ -1,0 +1,133 @@
+.layoutContainer {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: var(--bg-body);
+}
+
+/* SIDEBAR STYLES */
+.aside {
+  background-color: var(--bg-sidebar);
+  border-right: 1px solid var(--sidebar-border);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+}
+
+.logo {
+  padding: 32px 24px;
+  margin-bottom: 10px;
+
+  h3 {
+    margin: 0;
+    color: var(--sidebar-logo);
+    font-size: 24px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+}
+
+.tenantName {
+  margin: 6px 0 0 0;
+  font-size: 13px;
+  color: var(--primary-color);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.menuLabel {
+  padding: 0 28px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 16px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+/* MAIN CONTENT STYLES */
+.mainWrapper {
+  background-color: var(--bg-body);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.header {
+  background-color: var(--bg-card);
+  /* Fixed dark mode */
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  height: 70px;
+  z-index: 5;
+}
+
+.fw500 {
+  font-weight: 500;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+}
+
+.userProfile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: var(--bg-body);
+    /* Fixed dark mode */
+  }
+}
+
+.userName {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.mainContent {
+  padding: 32px;
+  overflow: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+
+  >* {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+}
+
+.footer {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+  background-color: var(--bg-card);
+  border-top: 1px solid var(--border-color);
+  flex-shrink: 0;
+  z-index: 5;
+}

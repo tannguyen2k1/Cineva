@@ -1,0 +1,90 @@
+.dashboardPage {
+  .statCards {
+    margin-bottom: 24px;
+  }
+  
+  .statHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    
+    .icon {
+      font-size: 20px;
+      padding: 8px;
+      border-radius: 8px;
+      
+      &.userIcon { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+      &.revenueIcon { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+      &.tenantIcon { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+      &.errorIcon { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    }
+  }
+
+  .statValue {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 16px 0;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  .statFooter {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .textSuccess { color: #10b981; }
+  .textDanger { color: #ef4444; }
+  .textWarning { color: #f59e0b; }
+
+  .mt4 { margin-top: 24px; }
+  .mt3 { margin-top: 16px; }
+
+  .cardHeader {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+  }
+
+  .statusItem {
+    .statusInfo {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+  }
+}
+
+/* UI Components for this page */
+.premiumCard {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  padding: 24px;
+  transition: box-shadow 0.3s ease;
+
+  &:hover {
+    box-shadow: var(--shadow-md);
+  }
+}
+
+.pageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+
+  h2 {
+    font-size: 24px;
+    letter-spacing: -0.5px;
+    margin: 0;
+  }
+}

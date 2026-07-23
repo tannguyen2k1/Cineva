@@ -1,0 +1,35 @@
+{
+  "name": "template_nuxt",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
+    "@element-plus/nuxt": "^1.1.5",
+    "@pinia/nuxt": "^1.0.1",
+    "@prisma/adapter-pg": "^7.9.0",
+    "@prisma/client": "^7.9.0",
+    "@vueuse/core": "^14.3.0",
+    "@vueuse/nuxt": "^14.3.0",
+    "bcryptjs": "^3.0.3",
+    "element-plus": "^2.14.3",
+    "jose": "^6.2.4",
+    "nuxt": "^4.5.0",
+    "pg": "^8.22.0",
+    "pinia": "^4.0.2",
+    "prisma": "^7.9.0",
+    "vue": "^3.5.40",
+    "vue-router": "^5.2.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/pg": "^8.20.0",
+    "sass": "^1.101.6"
+  }
+}

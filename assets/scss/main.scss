@@ -1,0 +1,162 @@
+/* Import Element Plus Dark Theme */
+@import 'element-plus/theme-chalk/dark/css-vars.css';
+
+/* --- DESIGN SYSTEM VARIABLES --- */
+:root {
+  /* Colors - Light Mode (Default) */
+  --bg-body: #f3f4f6;
+  --bg-card: #ffffff;
+  --bg-sidebar: #ffffff;
+  --sidebar-logo: #0f172a;
+  
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --text-sidebar: #64748b;
+  --text-sidebar-active: #f38b6d;
+  --bg-sidebar-active: #fff1ed;
+  
+  --primary-color: #f38b6d;
+  --primary-hover: #e57656;
+  
+  --border-color: #e5e7eb;
+  --sidebar-border: #e5e7eb;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-glow: 0 4px 14px rgba(243, 139, 109, 0.4);
+  
+  /* Border Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+}
+
+/* Colors - Dark Mode */
+html.dark {
+  --bg-body: #0a0a0a;
+  --bg-card: #141414;
+  --bg-sidebar: #141414;
+  --sidebar-logo: #ffffff;
+  
+  --text-primary: #e5e7eb;
+  --text-secondary: #9ca3af;
+  --text-sidebar: #9ca3af;
+  --text-sidebar-active: #ffffff;
+  --bg-sidebar-active: rgba(243, 139, 109, 0.15);
+  
+  --border-color: #262626;
+  --sidebar-border: #262626;
+  
+  /* Make shadows softer in dark mode */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.5);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5);
+}
+
+/* --- BASE STYLES --- */
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-body);
+  color: var(--text-primary);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* --- ELEMENT PLUS OVERRIDES --- */
+.header {
+  background-color: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  height: 70px;
+  z-index: 5;
+}
+
+.fw-500 {
+  font-weight: 500;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: var(--bg-body);
+  }
+}
+
+/* --- ELEMENT PLUS OVERRIDES --- */
+.el-button--primary {
+  --el-button-bg-color: var(--primary-color) !important;
+  --el-button-border-color: var(--primary-color) !important;
+  --el-button-hover-bg-color: var(--primary-hover) !important;
+  --el-button-hover-border-color: var(--primary-hover) !important;
+}
+
+.el-input__wrapper, .el-select__wrapper {
+  border-radius: var(--radius-sm) !important;
+  box-shadow: 0 0 0 1px var(--border-color) inset !important;
+  
+  &.is-focus, &.is-focused {
+    box-shadow: 0 0 0 1px var(--primary-color) inset !important;
+  }
+}
+
+.premium-table {
+  --el-table-border-color: var(--border-color) !important;
+  --el-table-header-bg-color: var(--bg-body) !important;
+  --el-table-header-text-color: var(--text-secondary) !important;
+  --el-table-text-color: var(--text-primary) !important;
+  --el-table-tr-bg-color: var(--bg-card) !important;
+  --el-table-row-hover-bg-color: var(--bg-body) !important;
+
+  border-radius: var(--radius-md);
+  overflow: hidden;
+
+  th.el-table__cell {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600 !important;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px !important;
+  }
+
+  td.el-table__cell {
+    padding: 16px !important;
+    font-size: 14px;
+  }
+
+  &::before {
+    display: none;
+  }
+}
+
+.el-tag {
+  border-radius: 6px !important;
+  border: none !important;
+  font-weight: 500;
+}

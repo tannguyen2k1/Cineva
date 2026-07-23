@@ -1,0 +1,31 @@
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: nuxt_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: multi_tenant_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nuxt_web
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password123@db:5432/multi_tenant_db?schema=public
+      - JWT_SECRET=super-secret-key-for-prod
+    depends_on:
+      - db
+    restart: unless-stopped
+
+volumes:
+  pgdata:
