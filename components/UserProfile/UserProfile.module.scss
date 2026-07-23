@@ -1,0 +1,17 @@
+.userProfile {
+  display: flex;
+  align-items: center;
+
+  :global(.el-avatar img) {
+    object-fit: cover;
+    object-position: center;
+  }
+}
+
+.userName {
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -1,13 +1,21 @@
 <template>
   <div :class="styles.pageContainer">
-    <div :class="styles.pageHeader">
-      <h2>Quản lý vai trò (Roles)</h2>
-      <el-button type="primary" :icon="Plus">Tạo vai trò mới</el-button>
-    </div>
-
-    <el-alert v-if="error" type="error" :title="error.message || error" show-icon style="margin-bottom: 20px" />
+    <el-alert v-if="error" type="error" :title="error.message || error" show-icon :class="styles.alert" />
 
     <div :class="styles.premiumCard">
+      <div :class="styles.toolbar">
+        <div :class="styles.filterSection">
+          <el-input
+            v-model="searchQuery"
+            placeholder="Tìm kiếm tên vai trò, mô tả..."
+            :prefix-icon="Search"
+            :class="styles.searchInput"
+            clearable
+          />
+        </div>
+        <el-button type="primary" :icon="Plus">Tạo vai trò mới</el-button>
+      </div>
+
       <DataTable 
         :data="apiResponse?.data || []" 
         :total="apiResponse?.total || 0"
@@ -47,7 +55,7 @@
 <script setup lang="ts">
 import styles from './roles.module.scss';
 import { ref, watch, onMounted } from 'vue';
-import { Plus, Edit, Delete, Setting } from '@element-plus/icons-vue';
+import { Plus, Edit, Delete, Setting, Search } from '@element-plus/icons-vue';
 import { useAuthStore } from '~/stores/auth';
 
 const authStore = useAuthStore();

@@ -15,9 +15,21 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter });
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
+/** Models hỗ trợ soft delete (cột deletedAt) */
+const SOFT_DELETE_MODELS = new Set(['User', 'Role', 'Tenant']);
+
+function withSoftDeleteFilter(args: any) {
+  const where = args?.where ?? {};
+  if (where.deletedAt === undefined) {
+    return { ...args, where: { ...where, deletedAt: null } };
+  }
+  return args;
+}
+
 /**
- * Tạo một Prisma Client instance có gắn Extension tự động lọc tenant_id.
- * Hàm này sẽ được gọi ở Middleware hoặc trong API sau khi đã xác định được tenant_id của request.
+ * Tạo Prisma Client gắn tenant_id + ẩn bản ghi soft-deleted.
+ * Lưu ý: update/delete/findUnique dùng WhereUniqueInput — không inject tenant_id
+ * vào where (sẽ phá unique). API cần verify ownership bằng findFirst trước.
  */
 export function getTenantPrisma(tenant_id: string) {
   if (!tenant_id) {
@@ -28,16 +40,24 @@ export function getTenantPrisma(tenant_id: string) {
     query: {
       $allModels: {
         async $allOperations({ model, operation, args, query }) {
-          // Bỏ qua model Tenant vì bảng Tenant không có cột tenant_id (chỉ có id)
-          if (model === 'Tenant') {
-            return query(args);
+          const dynamicArgs = args as any;
+
+          if (
+            SOFT_DELETE_MODELS.has(model) &&
+            ['findFirst', 'findMany', 'count', 'aggregate', 'groupBy'].includes(operation)
+          ) {
+            Object.assign(dynamicArgs, withSoftDeleteFilter(dynamicArgs));
           }
 
-          const dynamicArgs = args as any;
-          // Tự động gài tenant_id vào các câu lệnh điều kiện (where, data)
-          if (['findUnique', 'findFirst', 'findMany', 'count', 'update', 'updateMany', 'delete', 'deleteMany'].includes(operation)) {
+          if (model === 'Tenant') {
+            return query(dynamicArgs);
+          }
+
+          // where không-unique: an toàn khi thêm tenant_id
+          if (['findFirst', 'findMany', 'count', 'updateMany', 'deleteMany'].includes(operation)) {
             dynamicArgs.where = { ...dynamicArgs.where, tenant_id };
           }
+
           if (['create', 'createMany'].includes(operation)) {
             if (Array.isArray(dynamicArgs.data)) {
               dynamicArgs.data = dynamicArgs.data.map((d: any) => ({ ...d, tenant_id }));

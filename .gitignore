@@ -23,4 +23,7 @@ logs
 .env.*
 !.env.example
 
+# User uploads
+/public/uploads/
+
 /app/generated/prisma

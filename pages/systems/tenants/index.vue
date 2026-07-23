@@ -1,13 +1,25 @@
 <template>
   <div :class="styles.pageContainer">
-    <div :class="styles.pageHeader">
-      <h2>Quản lý Tenant (Không gian làm việc)</h2>
-      <el-button type="primary" :icon="Plus">Tạo Tenant mới</el-button>
-    </div>
-
-    <el-alert v-if="error" type="error" :title="error.message || error" show-icon style="margin-bottom: 20px" />
+    <el-alert v-if="error" type="error" :title="error.message || error" show-icon :class="styles.alert" />
 
     <div :class="styles.premiumCard">
+      <div :class="styles.toolbar">
+        <div :class="styles.filterSection">
+          <el-input
+            v-model="searchQuery"
+            placeholder="Tìm kiếm tên tenant, domain..."
+            :prefix-icon="Search"
+            :class="styles.searchInput"
+            clearable
+          />
+          <el-select v-model="statusFilter" placeholder="Trạng thái" :class="styles.filterSelect" clearable>
+            <el-option label="Hoạt động" value="active" />
+            <el-option label="Bị khóa" value="inactive" />
+          </el-select>
+        </div>
+        <el-button type="primary" :icon="Plus">Tạo Tenant mới</el-button>
+      </div>
+
       <DataTable 
         :data="apiResponse?.data || []" 
         :total="apiResponse?.total || 0"
@@ -58,13 +70,14 @@
 <script setup lang="ts">
 import styles from './tenants.module.scss';
 import { ref, watch, onMounted } from 'vue';
-import { Plus, Edit, Delete } from '@element-plus/icons-vue';
+import { Plus, Edit, Delete, Search } from '@element-plus/icons-vue';
 import { useAuthStore } from '~/stores/auth';
 
 const authStore = useAuthStore();
 const currentPage = ref(1);
 const pageSize = ref(10);
 const searchQuery = ref('');
+const statusFilter = ref('');
 
 const apiResponse = ref<any>(null);
 const pending = ref(false);
@@ -79,6 +92,7 @@ const fetchData = async () => {
       pageSize: pageSize.value,
     };
     if (searchQuery.value) params.search = searchQuery.value;
+    if (statusFilter.value) params.status = statusFilter.value;
     
     const headers: any = {};
     if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`;
@@ -95,6 +109,6 @@ const fetchData = async () => {
 };
 
 onMounted(() => fetchData());
-watch([currentPage, pageSize, searchQuery], () => fetchData());
+watch([currentPage, pageSize, searchQuery, statusFilter], () => fetchData());
 
 </script>

@@ -1,0 +1,224 @@
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes meshDrift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(3%, -2%) scale(1.04);
+  }
+}
+
+.page {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  min-height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  background: var(--bg-body);
+}
+
+/* --- BRAND PANEL --- */
+.brand {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 56px 64px;
+  color: #f8fafc;
+  overflow: hidden;
+  background: linear-gradient(155deg, #0b1220 0%, #0f172a 42%, #132337 100%);
+  animation: fadeSlideIn 0.7s ease-out both;
+}
+
+.brandMesh {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(ellipse 50% 40% at 20% 30%, rgba(59, 130, 246, 0.35), transparent 55%),
+    radial-gradient(ellipse 45% 35% at 80% 70%, rgba(14, 165, 233, 0.2), transparent 50%),
+    radial-gradient(ellipse 30% 25% at 60% 20%, rgba(59, 130, 246, 0.12), transparent 45%);
+  animation: meshDrift 14s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.brandGrid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.07) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent 75%);
+  pointer-events: none;
+}
+
+.brandContent {
+  position: relative;
+  z-index: 1;
+  max-width: 440px;
+}
+
+.brandName {
+  margin: 0 0 16px;
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(2.75rem, 5vw, 3.75rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: #ffffff;
+}
+
+.brandTagline {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  font-size: 1.125rem;
+  font-weight: 400;
+  line-height: 1.55;
+  color: rgba(226, 232, 240, 0.78);
+  max-width: 28ch;
+}
+
+/* --- FORM PANEL --- */
+.formPanel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 40px;
+  background: var(--bg-card);
+  animation: fadeSlideIn 0.7s ease-out 0.12s both;
+}
+
+.formInner {
+  width: 100%;
+  max-width: 380px;
+}
+
+.formHeader {
+  margin-bottom: 36px;
+}
+
+.formTitle {
+  margin: 0 0 8px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.formSubtitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.form {
+  :global(.el-form-item) {
+    margin-bottom: 22px;
+  }
+
+  :global(.el-form-item__label) {
+    font-weight: 500;
+    color: var(--text-primary);
+    padding-bottom: 6px;
+  }
+
+  :global(.el-input__wrapper) {
+    min-height: 44px;
+    padding: 4px 14px;
+  }
+}
+
+.submitItem {
+  margin-top: 8px;
+  margin-bottom: 0 !important;
+}
+
+.submitBtn {
+  width: 100%;
+  height: 48px !important;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  border-radius: var(--radius-md) !important;
+  letter-spacing: 0.02em;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease !important;
+  box-shadow: var(--shadow-glow);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.45);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+}
+
+.formFooter {
+  margin-top: 28px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* --- RESPONSIVE --- */
+@media (max-width: 900px) {
+  .page {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .brand {
+    min-height: 220px;
+    padding: 40px 32px 36px;
+    justify-content: flex-end;
+  }
+
+  .brandName {
+    font-size: 2.25rem;
+    margin-bottom: 10px;
+  }
+
+  .brandTagline {
+    font-size: 1rem;
+  }
+
+  .formPanel {
+    padding: 40px 28px 48px;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand {
+    min-height: 180px;
+    padding: 32px 24px 28px;
+  }
+
+  .brandName {
+    font-size: 1.875rem;
+  }
+
+  .formPanel {
+    padding: 32px 20px 40px;
+  }
+
+  .formTitle {
+    font-size: 1.5rem;
+  }
+}

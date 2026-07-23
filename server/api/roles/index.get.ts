@@ -34,7 +34,11 @@ export default defineEventHandler(async (event) => {
         description: true,
         createdAt: true,
         _count: {
-          select: { userRoles: true }
+          select: {
+            userRoles: {
+              where: { user: { deletedAt: null } }
+            }
+          }
         }
       },
       orderBy: { createdAt: 'desc' }

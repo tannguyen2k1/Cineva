@@ -985,6 +985,7 @@ export const TenantScalarFieldEnum = {
   name: 'name',
   domain: 'domain',
   isActive: 'isActive',
+  deletedAt: 'deletedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -1000,6 +1001,7 @@ export const UserScalarFieldEnum = {
   fullName: 'fullName',
   avatar: 'avatar',
   isActive: 'isActive',
+  deletedAt: 'deletedAt',
   tenant_id: 'tenant_id',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -1012,6 +1014,7 @@ export const RoleScalarFieldEnum = {
   id: 'id',
   name: 'name',
   description: 'description',
+  deletedAt: 'deletedAt',
   tenant_id: 'tenant_id',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'

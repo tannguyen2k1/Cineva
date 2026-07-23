@@ -51,10 +51,13 @@ export default defineEventHandler(async (event) => {
     db.user.count({ where: whereCondition })
   ]);
 
-  // Format data
   const formattedUsers = users.map(user => {
-    // Map all roles to an array of strings
-    const roles = user.userRoles.map(ur => ur.role?.name).filter(Boolean);
+    const roleIds = user.userRoles
+      .map(ur => ur.role?.id)
+      .filter(Boolean) as string[];
+    const roles = user.userRoles
+      .map(ur => ur.role?.name)
+      .filter(Boolean) as string[];
     if (roles.length === 0) roles.push('User');
 
     return {
@@ -65,7 +68,8 @@ export default defineEventHandler(async (event) => {
       avatar: user.avatar,
       isActive: user.isActive,
       createdAt: user.createdAt,
-      roles
+      roles,
+      roleIds
     };
   });
 

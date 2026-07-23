@@ -9,7 +9,9 @@ export default defineEventHandler(async (event) => {
   const search = query.search as string;
   const status = query.status as string;
 
-  const whereCondition: any = {};
+  const whereCondition: any = {
+    deletedAt: null
+  };
   
   if (search) {
     whereCondition.OR = [
@@ -33,7 +35,9 @@ export default defineEventHandler(async (event) => {
         isActive: true,
         createdAt: true,
         _count: {
-          select: { users: true }
+          select: {
+            users: { where: { deletedAt: null } }
+          }
         }
       },
       orderBy: { createdAt: 'desc' }

@@ -14,16 +14,16 @@ export default defineEventHandler(async (event) => {
 
   // Tìm Tenant theo name (người dùng nhập tên workspace thay vì UUID)
   const tenant = await prisma.tenant.findFirst({
-    where: { name: tenant_id } // frontend gửi tenant_id nhưng thực chất là name
+    where: { name: tenant_id, deletedAt: null } // frontend gửi tenant_id nhưng thực chất là name
   });
 
   if (!tenant) {
     throw createError({ statusCode: 404, statusMessage: 'Không tìm thấy Workspace này' });
   }
 
-  // Lấy user theo tenant_id thực tế và kèm theo quyền
+  // Lấy user theo tenant_id thực tế và kèm theo quyền (bỏ qua soft-deleted)
   const user = await prisma.user.findFirst({
-    where: { username, tenant_id: tenant.id },
+    where: { username, tenant_id: tenant.id, deletedAt: null },
     include: {
       userRoles: {
         include: {
@@ -43,6 +43,10 @@ export default defineEventHandler(async (event) => {
 
   if (!user) {
     throw createError({ statusCode: 401, statusMessage: 'Sai username hoặc mật khẩu' });
+  }
+
+  if (!user.isActive) {
+    throw createError({ statusCode: 403, statusMessage: 'Tài khoản đã bị khóa' });
   }
 
   // Kiểm tra password

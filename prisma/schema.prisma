@@ -11,13 +11,14 @@ datasource db {
 }
 
 model Tenant {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   name        String
-  domain      String?  @unique
-  isActive    Boolean  @default(true)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  domain      String?   @unique
+  isActive    Boolean   @default(true)
+  deletedAt   DateTime?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   users       User[]
   roles       Role[]
@@ -25,50 +26,55 @@ model Tenant {
   systemLogs  SystemLog[]
 
   @@index([isActive])
+  @@index([deletedAt])
 }
 
 model User {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   username    String
   email       String?
   password    String
   fullName    String?
   avatar      String?
-  isActive    Boolean  @default(true)
-  
+  isActive    Boolean   @default(true)
+  deletedAt   DateTime?
+
   // Base fields
   tenant_id   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // Relations
   tenant      Tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   userRoles   UserRole[]
   systemLogs  SystemLog[]
 
-  // Indexes for multi-tenant and fast lookup
-  @@unique([tenant_id, username])
+  // Unique active username enforced in app (soft-delete friendly)
   @@index([tenant_id])
+  @@index([tenant_id, username])
   @@index([tenant_id, isActive])
+  @@index([tenant_id, deletedAt])
 }
 
 model Role {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   name        String
   description String?
-  
+  deletedAt   DateTime?
+
   // Base fields
   tenant_id   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // Relations
   tenant      Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   userRoles   UserRole[]
   rolePerms   RolePermission[]
 
-  @@unique([tenant_id, name]) // Tên role không được trùng trong 1 Tenant
   @@index([tenant_id])
+  @@index([tenant_id, name])
+  @@index([tenant_id, deletedAt])
 }
 
 model Permission {

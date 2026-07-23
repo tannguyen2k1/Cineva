@@ -43,7 +43,7 @@ export default defineEventHandler(async (event) => {
       }
     });
 
-    if (!user) {
+    if (!user || user.deletedAt) {
       throw createError({ statusCode: 401, statusMessage: 'User not found' });
     }
 

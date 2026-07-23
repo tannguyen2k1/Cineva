@@ -1,93 +1,130 @@
 <template>
-  <div :class="styles.pageContainer">
-    <div :class="styles.pageHeader">
-      <h2>Hồ sơ cá nhân</h2>
-    </div>
-
-    <el-row :gutter="20">
-      <!-- Cột thông tin tĩnh -->
-      <el-col :span="8">
-        <div :class="[styles.premiumCard, styles.textCenter]">
-          <div style="position: relative; width: 100px; margin: 0 auto;">
-            <el-upload
-              action="#"
-              :show-file-list="false"
-              :auto-upload="false"
-              :on-change="handleAvatarChange"
-              accept="image/*"
-            >
-              <el-avatar v-if="authStore.user?.avatar" :size="100" :src="authStore.user?.avatar" style="cursor: pointer;" />
-              <el-avatar v-else :size="100" style="background-color: var(--primary-color); font-size: 36px; cursor: pointer;">
+  <div :class="styles.page">
+    <div :class="styles.content">
+      <section :class="styles.card">
+        <div :class="styles.profileHeader">
+          <el-upload
+            action="#"
+            :show-file-list="false"
+            :auto-upload="false"
+            :on-change="onPickAvatar"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            :disabled="avatarLoading"
+            :class="styles.avatarUpload"
+          >
+            <div :class="styles.avatarHit">
+              <el-avatar
+                v-if="authStore.user?.avatar"
+                :key="authStore.user.avatar"
+                :size="96"
+                :src="authStore.user.avatar"
+              />
+              <el-avatar v-else :size="96" :class="styles.avatarFallback">
                 {{ authStore.user?.username?.charAt(0).toUpperCase() }}
               </el-avatar>
-              
-              <div style="position: absolute; bottom: 0; right: 0; background: var(--bg-card); border-radius: 50%; padding: 6px; box-shadow: var(--shadow-sm); cursor: pointer; border: 1px solid var(--border-color); display: flex;">
-                <el-icon><Camera /></el-icon>
+              <div :class="styles.avatarOverlay">
+                <el-icon v-if="!avatarLoading"><Camera /></el-icon>
+                <el-icon v-else class="is-loading"><Loading /></el-icon>
               </div>
-            </el-upload>
-          </div>
-          <h3 style="margin-top: 16px; margin-bottom: 8px;">{{ authStore.user?.fullName || authStore.user?.username }}</h3>
-          <p style="color: var(--text-secondary); margin-bottom: 24px;">@{{ authStore.user?.username }}</p>
-          
-          <el-divider />
-          
-          <div :class="styles.infoRow">
-            <span :class="styles.label">ID Người dùng:</span>
-            <span :class="styles.value">{{ authStore.user?.id || '...' }}</span>
-          </div>
-          <div :class="styles.infoRow">
-            <span :class="styles.label">Tenant ID:</span>
-            <span :class="styles.value">{{ authStore.tenant_id }}</span>
-          </div>
+            </div>
+          </el-upload>
+
+          <h2 :class="styles.name">
+            {{ authStore.user?.fullName || authStore.user?.username }}
+          </h2>
+          <p :class="styles.handle">@{{ authStore.user?.username }}</p>
+          <p v-if="form.email" :class="styles.email">{{ form.email }}</p>
         </div>
-      </el-col>
+      </section>
 
-      <!-- Cột Form chỉnh sửa -->
-      <el-col :span="16">
-        <div :class="styles.premiumCard">
-          <h3 style="margin-top: 0; margin-bottom: 24px;">Cập nhật thông tin</h3>
-          
-          <el-alert v-if="successMessage" type="success" :title="successMessage" show-icon style="margin-bottom: 20px" />
-          <el-alert v-if="errorMessage" type="error" :title="errorMessage" show-icon style="margin-bottom: 20px" />
+      <el-alert
+        v-if="successMessage"
+        type="success"
+        :title="successMessage"
+        show-icon
+        closable
+        :class="styles.alert"
+        @close="successMessage = ''"
+      />
+      <el-alert
+        v-if="errorMessage"
+        type="error"
+        :title="errorMessage"
+        show-icon
+        closable
+        :class="styles.alert"
+        @close="errorMessage = ''"
+      />
 
-          <el-form 
-            ref="formRef" 
-            :model="form" 
-            :rules="rules" 
-            label-position="top"
-          >
-            <el-form-item label="Tên đăng nhập (Username)">
+      <el-form
+        ref="formRef"
+        :model="form"
+        :rules="rules"
+        label-position="top"
+        @submit.prevent
+      >
+        <section :class="styles.card">
+          <header :class="styles.cardHead">
+            <h3 :class="styles.cardTitle">Thông tin cá nhân</h3>
+            <p :class="styles.cardDesc">Cập nhật tên và email của bạn.</p>
+          </header>
+
+          <div :class="styles.cardBody">
+            <el-form-item label="Tên đăng nhập" :class="styles.fullWidth">
               <el-input :model-value="authStore.user?.username" disabled />
-              <div :class="styles.formHint">Tên đăng nhập không thể thay đổi.</div>
             </el-form-item>
 
-            <el-form-item label="Họ và Tên (Full Name)" prop="fullName">
-              <el-input v-model="form.fullName" placeholder="Nhập họ và tên..." />
+            <el-form-item label="Họ và tên" prop="fullName">
+              <el-input v-model="form.fullName" placeholder="Nguyễn Văn A" />
             </el-form-item>
 
-            <el-form-item label="Địa chỉ Email" prop="email">
-              <el-input v-model="form.email" placeholder="Nhập email..." />
+            <el-form-item label="Email" prop="email">
+              <el-input v-model="form.email" placeholder="ban@congty.com" />
             </el-form-item>
-            
-            <el-divider />
-            
-            <h4 style="margin-top: 0; margin-bottom: 16px;">Đổi mật khẩu (Tùy chọn)</h4>
-            
+          </div>
+
+          <div :class="styles.sectionDivider">
+            <h3 :class="styles.cardTitle">Đổi mật khẩu</h3>
+            <p :class="styles.cardDesc">Để trống nếu không muốn thay đổi.</p>
+          </div>
+
+          <div :class="styles.cardBody">
             <el-form-item label="Mật khẩu mới" prop="password">
-              <el-input v-model="form.password" type="password" placeholder="Bỏ trống nếu không đổi..." show-password />
+              <el-input
+                v-model="form.password"
+                type="password"
+                placeholder="••••••••"
+                show-password
+                autocomplete="new-password"
+              />
             </el-form-item>
 
-            <el-form-item label="Xác nhận mật khẩu mới" prop="confirmPassword">
-              <el-input v-model="form.confirmPassword" type="password" placeholder="Nhập lại mật khẩu mới..." show-password />
+            <el-form-item label="Xác nhận mật khẩu" prop="confirmPassword">
+              <el-input
+                v-model="form.confirmPassword"
+                type="password"
+                placeholder="••••••••"
+                show-password
+                autocomplete="new-password"
+              />
             </el-form-item>
+          </div>
 
-            <el-form-item style="margin-top: 30px;">
-              <el-button type="primary" @click="handleUpdate" :loading="loading">Lưu thay đổi</el-button>
-            </el-form-item>
-          </el-form>
-        </div>
-      </el-col>
-    </el-row>
+          <footer :class="styles.cardFoot">
+            <span :class="styles.footHint">Lưu toàn bộ thay đổi hồ sơ</span>
+            <el-button type="primary" :loading="loading" @click="handleUpdate">
+              Lưu thay đổi
+            </el-button>
+          </footer>
+        </section>
+      </el-form>
+    </div>
+
+    <AvatarCropDialog
+      v-model="cropOpen"
+      :file="cropFile"
+      @confirm="uploadCroppedAvatar"
+    />
   </div>
 </template>
 
@@ -95,15 +132,21 @@
 import styles from './profile.module.scss';
 import { ref, reactive, onMounted } from 'vue';
 import { useAuthStore } from '~/stores/auth';
-import { Camera } from '@element-plus/icons-vue';
+import { Camera, Loading } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';
+import { withCacheBust } from '~/utils/avatar';
+import AvatarCropDialog from '~/components/AvatarCropDialog/index.vue';
 
 const authStore = useAuthStore();
 const formRef = ref<FormInstance>();
 const loading = ref(false);
+const avatarLoading = ref(false);
 const successMessage = ref('');
 const errorMessage = ref('');
+
+const cropOpen = ref(false);
+const cropFile = ref<File | null>(null);
 
 const form = reactive({
   fullName: '',
@@ -112,57 +155,63 @@ const form = reactive({
   confirmPassword: ''
 });
 
-// Load current user data into form
 onMounted(async () => {
-  // Lấy thông tin mới nhất từ API me
   try {
     const headers: any = {};
     if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`;
-    
+
     const { data } = await $fetch<any>('/api/auth/me', { headers });
     if (data) {
       form.fullName = data.user.fullName || '';
       form.email = data.user.email || '';
     }
-  } catch (e) {
-    // Fallback to store
+  } catch {
     form.fullName = authStore.user?.fullName || '';
     form.email = authStore.user?.email || '';
   }
 });
 
-const validatePass2 = (rule: any, value: any, callback: any) => {
-  if (value !== form.password) {
+const validatePass2 = (_rule: any, value: any, callback: any) => {
+  if (form.password && value !== form.password) {
     callback(new Error('Mật khẩu xác nhận không khớp!'));
   } else {
     callback();
   }
 };
 
-const handleAvatarChange = async (uploadFile: any) => {
-  if (!uploadFile || !uploadFile.raw) return;
-  
-  const formData = new FormData();
-  formData.append('file', uploadFile.raw);
+const onPickAvatar = (uploadFile: any) => {
+  if (!uploadFile?.raw) return;
+  cropFile.value = uploadFile.raw as File;
+  cropOpen.value = true;
+};
 
+const uploadCroppedAvatar = async (file: File) => {
+  avatarLoading.value = true;
   try {
-    const headers: any = {};
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers: Record<string, string> = {};
     if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`;
-    
+    if (authStore.tenant_id) headers['x-tenant-id'] = authStore.tenant_id;
+
     const res = await $fetch<any>('/api/users/avatar', {
       method: 'POST',
       headers,
       body: formData
     });
-    
+
     if (res.success && res.data.avatar) {
       if (authStore.user) {
-        authStore.user.avatar = res.data.avatar;
+        authStore.user.avatar = withCacheBust(res.data.avatar);
       }
       ElMessage.success('Cập nhật ảnh đại diện thành công');
     }
   } catch (error: any) {
-    ElMessage.error(error.data?.statusMessage || 'Lỗi tải ảnh');
+    ElMessage.error(error.data?.statusMessage || error.message || 'Lỗi tải ảnh');
+  } finally {
+    avatarLoading.value = false;
+    cropFile.value = null;
   }
 };
 
@@ -182,16 +231,16 @@ const handleUpdate = async () => {
       loading.value = true;
       successMessage.value = '';
       errorMessage.value = '';
-      
+
       try {
         const headers: any = {};
         if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`;
-        
+
         const payload: any = {
           fullName: form.fullName,
           email: form.email
         };
-        
+
         if (form.password) {
           payload.password = form.password;
         }
@@ -205,13 +254,11 @@ const handleUpdate = async () => {
         successMessage.value = 'Cập nhật hồ sơ thành công!';
         form.password = '';
         form.confirmPassword = '';
-        
-        // Cập nhật lại Auth Store
-        if (res.data && authStore.user) {
-           authStore.user.fullName = res.data.fullName;
-           authStore.user.email = res.data.email;
-        }
 
+        if (res.data && authStore.user) {
+          authStore.user.fullName = res.data.fullName;
+          authStore.user.email = res.data.email;
+        }
       } catch (err: any) {
         errorMessage.value = err.data?.statusMessage || err.message || 'Lỗi khi cập nhật hồ sơ';
       } finally {

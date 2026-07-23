@@ -24,5 +24,11 @@ export default defineNuxtConfig({
   ],
   elementPlus: {
     // Config cho Element Plus nếu cần
+  },
+
+  nitro: {
+    experimental: {
+      websocket: true
+    }
   }
 })
