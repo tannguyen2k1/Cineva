@@ -108,8 +108,16 @@
   margin-bottom: 36px;
 }
 
+.formHeaderTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
 .formTitle {
-  margin: 0 0 8px;
+  margin: 0;
   font-family: 'Outfit', sans-serif;
   font-size: 1.75rem;
   font-weight: 600;

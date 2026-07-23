@@ -54,3 +54,15 @@
 - List / count / auth must ignore soft-deleted rows (`deletedAt: null`). `getTenantPrisma` already filters this on read for soft-delete models; raw `prisma` queries (login, `me`, …) must also use `deletedAt: null`.
 - Business uniqueness (username, role name, …) is checked among **non-deleted** rows in the API. Avoid DB `@@unique` alone if soft-deleted rows would block reusing the same key.
 - New soft-deletable models: add `deletedAt DateTime?` + index; relation `_count` for “active” totals should filter `deletedAt: null`.
+
+## 9. Internationalization / i18n (CRITICAL)
+- Stack: `@nuxtjs/i18n` (configured in `nuxt.config.ts`). Default locale: `vi`. Strategy: `no_prefix`.
+- Locale files live under `i18n/locales/` (`vi.json`, `en.json`). Keep both files in sync — every new key must exist in **vi and en**.
+- **Never** hardcode user-facing UI copy (labels, placeholders, buttons, toasts, confirm dialogs, empty states, page titles, validation messages) in Vietnamese or English. Use `t('...')` / `$t('...')` via `useI18n()`.
+- Key naming: group by feature (`login.*`, `users.*`, `roles.*`, `tenants.*`, `logs.*`, `dashboard.*`, `nav.*`, `pages.*`, `header.*`, `common.*`, `lang.*`, `app.*`). Prefer reusing `common.*` for shared actions (cancel, save, delete, status, …).
+- Dynamic text: use interpolation, e.g. `t('users.deleteConfirm', { name })`, not string concatenation.
+- Form rules / `ElMessage` / `ElMessageBox`: messages must come from `t()` (usually inside `computed` so they update on locale change).
+- Element Plus locale must stay in sync with i18n locale (`el-config-provider` in `app.vue` — `vi` / `en` from `element-plus/es/locale/lang/...`).
+- Language switcher belongs in the app shell (layout header) and on layout-less pages that need it (e.g. login). Persist via i18n cookie (`detectBrowserLanguage`).
+- Server/API `statusMessage` strings may stay as-is for now; UI should still prefer a client-side `t()` fallback when showing errors.
+- When adding a new page or feature UI: add keys first, then wire `t()` — do not ship untranslated strings.

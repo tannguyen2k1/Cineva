@@ -1,69 +1,17 @@
 <template>
   <div :class="styles.dashboardPage">
     <el-row :gutter="16" :class="styles.statCards">
-      <el-col :span="6">
-        <el-card :class="[styles.premiumCard, styles.statCard]" shadow="never">
-          <div :class="styles.statHeader">
-            <span class="title">Người dùng</span>
-            <el-icon :class="[styles.icon, styles.userIcon]"><User /></el-icon>
-          </div>
-          <div :class="styles.statValue">
-            <el-skeleton v-if="pending" animated :rows="1" />
-            <span v-else>{{ statsData?.stats.users || 0 }}</span>
-          </div>
-          <div :class="[styles.statFooter, styles.textSuccess]">
-            <el-icon><TopRight /></el-icon>
-            <span>+12% so với tháng trước</span>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card :class="[styles.premiumCard, styles.statCard]" shadow="never">
-          <div :class="styles.statHeader">
-            <span class="title">Vai trò (Roles)</span>
-            <el-icon :class="[styles.icon, styles.revenueIcon]"><Key /></el-icon>
-          </div>
-          <div :class="styles.statValue">
-            <el-skeleton v-if="pending" animated :rows="1" />
-            <span v-else>{{ statsData?.stats.roles || 0 }}</span>
-          </div>
-          <div :class="[styles.statFooter, styles.textSuccess]">
-            <el-icon><TopRight /></el-icon>
-            <span>+8% so với tháng trước</span>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card :class="[styles.premiumCard, styles.statCard]" shadow="never">
-          <div :class="styles.statHeader">
-            <span class="title">Tenants</span>
-            <el-icon :class="[styles.icon, styles.tenantIcon]"><House /></el-icon>
-          </div>
-          <div :class="styles.statValue">
-            <el-skeleton v-if="pending" animated :rows="1" />
-            <span v-else>{{ statsData?.stats.tenants || 0 }}</span>
-          </div>
-          <div :class="[styles.statFooter, styles.textWarning]">
-            <el-icon><Right /></el-icon>
-            <span>Không thay đổi</span>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card :class="[styles.premiumCard, styles.statCard]" shadow="never">
-          <div :class="styles.statHeader">
-            <span class="title">Nhật ký (Logs)</span>
-            <el-icon :class="[styles.icon, styles.errorIcon]"><Document /></el-icon>
-          </div>
-          <div :class="styles.statValue">
-            <el-skeleton v-if="pending" animated :rows="1" />
-            <span v-else>{{ statsData?.stats.logs || 0 }}</span>
-          </div>
-          <div :class="[styles.statFooter, styles.textDanger]">
-            <el-icon><BottomRight /></el-icon>
-            <span>-2% so với tuần trước</span>
-          </div>
-        </el-card>
+      <el-col v-for="card in statCards" :key="card.key" :span="6">
+        <StatCard
+          :title="card.title"
+          :value="card.value"
+          :loading="pending"
+          :icon="card.icon"
+          :icon-tone="card.iconTone"
+          :trend-text="card.trendText"
+          :trend-tone="card.trendTone"
+          :trend-icon="card.trendIcon"
+        />
       </el-col>
     </el-row>
 
@@ -71,7 +19,7 @@
       <el-card :class="[styles.premiumCard, styles.fillCard]" shadow="never">
         <template #header>
           <div :class="styles.cardHeader">
-            <span>Hoạt động gần đây</span>
+            <span>{{ t('dashboard.recentActivity') }}</span>
           </div>
         </template>
         <el-skeleton v-if="pending" animated :rows="4" />
@@ -91,62 +39,20 @@
             </el-timeline-item>
           </el-timeline>
         </div>
-        <el-empty v-else description="Chưa có hoạt động nào" :image-size="72" />
+        <el-empty v-else :description="t('dashboard.noActivity')" :image-size="72" />
       </el-card>
 
       <div :class="styles.sideCol">
-        <el-card :class="[styles.premiumCard, styles.sideCard]" shadow="never">
-          <template #header>
-            <div :class="styles.cardHeader">
-              <span>Trạng thái máy chủ</span>
-              <span :class="[styles.liveBadge, wsConnected ? styles.liveOn : styles.liveOff]">
-                {{ wsConnected ? 'LIVE' : 'OFF' }}
-              </span>
-            </div>
-          </template>
-          <el-skeleton v-if="pending" animated :rows="4" />
-          <div v-else>
-            <div :class="styles.statusItem">
-              <div :class="styles.statusInfo">
-                <span>CPU</span>
-                <span>{{ statsData?.server.cpu }}% · {{ statsData?.server.cpuCores || 0 }} nhân</span>
-              </div>
-              <el-progress
-                :percentage="statsData?.server.cpu || 0"
-                :status="getUsageStatus(statsData?.server.cpu)"
-              />
-            </div>
-            <div :class="[styles.statusItem, styles.mt3]">
-              <div :class="styles.statusInfo">
-                <span>RAM</span>
-                <span>
-                  {{ formatBytes(statsData?.server.ramUsed) }} / {{ formatBytes(statsData?.server.ramTotal) }}
-                </span>
-              </div>
-              <el-progress
-                :percentage="statsData?.server.ram || 0"
-                :status="getUsageStatus(statsData?.server.ram)"
-              />
-            </div>
-            <div :class="[styles.statusItem, styles.mt3]">
-              <div :class="styles.statusInfo">
-                <span>Disk</span>
-                <span>
-                  {{ formatBytes(statsData?.server.diskUsed) }} / {{ formatBytes(statsData?.server.diskTotal) }}
-                </span>
-              </div>
-              <el-progress
-                :percentage="statsData?.server.disk || 0"
-                :status="getUsageStatus(statsData?.server.disk)"
-              />
-            </div>
-          </div>
-        </el-card>
+        <ServerStatusCard
+          :loading="pending"
+          :connected="wsConnected"
+          :server="statsData?.server"
+        />
 
         <el-card :class="[styles.premiumCard, styles.membersCard]" shadow="never">
           <template #header>
             <div :class="styles.cardHeader">
-              <span>Thành viên mới</span>
+              <span>{{ t('dashboard.recentUsers') }}</span>
             </div>
           </template>
           <el-skeleton v-if="pending" animated :rows="3" />
@@ -164,11 +70,11 @@
                 :gap="12"
               />
               <span :class="styles.memberDate">
-                {{ new Date(u.createdAt).toLocaleDateString('vi-VN') }}
+                {{ new Date(u.createdAt).toLocaleDateString(dateLocale) }}
               </span>
             </div>
           </div>
-          <el-empty v-else description="Chưa có thành viên" :image-size="60" />
+          <el-empty v-else :description="t('dashboard.noActivity')" :image-size="60" />
         </el-card>
       </div>
     </div>
@@ -181,10 +87,62 @@ import styles from './dashboard.module.scss';
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useWebSocket } from '@vueuse/core';
 import { useAuthStore } from '~/stores/auth';
+import type { Component } from 'vue';
 
+const { t, locale } = useI18n();
 const authStore = useAuthStore();
 const statsData = ref<any>(null);
 const pending = ref(false);
+const dateLocale = computed(() => (locale.value === 'en' ? 'en-US' : 'vi-VN'));
+
+type IconTone = 'Blue' | 'Green' | 'Amber' | 'Red';
+type TrendTone = 'Success' | 'Warning' | 'Danger';
+
+const statCards = computed(() => {
+  const stats = statsData.value?.stats;
+  return [
+    {
+      key: 'users',
+      title: t('dashboard.users'),
+      value: stats?.users || 0,
+      icon: User,
+      iconTone: 'Blue' as IconTone,
+      trendText: `+12% ${t('dashboard.vsLastMonth')}`,
+      trendTone: 'Success' as TrendTone,
+      trendIcon: TopRight as Component
+    },
+    {
+      key: 'roles',
+      title: t('dashboard.roles'),
+      value: stats?.roles || 0,
+      icon: Key,
+      iconTone: 'Green' as IconTone,
+      trendText: `+8% ${t('dashboard.vsLastMonth')}`,
+      trendTone: 'Success' as TrendTone,
+      trendIcon: TopRight as Component
+    },
+    {
+      key: 'tenants',
+      title: t('dashboard.tenants'),
+      value: stats?.tenants || 0,
+      icon: House,
+      iconTone: 'Amber' as IconTone,
+      trendText: t('dashboard.noChange'),
+      trendTone: 'Warning' as TrendTone,
+      trendIcon: Right as Component
+    },
+    {
+      key: 'logs',
+      title: t('dashboard.logs'),
+      value: stats?.logs || 0,
+      icon: Document,
+      iconTone: 'Red' as IconTone,
+      trendText: `-2% ${t('dashboard.vsLastWeek')}`,
+      trendTone: 'Danger' as TrendTone,
+      trendIcon: BottomRight as Component
+    }
+  ];
+});
 
 const wsUrl = computed(() => {
   if (!import.meta.client) return undefined;
@@ -233,24 +191,9 @@ const fetchStats = async () => {
   }
 };
 
-const formatBytes = (bytes: number = 0) => {
-  if (!bytes || bytes < 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  const value = bytes / Math.pow(1024, i);
-  const digits = value >= 100 || i === 0 ? 0 : value >= 10 ? 1 : 2;
-  return `${value.toFixed(digits)} ${units[i]}`;
-};
-
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
-  return date.toLocaleString('vi-VN');
-};
-
-const getUsageStatus = (percentage: number = 0) => {
-  if (percentage >= 90) return 'exception';
-  if (percentage >= 75) return 'warning';
-  return 'success';
+  return date.toLocaleString(locale.value === 'en' ? 'en-US' : 'vi-VN');
 };
 
 onMounted(async () => {

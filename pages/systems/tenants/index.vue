@@ -7,17 +7,17 @@
         <div :class="styles.filterSection">
           <el-input
             v-model="searchQuery"
-            placeholder="Tìm kiếm tên tenant, domain..."
+            :placeholder="t('tenants.searchPlaceholder')"
             :prefix-icon="Search"
             :class="styles.searchInput"
             clearable
           />
-          <el-select v-model="statusFilter" placeholder="Trạng thái" :class="styles.filterSelect" clearable>
-            <el-option label="Hoạt động" value="active" />
-            <el-option label="Bị khóa" value="inactive" />
+          <el-select v-model="statusFilter" :placeholder="t('common.status')" :class="styles.filterSelect" clearable>
+            <el-option :label="t('common.active')" value="active" />
+            <el-option :label="t('common.inactive')" value="inactive" />
           </el-select>
         </div>
-        <el-button type="primary" :icon="Plus" @click="openCreate">Tạo Tenant mới</el-button>
+        <el-button type="primary" :icon="Plus" @click="openCreate">{{ t('tenants.add') }}</el-button>
       </div>
 
       <DataTable
@@ -28,22 +28,22 @@
         v-model:current-page="currentPage"
         row-key="id"
       >
-        <el-table-column prop="name" label="Tên Tenant (Không gian làm việc)" min-width="250">
+        <el-table-column prop="name" :label="t('tenants.name')" min-width="250">
           <template #default="scope">
             <span :class="styles.fwBold">{{ scope.row.name }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="domain" label="Domain / Slug" min-width="150">
+        <el-table-column prop="domain" :label="t('tenants.domain')" min-width="150">
           <template #default="scope">
             <span style="color: var(--text-secondary)">{{ scope.row.domain || '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="userCount" label="Số lượng User" width="150" align="center">
+        <el-table-column prop="userCount" :label="t('tenants.userCount')" width="150" align="center">
           <template #default="scope">
             <el-tag size="small" type="info">{{ scope.row.userCount }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="isActive" label="Trạng thái" width="120">
+        <el-table-column prop="isActive" :label="t('common.status')" width="120">
           <template #default="scope">
             <el-switch
               :model-value="scope.row.isActive"
@@ -52,19 +52,19 @@
             />
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="Ngày tạo" width="150">
+        <el-table-column prop="createdAt" :label="t('tenants.createdAt')" width="150">
           <template #default="scope">
             <span style="color: var(--text-secondary)">
-              {{ new Date(scope.row.createdAt).toLocaleDateString('vi-VN') }}
+              {{ new Date(scope.row.createdAt).toLocaleDateString(dateLocale) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="Thao tác" width="120" align="right">
+        <el-table-column :label="t('common.actions')" width="120" align="right">
           <template #default="scope">
-            <el-tooltip content="Chỉnh sửa" placement="top">
+            <el-tooltip :content="t('common.edit')" placement="top">
               <el-button type="primary" link :icon="Edit" @click="openEdit(scope.row)" />
             </el-tooltip>
-            <el-tooltip content="Xóa" placement="top">
+            <el-tooltip :content="t('common.delete')" placement="top">
               <el-button
                 type="danger"
                 link
@@ -80,7 +80,7 @@
 
     <el-dialog
       v-model="dialogVisible"
-      :title="isEdit ? 'Chỉnh sửa tenant' : 'Tạo tenant mới'"
+      :title="isEdit ? t('tenants.editTitle') : t('tenants.createTitle')"
       width="480px"
       destroy-on-close
       @closed="resetForm"
@@ -92,26 +92,26 @@
         label-position="top"
         @submit.prevent
       >
-        <el-form-item label="Tên workspace" prop="name">
+        <el-form-item :label="t('tenants.name')" prop="name">
           <el-input v-model="form.name" placeholder="default, acme..." />
         </el-form-item>
-        <el-form-item label="Domain / Slug" prop="domain">
-          <el-input v-model="form.domain" placeholder="acme.local (tuỳ chọn)" />
+        <el-form-item :label="t('tenants.domain')" prop="domain">
+          <el-input v-model="form.domain" placeholder="acme.local" />
         </el-form-item>
-        <el-form-item label="Trạng thái">
+        <el-form-item :label="t('common.status')">
           <el-switch
             v-model="form.isActive"
-            active-text="Hoạt động"
-            inactive-text="Khóa"
+            :active-text="t('common.active')"
+            :inactive-text="t('common.locked')"
             :disabled="isEdit && form.id === authStore.tenant_id"
           />
         </el-form-item>
       </el-form>
 
       <template #footer>
-        <el-button @click="dialogVisible = false">Hủy</el-button>
+        <el-button @click="dialogVisible = false">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" :loading="saving" @click="onSubmit">
-          {{ isEdit ? 'Lưu thay đổi' : 'Tạo tenant' }}
+          {{ isEdit ? t('common.saveChanges') : t('tenants.createSubmit') }}
         </el-button>
       </template>
     </el-dialog>
@@ -134,6 +134,7 @@ interface TenantRow {
   createdAt: string;
 }
 
+const { t, locale } = useI18n();
 const authStore = useAuthStore();
 const currentPage = ref(1);
 const pageSize = ref(10);
@@ -158,13 +159,14 @@ const form = reactive({
 });
 
 const isEdit = computed(() => !!editingId.value);
+const dateLocale = computed(() => (locale.value === 'en' ? 'en-US' : 'vi-VN'));
 
-const formRules: FormRules = {
+const formRules = computed<FormRules>(() => ({
   name: [
-    { required: true, message: 'Nhập tên workspace', trigger: 'blur' },
-    { min: 2, message: 'Ít nhất 2 ký tự', trigger: 'blur' }
+    { required: true, message: t('tenants.requiredName'), trigger: 'blur' },
+    { min: 2, message: t('tenants.minName'), trigger: 'blur' }
   ]
-};
+}));
 
 const authHeaders = () => {
   const headers: Record<string, string> = {};
@@ -237,7 +239,7 @@ const onSubmit = async () => {
         },
         headers: authHeaders()
       });
-      ElMessage.success('Đã cập nhật tenant');
+      ElMessage.success(t('tenants.updated'));
     } else {
       const created = await $fetch<any>('/api/tenants', {
         method: 'POST',
@@ -251,14 +253,14 @@ const onSubmit = async () => {
       const creds = created?.data?.defaultAdmin;
       ElMessage.success(
         creds
-          ? `Đã tạo tenant — đăng nhập: ${creds.username} / ${creds.password}`
-          : 'Đã tạo tenant'
+          ? t('tenants.createdWithCreds', { username: creds.username, password: creds.password })
+          : t('tenants.created')
       );
     }
     dialogVisible.value = false;
     await fetchData();
   } catch (err: any) {
-    ElMessage.error(err?.data?.statusMessage || err?.message || 'Thao tác thất bại');
+    ElMessage.error(err?.data?.statusMessage || err?.message || t('common.actionFailed'));
   } finally {
     saving.value = false;
   }
@@ -266,7 +268,7 @@ const onSubmit = async () => {
 
 const onToggleActive = async (row: TenantRow, next: boolean) => {
   if (row.id === authStore.tenant_id) {
-    ElMessage.warning('Không thể khóa tenant đang đăng nhập');
+    ElMessage.warning(t('tenants.cannotLockSelf'));
     return;
   }
 
@@ -279,10 +281,10 @@ const onToggleActive = async (row: TenantRow, next: boolean) => {
       body: { isActive: next },
       headers: authHeaders()
     });
-    ElMessage.success(next ? 'Đã mở khóa tenant' : 'Đã khóa tenant');
+    ElMessage.success(next ? t('tenants.unlocked') : t('tenants.locked'));
   } catch (err: any) {
     row.isActive = prev;
-    ElMessage.error(err?.data?.statusMessage || err?.message || 'Không thể cập nhật trạng thái');
+    ElMessage.error(err?.data?.statusMessage || err?.message || t('users.statusFailed'));
   } finally {
     statusSavingId.value = null;
   }
@@ -290,25 +292,25 @@ const onToggleActive = async (row: TenantRow, next: boolean) => {
 
 const onDelete = async (row: TenantRow) => {
   if (row.id === authStore.tenant_id) {
-    ElMessage.warning('Không thể xóa tenant đang đăng nhập');
+    ElMessage.warning(t('tenants.cannotDeleteSelf'));
     return;
   }
 
   if (row.userCount > 0) {
     ElMessage.warning(
-      `Không thể xóa: còn ${row.userCount} người dùng trong tenant “${row.name}”`
+      t('tenants.cannotDeleteInUse', { count: row.userCount, name: row.name })
     );
     return;
   }
 
   try {
     await ElMessageBox.confirm(
-      `Xóa tenant “${row.name}”? Bản ghi sẽ được ẩn (soft delete).`,
-      'Xác nhận xóa',
+      t('tenants.deleteConfirm', { name: row.name }),
+      t('common.confirmDelete'),
       {
         type: 'warning',
-        confirmButtonText: 'Xóa',
-        cancelButtonText: 'Hủy'
+        confirmButtonText: t('common.delete'),
+        cancelButtonText: t('common.cancel')
       }
     );
   } catch {
@@ -320,10 +322,10 @@ const onDelete = async (row: TenantRow) => {
       method: 'DELETE',
       headers: authHeaders()
     });
-    ElMessage.success('Đã xóa tenant');
+    ElMessage.success(t('tenants.deleted'));
     await fetchData();
   } catch (err: any) {
-    ElMessage.error(err?.data?.statusMessage || err?.message || 'Không thể xóa tenant');
+    ElMessage.error(err?.data?.statusMessage || err?.message || t('tenants.deleteFailed'));
   }
 };
 

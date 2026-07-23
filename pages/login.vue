@@ -1,19 +1,22 @@
 <template>
   <div :class="styles.page">
-    <section :class="styles.brand" aria-label="Admin Pro">
+    <section :class="styles.brand" :aria-label="t('app.name')">
       <div :class="styles.brandMesh" aria-hidden="true" />
       <div :class="styles.brandGrid" aria-hidden="true" />
       <div :class="styles.brandContent">
-        <h1 :class="styles.brandName">Admin Pro</h1>
-        <p :class="styles.brandTagline">Quản trị đa workspace</p>
+        <h1 :class="styles.brandName">{{ t('app.name') }}</h1>
+        <p :class="styles.brandTagline">{{ t('login.brandTagline') }}</p>
       </div>
     </section>
 
     <section :class="styles.formPanel">
       <div :class="styles.formInner">
         <header :class="styles.formHeader">
-          <h2 :class="styles.formTitle">Đăng nhập</h2>
-          <p :class="styles.formSubtitle">Nhập thông tin workspace để tiếp tục.</p>
+          <div :class="styles.formHeaderTop">
+            <h2 :class="styles.formTitle">{{ t('login.title') }}</h2>
+            <LocaleSwitcher />
+          </div>
+          <p :class="styles.formSubtitle">{{ t('login.subtitle') }}</p>
         </header>
 
         <el-form
@@ -24,27 +27,27 @@
           label-position="top"
           @submit.prevent
         >
-          <el-form-item label="Workspace" prop="tenant_id">
+          <el-form-item :label="t('login.workspace')" prop="tenant_id">
             <el-input
               v-model="form.tenant_id"
-              placeholder="VD: default"
+              :placeholder="t('login.workspacePlaceholder')"
               clearable
             />
           </el-form-item>
 
-          <el-form-item label="Tên đăng nhập" prop="username">
+          <el-form-item :label="t('login.username')" prop="username">
             <el-input
               v-model="form.username"
-              placeholder="Nhập tên đăng nhập"
+              :placeholder="t('login.usernamePlaceholder')"
               clearable
             />
           </el-form-item>
 
-          <el-form-item label="Mật khẩu" prop="password">
+          <el-form-item :label="t('login.password')" prop="password">
             <el-input
               v-model="form.password"
               type="password"
-              placeholder="Nhập mật khẩu"
+              :placeholder="t('login.passwordPlaceholder')"
               show-password
               @keyup.enter="handleLogin"
             />
@@ -68,12 +71,12 @@
               :class="styles.submitBtn"
               @click="handleLogin"
             >
-              Đăng nhập
+              {{ t('login.submit') }}
             </el-button>
           </el-form-item>
         </el-form>
 
-        <p :class="styles.formFooter">Bảo mật bởi Admin Pro · Cloudflare Turnstile</p>
+        <p :class="styles.formFooter">{{ t('login.footer') }}</p>
       </div>
     </section>
   </div>
@@ -90,6 +93,7 @@ definePageMeta({
   layout: false
 });
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const formRef = ref();
 const turnstileRef = ref<{ reset?: () => void } | null>(null);
@@ -104,12 +108,12 @@ const form = reactive({
   turnstileToken: ''
 });
 
-const rules = {
-  tenant_id: [{ required: true, message: 'Vui lòng nhập Workspace', trigger: 'blur' }],
-  username: [{ required: true, message: 'Vui lòng nhập tên đăng nhập', trigger: 'blur' }],
-  password: [{ required: true, message: 'Vui lòng nhập mật khẩu', trigger: 'blur' }],
-  turnstileToken: [{ required: true, message: 'Vui lòng xác minh bảo mật', trigger: 'change' }]
-};
+const rules = computed(() => ({
+  tenant_id: [{ required: true, message: t('login.requiredWorkspace'), trigger: 'blur' }],
+  username: [{ required: true, message: t('login.requiredUsername'), trigger: 'blur' }],
+  password: [{ required: true, message: t('login.requiredPassword'), trigger: 'blur' }],
+  turnstileToken: [{ required: true, message: t('login.requiredTurnstile'), trigger: 'change' }]
+}));
 
 const resetTurnstile = () => {
   form.turnstileToken = '';
@@ -138,10 +142,10 @@ const handleLogin = async () => {
 
         authStore.setAuth(data.token, data.user, data.tenant_id, data.permissions);
         const displayName = data.user?.fullName || data.user?.username || form.username;
-        ElMessage.success(`Xin chào, ${displayName}!`);
+        ElMessage.success(t('login.welcome', { name: displayName }));
         navigateTo('/');
       } catch (err: any) {
-        ElMessage.error(err.data?.statusMessage || 'Đăng nhập thất bại');
+        ElMessage.error(err.data?.statusMessage || t('login.failed'));
         resetTurnstile();
       } finally {
         loading.value = false;

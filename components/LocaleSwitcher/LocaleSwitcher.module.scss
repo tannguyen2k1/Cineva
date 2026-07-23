@@ -1,0 +1,48 @@
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  margin: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease;
+
+  &:hover {
+    background: var(--bg-body);
+    border-color: color-mix(in srgb, var(--primary-color) 35%, var(--border-color));
+  }
+}
+
+.flag {
+  display: inline-flex;
+  width: 22px;
+  height: 15px;
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--border-color) 80%, transparent);
+  flex-shrink: 0;
+
+  :deep(svg) {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+}
+
+.option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chevron {
+  font-size: 12px;
+  color: var(--text-secondary);
+}

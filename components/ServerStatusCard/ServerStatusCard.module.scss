@@ -1,0 +1,64 @@
+.card {
+  flex-shrink: 0;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  transition: box-shadow 0.3s ease;
+
+  &:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  :global(.el-card__header) {
+    padding: 14px 18px;
+    border-bottom-color: var(--border-color);
+  }
+
+  :global(.el-card__body) {
+    padding: 16px 18px;
+  }
+}
+
+.header {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.liveBadge {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.liveOn {
+  color: #059669;
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.liveOff {
+  color: var(--text-secondary);
+  background: var(--bg-body);
+}
+
+.statusItem {
+  .statusInfo {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+}
+
+.spaced {
+  margin-top: 14px;
+}

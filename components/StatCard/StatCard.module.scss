@@ -1,0 +1,83 @@
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  transition: box-shadow 0.3s ease;
+
+  &:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  :global(.el-card__body) {
+    padding: 16px 18px;
+  }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.title {
+  line-height: 1.2;
+}
+
+.icon {
+  font-size: 18px;
+  padding: 7px;
+  border-radius: 8px;
+}
+
+.iconBlue {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.iconGreen {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.iconAmber {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.iconRed {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.value {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 10px 0 8px;
+  font-family: 'Outfit', sans-serif;
+  line-height: 1.1;
+  color: var(--text-primary);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.toneSuccess {
+  color: #10b981;
+}
+
+.toneWarning {
+  color: #f59e0b;
+}
+
+.toneDanger {
+  color: #ef4444;
+}

@@ -7,13 +7,13 @@
         <div :class="styles.filterSection">
           <el-input
             v-model="searchQuery"
-            placeholder="Tìm kiếm tên vai trò, mô tả..."
+            :placeholder="t('roles.searchPlaceholder')"
             :prefix-icon="Search"
             :class="styles.searchInput"
             clearable
           />
         </div>
-        <el-button type="primary" :icon="Plus" @click="openCreate">Tạo vai trò mới</el-button>
+        <el-button type="primary" :icon="Plus" @click="openCreate">{{ t('roles.add') }}</el-button>
       </div>
 
       <DataTable
@@ -24,24 +24,24 @@
         v-model:current-page="currentPage"
         row-key="id"
       >
-        <el-table-column prop="name" label="Tên vai trò" min-width="150">
+        <el-table-column prop="name" :label="t('roles.name')" min-width="150">
           <template #default="scope">
             <span :class="styles.fwBold">{{ scope.row.name }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="description" label="Mô tả" min-width="250">
+        <el-table-column prop="description" :label="t('roles.description')" min-width="250">
           <template #default="scope">
             {{ scope.row.description || '-' }}
           </template>
         </el-table-column>
-        <el-table-column prop="userCount" label="Số người dùng" width="150" align="center">
+        <el-table-column prop="userCount" :label="t('roles.userCount')" width="150" align="center">
           <template #default="scope">
             <el-tag size="small" type="info">{{ scope.row.userCount }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="Thao tác" width="160" align="right">
+        <el-table-column :label="t('common.actions')" width="160" align="right">
           <template #default="scope">
-            <el-tooltip content="Phân quyền" placement="top">
+            <el-tooltip :content="t('roles.permissions')" placement="top">
               <el-button
                 type="warning"
                 link
@@ -49,10 +49,10 @@
                 @click="navigateTo(`/systems/roles/${scope.row.id}/permissions`)"
               />
             </el-tooltip>
-            <el-tooltip content="Chỉnh sửa" placement="top">
+            <el-tooltip :content="t('common.edit')" placement="top">
               <el-button type="primary" link :icon="Edit" @click="openEdit(scope.row)" />
             </el-tooltip>
-            <el-tooltip content="Xóa" placement="top">
+            <el-tooltip :content="t('common.delete')" placement="top">
               <el-button type="danger" link :icon="Delete" @click="onDelete(scope.row)" />
             </el-tooltip>
           </template>
@@ -62,7 +62,7 @@
 
     <el-dialog
       v-model="dialogVisible"
-      :title="isEdit ? 'Chỉnh sửa vai trò' : 'Tạo vai trò mới'"
+      :title="isEdit ? t('roles.editTitle') : t('roles.createTitle')"
       width="480px"
       destroy-on-close
       @closed="resetForm"
@@ -74,23 +74,23 @@
         label-position="top"
         @submit.prevent
       >
-        <el-form-item label="Tên vai trò" prop="name">
+        <el-form-item :label="t('roles.name')" prop="name">
           <el-input v-model="form.name" placeholder="Admin, Editor..." />
         </el-form-item>
-        <el-form-item label="Mô tả" prop="description">
+        <el-form-item :label="t('roles.description')" prop="description">
           <el-input
             v-model="form.description"
             type="textarea"
             :rows="3"
-            placeholder="Mô tả ngắn về vai trò"
+            :placeholder="t('roles.description')"
           />
         </el-form-item>
       </el-form>
 
       <template #footer>
-        <el-button @click="dialogVisible = false">Hủy</el-button>
+        <el-button @click="dialogVisible = false">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" :loading="saving" @click="onSubmit">
-          {{ isEdit ? 'Lưu thay đổi' : 'Tạo vai trò' }}
+          {{ isEdit ? t('common.saveChanges') : t('roles.createSubmit') }}
         </el-button>
       </template>
     </el-dialog>
@@ -111,6 +111,7 @@ interface RoleRow {
   userCount: number;
 }
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const currentPage = ref(1);
 const pageSize = ref(10);
@@ -132,12 +133,12 @@ const form = reactive({
 
 const isEdit = computed(() => !!editingId.value);
 
-const formRules: FormRules = {
+const formRules = computed<FormRules>(() => ({
   name: [
-    { required: true, message: 'Nhập tên vai trò', trigger: 'blur' },
-    { min: 2, message: 'Ít nhất 2 ký tự', trigger: 'blur' }
+    { required: true, message: t('roles.requiredName'), trigger: 'blur' },
+    { min: 2, message: t('roles.minName'), trigger: 'blur' }
   ]
-};
+}));
 
 const authHeaders = () => {
   const headers: Record<string, string> = {};
@@ -204,7 +205,7 @@ const onSubmit = async () => {
         },
         headers: authHeaders()
       });
-      ElMessage.success('Đã cập nhật vai trò');
+      ElMessage.success(t('roles.updated'));
     } else {
       await $fetch('/api/roles', {
         method: 'POST',
@@ -214,12 +215,12 @@ const onSubmit = async () => {
         },
         headers: authHeaders()
       });
-      ElMessage.success('Đã tạo vai trò');
+      ElMessage.success(t('roles.created'));
     }
     dialogVisible.value = false;
     await fetchData();
   } catch (err: any) {
-    ElMessage.error(err?.data?.statusMessage || err?.message || 'Thao tác thất bại');
+    ElMessage.error(err?.data?.statusMessage || err?.message || t('common.actionFailed'));
   } finally {
     saving.value = false;
   }
@@ -228,19 +229,19 @@ const onSubmit = async () => {
 const onDelete = async (row: RoleRow) => {
   if (row.userCount > 0) {
     ElMessage.warning(
-      `Không thể xóa: còn ${row.userCount} người dùng đang dùng vai trò “${row.name}”`
+      t('roles.cannotDeleteInUse', { count: row.userCount, name: row.name })
     );
     return;
   }
 
   try {
     await ElMessageBox.confirm(
-      `Xóa vai trò “${row.name}”? Bản ghi sẽ được ẩn (soft delete).`,
-      'Xác nhận xóa',
+      t('roles.deleteConfirm', { name: row.name }),
+      t('common.confirmDelete'),
       {
         type: 'warning',
-        confirmButtonText: 'Xóa',
-        cancelButtonText: 'Hủy'
+        confirmButtonText: t('common.delete'),
+        cancelButtonText: t('common.cancel')
       }
     );
   } catch {
@@ -252,10 +253,10 @@ const onDelete = async (row: RoleRow) => {
       method: 'DELETE',
       headers: authHeaders()
     });
-    ElMessage.success('Đã xóa vai trò');
+    ElMessage.success(t('roles.deleted'));
     await fetchData();
   } catch (err: any) {
-    ElMessage.error(err?.data?.statusMessage || err?.message || 'Không thể xóa vai trò');
+    ElMessage.error(err?.data?.statusMessage || err?.message || t('roles.deleteFailed'));
   }
 };
 

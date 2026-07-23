@@ -7,17 +7,17 @@
         <div :class="styles.filterSection">
           <el-input
             v-model="searchQuery"
-            placeholder="Tìm kiếm username, họ tên..."
+            :placeholder="t('users.searchPlaceholder')"
             :prefix-icon="Search"
             :class="styles.searchInput"
             clearable
           />
-          <el-select v-model="statusFilter" placeholder="Trạng thái" :class="styles.filterSelect" clearable>
-            <el-option label="Hoạt động" value="active" />
-            <el-option label="Bị khóa" value="inactive" />
+          <el-select v-model="statusFilter" :placeholder="t('common.status')" :class="styles.filterSelect" clearable>
+            <el-option :label="t('common.active')" value="active" />
+            <el-option :label="t('common.inactive')" value="inactive" />
           </el-select>
         </div>
-        <el-button type="primary" :icon="Plus" @click="openCreate">Thêm Người dùng</el-button>
+        <el-button type="primary" :icon="Plus" @click="openCreate">{{ t('users.add') }}</el-button>
       </div>
 
       <DataTable
@@ -28,7 +28,7 @@
         v-model:current-page="currentPage"
         row-key="id"
       >
-        <el-table-column prop="username" label="Username" min-width="180">
+        <el-table-column prop="username" :label="t('users.username')" min-width="180">
           <template #default="scope">
             <div :class="styles.userCell">
               <UserProfile
@@ -41,12 +41,12 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="fullName" label="Họ và tên" min-width="200">
+        <el-table-column prop="fullName" :label="t('users.fullName')" min-width="200">
           <template #default="scope">
             {{ scope.row.fullName || '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="Vai trò" min-width="200">
+        <el-table-column :label="t('users.roles')" min-width="200">
           <template #default="scope">
             <div style="display: flex; gap: 4px; flex-wrap: wrap;">
               <el-tag
@@ -60,7 +60,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="isActive" label="Trạng thái" width="120">
+        <el-table-column prop="isActive" :label="t('common.status')" width="120">
           <template #default="scope">
             <el-switch
               :model-value="scope.row.isActive"
@@ -69,12 +69,12 @@
             />
           </template>
         </el-table-column>
-        <el-table-column label="Thao tác" width="120" align="right">
+        <el-table-column :label="t('common.actions')" width="120" align="right">
           <template #default="scope">
-            <el-tooltip content="Chỉnh sửa" placement="top">
+            <el-tooltip :content="t('common.edit')" placement="top">
               <el-button type="primary" link :icon="Edit" @click="openEdit(scope.row)" />
             </el-tooltip>
-            <el-tooltip content="Xóa" placement="top">
+            <el-tooltip :content="t('common.delete')" placement="top">
               <el-button
                 type="danger"
                 link
@@ -90,7 +90,7 @@
 
     <el-dialog
       v-model="dialogVisible"
-      :title="isEdit ? 'Chỉnh sửa người dùng' : 'Thêm người dùng'"
+      :title="isEdit ? t('users.editTitle') : t('users.createTitle')"
       width="480px"
       destroy-on-close
       @closed="resetForm"
@@ -102,7 +102,7 @@
         label-position="top"
         @submit.prevent
       >
-        <el-form-item label="Username" prop="username">
+        <el-form-item :label="t('users.username')" prop="username">
           <el-input
             v-model="form.username"
             placeholder="nguyenvana"
@@ -110,27 +110,27 @@
             autocomplete="off"
           />
         </el-form-item>
-        <el-form-item label="Họ và tên" prop="fullName">
+        <el-form-item :label="t('users.fullName')" prop="fullName">
           <el-input v-model="form.fullName" placeholder="Nguyễn Văn A" />
         </el-form-item>
-        <el-form-item label="Email" prop="email">
+        <el-form-item :label="t('users.email')" prop="email">
           <el-input v-model="form.email" placeholder="ban@congty.com" />
         </el-form-item>
-        <el-form-item :label="isEdit ? 'Mật khẩu mới' : 'Mật khẩu'" prop="password">
+        <el-form-item :label="isEdit ? t('users.passwordNew') : t('users.password')" prop="password">
           <el-input
             v-model="form.password"
             type="password"
-            :placeholder="isEdit ? 'Để trống nếu không đổi' : '••••••••'"
+            :placeholder="isEdit ? t('users.passwordOptional') : '••••••••'"
             show-password
             autocomplete="new-password"
           />
         </el-form-item>
-        <el-form-item label="Vai trò" prop="roleIds">
+        <el-form-item :label="t('users.roles')" prop="roleIds">
           <el-select
             v-model="form.roleIds"
             multiple
             filterable
-            placeholder="Chọn vai trò"
+            :placeholder="t('users.rolesPlaceholder')"
             style="width: 100%"
             :loading="rolesLoading"
           >
@@ -142,20 +142,20 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="Trạng thái">
+        <el-form-item :label="t('common.status')">
           <el-switch
             v-model="form.isActive"
-            active-text="Hoạt động"
-            inactive-text="Khóa"
+            :active-text="t('common.active')"
+            :inactive-text="t('common.locked')"
             :disabled="isEdit && form.id === authStore.user?.id"
           />
         </el-form-item>
       </el-form>
 
       <template #footer>
-        <el-button @click="dialogVisible = false">Hủy</el-button>
+        <el-button @click="dialogVisible = false">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" :loading="saving" @click="onSubmit">
-          {{ isEdit ? 'Lưu thay đổi' : 'Tạo người dùng' }}
+          {{ isEdit ? t('common.saveChanges') : t('users.createSubmit') }}
         </el-button>
       </template>
     </el-dialog>
@@ -185,6 +185,7 @@ interface RoleOption {
   name: string;
 }
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const searchQuery = ref('');
 const statusFilter = ref('');
@@ -215,25 +216,25 @@ const isEdit = computed(() => !!editingId.value);
 
 const formRules = computed<FormRules>(() => ({
   username: [
-    { required: true, message: 'Nhập username', trigger: 'blur' },
-    { min: 3, message: 'Ít nhất 3 ký tự', trigger: 'blur' }
+    { required: true, message: t('users.requiredUsername'), trigger: 'blur' },
+    { min: 3, message: t('users.minUsername'), trigger: 'blur' }
   ],
   email: [
-    { type: 'email', message: 'Email không hợp lệ', trigger: ['blur', 'change'] }
+    { type: 'email', message: t('users.invalidEmail'), trigger: ['blur', 'change'] }
   ],
   password: isEdit.value
     ? [
         {
           validator: (_rule, value, callback) => {
-            if (value && value.length < 6) callback(new Error('Mật khẩu phải có ít nhất 6 ký tự'));
+            if (value && value.length < 6) callback(new Error(t('users.minPassword')));
             else callback();
           },
           trigger: 'blur'
         }
       ]
     : [
-        { required: true, message: 'Nhập mật khẩu', trigger: 'blur' },
-        { min: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự', trigger: 'blur' }
+        { required: true, message: t('users.requiredPassword'), trigger: 'blur' },
+        { min: 6, message: t('users.minPassword'), trigger: 'blur' }
       ]
 }));
 
@@ -341,7 +342,7 @@ const onSubmit = async () => {
         body: payload,
         headers: authHeaders()
       });
-      ElMessage.success('Đã cập nhật người dùng');
+      ElMessage.success(t('users.updated'));
     } else {
       await $fetch('/api/users', {
         method: 'POST',
@@ -355,12 +356,12 @@ const onSubmit = async () => {
         },
         headers: authHeaders()
       });
-      ElMessage.success('Đã tạo người dùng');
+      ElMessage.success(t('users.created'));
     }
     dialogVisible.value = false;
     await fetchData();
   } catch (err: any) {
-    ElMessage.error(err?.data?.statusMessage || err?.message || 'Thao tác thất bại');
+    ElMessage.error(err?.data?.statusMessage || err?.message || t('common.actionFailed'));
   } finally {
     saving.value = false;
   }
@@ -368,7 +369,7 @@ const onSubmit = async () => {
 
 const onToggleActive = async (row: UserRow, next: boolean) => {
   if (row.id === authStore.user?.id) {
-    ElMessage.warning('Không thể khóa tài khoản đang đăng nhập');
+    ElMessage.warning(t('users.cannotLockSelf'));
     return;
   }
 
@@ -381,10 +382,10 @@ const onToggleActive = async (row: UserRow, next: boolean) => {
       body: { isActive: next },
       headers: authHeaders()
     });
-    ElMessage.success(next ? 'Đã mở khóa người dùng' : 'Đã khóa người dùng');
+    ElMessage.success(next ? t('users.unlocked') : t('users.locked'));
   } catch (err: any) {
     row.isActive = prev;
-    ElMessage.error(err?.data?.statusMessage || err?.message || 'Không thể cập nhật trạng thái');
+    ElMessage.error(err?.data?.statusMessage || err?.message || t('users.statusFailed'));
   } finally {
     statusSavingId.value = null;
   }
@@ -392,18 +393,18 @@ const onToggleActive = async (row: UserRow, next: boolean) => {
 
 const onDelete = async (row: UserRow) => {
   if (row.id === authStore.user?.id) {
-    ElMessage.warning('Không thể xóa tài khoản đang đăng nhập');
+    ElMessage.warning(t('users.cannotDeleteSelf'));
     return;
   }
 
   try {
     await ElMessageBox.confirm(
-      `Xóa người dùng “${row.username}”? Bản ghi sẽ được ẩn (soft delete), không xóa cứng khỏi hệ thống.`,
-      'Xác nhận xóa',
+      t('users.deleteConfirm', { name: row.username }),
+      t('common.confirmDelete'),
       {
         type: 'warning',
-        confirmButtonText: 'Xóa',
-        cancelButtonText: 'Hủy'
+        confirmButtonText: t('common.delete'),
+        cancelButtonText: t('common.cancel')
       }
     );
   } catch {
@@ -415,10 +416,10 @@ const onDelete = async (row: UserRow) => {
       method: 'DELETE',
       headers: authHeaders()
     });
-    ElMessage.success('Đã xóa người dùng');
+    ElMessage.success(t('users.deleted'));
     await fetchData();
   } catch (err: any) {
-    ElMessage.error(err?.data?.statusMessage || err?.message || 'Không thể xóa người dùng');
+    ElMessage.error(err?.data?.statusMessage || err?.message || t('users.deleteFailed'));
   }
 };
 

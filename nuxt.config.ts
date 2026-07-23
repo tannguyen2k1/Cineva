@@ -21,10 +21,27 @@ export default defineNuxtConfig({
     '@element-plus/nuxt',
     '@pinia/nuxt',
     '@vueuse/nuxt',
-    '@nuxtjs/turnstile'
+    '@nuxtjs/turnstile',
+    '@nuxtjs/i18n'
   ],
   elementPlus: {
     // Config cho Element Plus nếu cần
+  },
+
+  i18n: {
+    locales: [
+      { code: 'vi', language: 'vi-VN', name: 'Tiếng Việt', file: 'vi.json' },
+      { code: 'en', language: 'en-US', name: 'English', file: 'en.json' }
+    ],
+    langDir: 'locales',
+    defaultLocale: 'vi',
+    strategy: 'no_prefix',
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: 'i18n_redirected',
+      redirectOn: 'root',
+      fallbackLocale: 'vi'
+    }
   },
 
   turnstile: {

@@ -15,46 +15,6 @@
   flex-shrink: 0;
 }
 
-.statHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 500;
-
-  .icon {
-    font-size: 18px;
-    padding: 7px;
-    border-radius: 8px;
-
-    &.userIcon { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-    &.revenueIcon { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-    &.tenantIcon { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-    &.errorIcon { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-  }
-}
-
-.statValue {
-  font-size: 28px;
-  font-weight: 700;
-  margin: 10px 0 8px;
-  font-family: 'Outfit', sans-serif;
-  line-height: 1.1;
-}
-
-.statFooter {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.textSuccess { color: #10b981; }
-.textDanger { color: #ef4444; }
-.textWarning { color: #f59e0b; }
-
 .mainGrid {
   flex: 1 1 0;
   min-height: 0;
@@ -93,12 +53,6 @@
   }
 }
 
-.statCard {
-  :global(.el-card__body) {
-    padding: 16px 18px;
-  }
-}
-
 .fillCard {
   min-height: 0;
   height: 100%;
@@ -112,10 +66,6 @@
     display: flex;
     flex-direction: column;
   }
-}
-
-.sideCard {
-  flex-shrink: 0;
 }
 
 .membersCard {
@@ -139,25 +89,6 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-}
-
-.liveBadge {
-  font-family: 'Inter', sans-serif;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  padding: 3px 8px;
-  border-radius: 999px;
-}
-
-.liveOn {
-  color: #059669;
-  background: rgba(16, 185, 129, 0.12);
-}
-
-.liveOff {
-  color: var(--text-secondary);
-  background: var(--bg-body);
 }
 
 .timelineScroll {
@@ -201,24 +132,14 @@
   }
 }
 
-.statusItem {
-  .statusInfo {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
-    font-size: 13px;
-    font-weight: 500;
-  }
-}
-
-.mt3 {
-  margin-top: 14px;
-}
-
 .memberRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.mt3 {
+  margin-top: 14px;
 }
 
 .memberDate {
