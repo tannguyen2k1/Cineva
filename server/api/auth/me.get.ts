@@ -69,7 +69,9 @@ export default defineEventHandler(async (event) => {
         user: {
           id: user.id,
           username: user.username,
-          fullName: user.fullName
+          fullName: user.fullName,
+          email: user.email,
+          avatar: user.avatar
         },
         tenant_id: user.tenant_id,
         permissions

@@ -5,6 +5,7 @@ interface User {
   username: string;
   fullName: string | null;
   email?: string | null;
+  avatar?: string | null;
 }
 
 export const useAuthStore = defineStore('auth', {

@@ -38,3 +38,10 @@
 - **Variables/Functions/CSS Classes**: `camelCase`
 - **Vue Components/Interfaces**: `PascalCase`
 - **API File Names**: Nuxt 3 pattern `[name].[method].ts` (e.g., `index.get.ts`, `profile.put.ts`)
+
+## 7. Security Best Practices (CRITICAL)
+- **Always pay attention to security** in all implementation tasks.
+- Never expose sensitive information (like `password` hashes, secret keys) in API responses.
+- Always validate and sanitize user inputs to prevent Injection and XSS.
+- Secure file uploads (restrict mime types, size, and use safe paths).
+- Ensure strict multi-tenant data isolation on EVERY database query.

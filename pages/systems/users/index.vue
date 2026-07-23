@@ -33,7 +33,8 @@
         <el-table-column prop="username" label="Username" min-width="180">
           <template #default="scope">
             <div :class="styles.userCell">
-              <el-avatar size="small" :style="{ backgroundColor: getAvatarColor(scope.row.username) }">
+              <el-avatar v-if="scope.row.avatar" size="small" :src="scope.row.avatar" />
+              <el-avatar v-else size="small" :style="{ backgroundColor: getAvatarColor(scope.row.username) }">
                 {{ scope.row.username.charAt(0).toUpperCase() }}
               </el-avatar>
               <span :class="styles.fwBold">{{ scope.row.username }}</span>

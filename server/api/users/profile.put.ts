@@ -27,6 +27,7 @@ export default defineEventHandler(async (event) => {
         username: true,
         email: true,
         fullName: true,
+        avatar: true,
         isActive: true,
         tenant_id: true,
       }

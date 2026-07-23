@@ -62,7 +62,8 @@
 
           <el-dropdown trigger="click" @command="handleCommand">
             <div :class="styles.userProfile">
-              <el-avatar size="default" style="background-color: var(--primary-color)">{{ authStore.user?.username?.charAt(0).toUpperCase() }}</el-avatar>
+              <el-avatar v-if="authStore.user?.avatar" size="default" :src="authStore.user?.avatar" />
+              <el-avatar v-else size="default" style="background-color: var(--primary-color)">{{ authStore.user?.username?.charAt(0).toUpperCase() }}</el-avatar>
               <span :class="styles.userName">{{ authStore.user?.fullName || authStore.user?.username }}</span>
               <el-icon style="margin-left: 8px;"><ArrowDown /></el-icon>
             </div>

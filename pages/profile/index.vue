@@ -8,9 +8,24 @@
       <!-- Cột thông tin tĩnh -->
       <el-col :span="8">
         <div :class="[styles.premiumCard, styles.textCenter]">
-          <el-avatar :size="100" style="background-color: var(--primary-color); font-size: 36px;">
-            {{ authStore.user?.username?.charAt(0).toUpperCase() }}
-          </el-avatar>
+          <div style="position: relative; width: 100px; margin: 0 auto;">
+            <el-upload
+              action="#"
+              :show-file-list="false"
+              :auto-upload="false"
+              :on-change="handleAvatarChange"
+              accept="image/*"
+            >
+              <el-avatar v-if="authStore.user?.avatar" :size="100" :src="authStore.user?.avatar" style="cursor: pointer;" />
+              <el-avatar v-else :size="100" style="background-color: var(--primary-color); font-size: 36px; cursor: pointer;">
+                {{ authStore.user?.username?.charAt(0).toUpperCase() }}
+              </el-avatar>
+              
+              <div style="position: absolute; bottom: 0; right: 0; background: var(--bg-card); border-radius: 50%; padding: 6px; box-shadow: var(--shadow-sm); cursor: pointer; border: 1px solid var(--border-color); display: flex;">
+                <el-icon><Camera /></el-icon>
+              </div>
+            </el-upload>
+          </div>
           <h3 style="margin-top: 16px; margin-bottom: 8px;">{{ authStore.user?.fullName || authStore.user?.username }}</h3>
           <p style="color: var(--text-secondary); margin-bottom: 24px;">@{{ authStore.user?.username }}</p>
           
@@ -80,6 +95,8 @@
 import styles from './profile.module.scss';
 import { ref, reactive, onMounted } from 'vue';
 import { useAuthStore } from '~/stores/auth';
+import { Camera } from '@element-plus/icons-vue';
+import { ElMessage } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';
 
 const authStore = useAuthStore();
@@ -119,6 +136,33 @@ const validatePass2 = (rule: any, value: any, callback: any) => {
     callback(new Error('Mật khẩu xác nhận không khớp!'));
   } else {
     callback();
+  }
+};
+
+const handleAvatarChange = async (uploadFile: any) => {
+  if (!uploadFile || !uploadFile.raw) return;
+  
+  const formData = new FormData();
+  formData.append('file', uploadFile.raw);
+
+  try {
+    const headers: any = {};
+    if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`;
+    
+    const res = await $fetch<any>('/api/users/avatar', {
+      method: 'POST',
+      headers,
+      body: formData
+    });
+    
+    if (res.success && res.data.avatar) {
+      if (authStore.user) {
+        authStore.user.avatar = res.data.avatar;
+      }
+      ElMessage.success('Cập nhật ảnh đại diện thành công');
+    }
+  } catch (error: any) {
+    ElMessage.error(error.data?.statusMessage || 'Lỗi tải ảnh');
   }
 };
 
