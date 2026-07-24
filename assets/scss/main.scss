@@ -6,27 +6,31 @@
   /* Colors - Light Mode (Default) */
   --bg-body: #f3f4f6;
   --bg-card: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-card-rgb: 255, 255, 255;
   --bg-sidebar: #ffffff;
+  --bg-bottom-nav: rgba(255, 255, 255, 0.85);
   --sidebar-logo: #0f172a;
-  
+
   --text-primary: #111827;
   --text-secondary: #6b7280;
   --text-sidebar: #64748b;
   --text-sidebar-active: #3b82f6;
   --bg-sidebar-active: #eff6ff;
-  
+
   --primary-color: #3b82f6;
   --primary-hover: #2563eb;
-  
+
   --border-color: #e5e7eb;
   --sidebar-border: #e5e7eb;
-  
+
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --shadow-glow: 0 4px 14px rgba(59, 130, 246, 0.4);
-  
+
   /* Border Radius */
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -37,18 +41,22 @@
 html.dark {
   --bg-body: #0a0a0a;
   --bg-card: #141414;
+  --bg-surface: #1f1f1f;
+  --bg-elevated: #262626;
+  --bg-card-rgb: 20, 20, 20;
   --bg-sidebar: #141414;
+  --bg-bottom-nav: rgba(20, 20, 20, 0.85);
   --sidebar-logo: #ffffff;
-  
+
   --text-primary: #e5e7eb;
   --text-secondary: #9ca3af;
   --text-sidebar: #9ca3af;
   --text-sidebar-active: #ffffff;
   --bg-sidebar-active: rgba(59, 130, 246, 0.15);
-  
+
   --border-color: #262626;
   --sidebar-border: #262626;
-  
+
   /* Make shadows softer in dark mode */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.5);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5);
@@ -66,7 +74,12 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: 'Outfit', sans-serif;
   font-weight: 600;
   color: var(--text-primary);
@@ -116,11 +129,13 @@ h1, h2, h3, h4, h5, h6 {
   --el-button-hover-border-color: var(--primary-hover) !important;
 }
 
-.el-input__wrapper, .el-select__wrapper {
+.el-input__wrapper,
+.el-select__wrapper {
   border-radius: var(--radius-sm) !important;
   box-shadow: 0 0 0 1px var(--border-color) inset !important;
-  
-  &.is-focus, &.is-focused {
+
+  &.is-focus,
+  &.is-focused {
     box-shadow: 0 0 0 1px var(--primary-color) inset !important;
   }
 }
@@ -174,5 +189,3 @@ h1, h2, h3, h4, h5, h6 {
 .el-message-fade-leave-to.el-message.is-right {
   transform: translateX(120%) !important;
 }
-
-

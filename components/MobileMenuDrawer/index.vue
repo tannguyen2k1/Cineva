@@ -9,10 +9,7 @@
     class="mobile-menu-drawer"
     append-to-body
   >
-    <!-- Handle for sliding -->
-    <div :class="styles.drawerHandle">
-      <div :class="styles.handleBar"></div>
-    </div>
+
 
     <div :class="styles.menuPage">
       <!-- Header -->
@@ -168,6 +165,13 @@ const handleLogout = async () => {
   background-color: var(--bg-body) !important;
   margin-bottom: 0 !important;
   bottom: 0 !important;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05) !important;
+}
+html.dark .mobile-menu-drawer.el-drawer {
+  background-color: var(--bg-body) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-bottom: none !important;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.8) !important;
 }
 .mobile-menu-drawer .el-drawer__body {
   padding: 0 !important;
