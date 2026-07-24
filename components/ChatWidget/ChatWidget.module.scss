@@ -8,6 +8,11 @@
   align-items: flex-end;
   gap: 14px;
   pointer-events: none;
+
+  @media (max-width: 768px) {
+    right: 16px;
+    bottom: calc(64px + env(safe-area-inset-bottom) + 16px);
+  }
 }
 
 .fab {

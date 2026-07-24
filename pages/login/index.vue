@@ -84,7 +84,6 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue';
-import { useAuthStore } from '../stores/auth';
 import { ElMessage } from 'element-plus';
 import { useDark } from '@vueuse/core';
 import styles from './login.module.scss';

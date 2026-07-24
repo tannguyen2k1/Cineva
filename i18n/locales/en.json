@@ -11,7 +11,12 @@
     "users": "Users",
     "roles": "Roles",
     "tenants": "Tenants",
-    "logs": "Logs"
+    "logs": "Logs",
+    "settings": "Settings",
+    "orders": "Orders",
+    "products": "Products",
+    "customers": "Customers",
+    "menu": "Menu"
   },
   "pages": {
     "dashboard": "System overview",

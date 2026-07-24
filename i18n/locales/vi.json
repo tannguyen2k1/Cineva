@@ -7,11 +7,16 @@
   "nav": {
     "overview": "Tổng quan",
     "system": "Hệ thống",
-    "dashboard": "Dashboard",
+    "dashboard": "Trang chủ",
     "users": "Người dùng",
     "roles": "Vai trò",
     "tenants": "Tenant",
-    "logs": "Nhật ký"
+    "logs": "Nhật ký",
+    "settings": "Cài đặt",
+    "orders": "Đơn hàng",
+    "products": "Sản phẩm",
+    "customers": "Khách hàng",
+    "menu": "Menu"
   },
   "pages": {
     "dashboard": "Tổng quan hệ thống",

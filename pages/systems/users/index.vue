@@ -21,6 +21,7 @@
       </div>
 
       <DataTable
+        v-if="!appStore.isMobile"
         :data="apiResponse?.data || []"
         :total="apiResponse?.total || 0"
         :loading="pending"
@@ -65,14 +66,14 @@
             <el-switch
               :model-value="scope.row.isActive"
               :disabled="scope.row.id === authStore.user?.id || statusSavingId === scope.row.id"
-              @change="(val: string | number | boolean) => onToggleActive(scope.row, Boolean(val))"
+              @change="(val: string | number | boolean) => onToggleActive(scope.row as any, Boolean(val))"
             />
           </template>
         </el-table-column>
         <el-table-column :label="t('common.actions')" width="120" align="right">
           <template #default="scope">
             <el-tooltip :content="t('common.edit')" placement="top">
-              <el-button type="primary" link :icon="Edit" @click="openEdit(scope.row)" />
+              <el-button type="primary" link :icon="Edit" @click="openEdit(scope.row as any)" />
             </el-tooltip>
             <el-tooltip :content="t('common.delete')" placement="top">
               <el-button
@@ -80,12 +81,59 @@
                 link
                 :icon="Delete"
                 :disabled="scope.row.id === authStore.user?.id"
-                @click="onDelete(scope.row)"
+                @click="onDelete(scope.row as any)"
               />
             </el-tooltip>
           </template>
         </el-table-column>
       </DataTable>
+
+      <div v-else :class="styles.mobileList" v-infinite-scroll="loadMore" :infinite-scroll-disabled="pending || !hasMoreMobile" :infinite-scroll-distance="50">
+        <div v-for="user in mobileUsers" :key="user.id" :class="styles.userCard">
+          
+          <div :class="styles.cardHeader">
+            <div :class="styles.userInfo">
+              <UserProfile
+                :username="user.username"
+                :avatar="user.avatar"
+                :size="48"
+                :show-name="false"
+              />
+              <div :class="styles.userDetails">
+                <span :class="styles.userName">{{ user.username }}</span>
+                <span v-if="user.fullName" :class="styles.textSecondary">{{ user.fullName }}</span>
+                <div v-if="user.roles?.length" :class="styles.cardRoles">
+                  <el-tag
+                    v-for="(role, index) in user.roles"
+                    :key="index"
+                    size="small"
+                    :type="role === 'Admin' ? 'danger' : 'info'"
+                    effect="light"
+                    round
+                  >
+                    {{ role }}
+                  </el-tag>
+                </div>
+              </div>
+            </div>
+            
+            <div :class="styles.cardActions">
+              <el-button type="primary" link :icon="Edit" @click="openEdit(user as any)" />
+              <el-button type="danger" link :icon="Delete" :disabled="user.id === authStore.user?.id" @click="onDelete(user as any)" />
+            </div>
+          </div>
+
+          <div :class="styles.cardFooter">
+            <span :class="styles.cardMeta">{{ t('common.status') }}</span>
+            <el-switch
+              :model-value="user.isActive"
+              :disabled="user.id === authStore.user?.id || statusSavingId === user.id"
+              @change="(val: string | number | boolean) => onToggleActive(user as any, Boolean(val))"
+            />
+          </div>
+        </div>
+        <div v-if="pending" :class="styles.loadingMore">{{ t('common.loading') }}</div>
+      </div>
     </div>
 
     <el-dialog
@@ -168,6 +216,7 @@ import { ref, reactive, computed, watch, onMounted } from 'vue';
 import { Search, Plus, Edit, Delete } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { useAuthStore } from '~/stores/auth';
+import { useAppStore } from '~/stores/app';
 
 interface UserRow {
   id: string;
@@ -187,10 +236,15 @@ interface RoleOption {
 
 const { t } = useI18n();
 const authStore = useAuthStore();
+const appStore = useAppStore();
 const searchQuery = ref('');
 const statusFilter = ref('');
 const currentPage = ref(1);
 const pageSize = ref(10);
+
+const mobileUsers = ref<UserRow[]>([]);
+const mobilePage = ref(1);
+const hasMoreMobile = ref(true);
 
 const apiResponse = ref<any>(null);
 const pending = ref(false);
@@ -248,12 +302,13 @@ const authHeaders = () => {
   return headers;
 };
 
-const fetchData = async () => {
+const fetchData = async (isLoadMore = false) => {
   pending.value = true;
   error.value = null;
   try {
+    const pageToFetch = appStore.isMobile ? (isLoadMore ? mobilePage.value + 1 : 1) : currentPage.value;
     const params: Record<string, any> = {
-      page: currentPage.value,
+      page: pageToFetch,
       pageSize: pageSize.value
     };
     if (searchQuery.value) params.search = searchQuery.value;
@@ -263,13 +318,29 @@ const fetchData = async () => {
       params,
       headers: authHeaders()
     });
+    
     apiResponse.value = res;
+    if (appStore.isMobile) {
+      if (!isLoadMore) {
+        mobileUsers.value = res.data || [];
+        mobilePage.value = 1;
+      } else {
+        mobileUsers.value.push(...(res.data || []));
+        mobilePage.value = pageToFetch;
+      }
+      hasMoreMobile.value = mobileUsers.value.length < (res.total || 0);
+    }
   } catch (err: any) {
     error.value = err;
     console.error('Fetch Users Error:', err);
   } finally {
     pending.value = false;
   }
+};
+
+const loadMore = () => {
+  if (pending.value || !hasMoreMobile.value) return;
+  fetchData(true);
 };
 
 const fetchRoles = async () => {

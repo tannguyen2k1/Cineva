@@ -1,7 +1,7 @@
 <template>
   <div :class="styles.dashboardPage">
     <el-row :gutter="16" :class="styles.statCards">
-      <el-col v-for="card in statCards" :key="card.key" :span="6">
+      <el-col v-for="card in statCards" :key="card.key" :span="6" :xs="12" :sm="12" :md="12" :lg="6" :xl="6">
         <StatCard
           :title="card.title"
           :value="card.value"
