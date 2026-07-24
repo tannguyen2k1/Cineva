@@ -145,6 +145,7 @@
     "deleteConfirm": "Xóa tenant “{name}”? Bản ghi sẽ được ẩn (soft delete)."
   },
   "logs": {
+    "module": "Module",
     "action": "Hành động",
     "all": "Tất cả",
     "startDate": "Ngày bắt đầu",

@@ -145,6 +145,7 @@
     "deleteConfirm": "Delete tenant “{name}”? The record will be hidden (soft delete)."
   },
   "logs": {
+    "module": "Module",
     "action": "Action",
     "all": "All",
     "startDate": "Start date",
