@@ -20,7 +20,8 @@
         <el-button type="primary" :icon="Plus" @click="openCreate">{{ t('users.add') }}</el-button>
       </div>
 
-      <DataTable
+      <ClientOnly>
+        <DataTable
         v-if="!appStore.isMobile"
         :data="apiResponse?.data || []"
         :total="apiResponse?.total || 0"
@@ -88,7 +89,7 @@
         </el-table-column>
       </DataTable>
 
-      <div v-else :class="styles.mobileList" v-infinite-scroll="loadMore" :infinite-scroll-disabled="pending || !hasMoreMobile" :infinite-scroll-distance="50">
+      <div v-else ref="mobileListRef" :class="styles.mobileList">
         <div v-for="user in mobileUsers" :key="user.id" :class="styles.userCard">
           
           <div :class="styles.cardHeader">
@@ -134,6 +135,7 @@
         </div>
         <div v-if="pending" :class="styles.loadingMore">{{ t('common.loading') }}</div>
       </div>
+      </ClientOnly>
     </div>
 
     <el-dialog
@@ -217,6 +219,7 @@ import { Search, Plus, Edit, Delete } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { useAuthStore } from '~/stores/auth';
 import { useAppStore } from '~/stores/app';
+import { useInfiniteScroll } from '@vueuse/core';
 
 interface UserRow {
   id: string;
@@ -245,10 +248,21 @@ const pageSize = ref(10);
 const mobileUsers = ref<UserRow[]>([]);
 const mobilePage = ref(1);
 const hasMoreMobile = ref(true);
+const mobileListRef = ref<HTMLElement | null>(null);
 
 const apiResponse = ref<any>(null);
 const pending = ref(false);
 const error = ref<any>(null);
+
+useInfiniteScroll(
+  mobileListRef,
+  () => {
+    if (!pending.value && hasMoreMobile.value) {
+      loadMore();
+    }
+  },
+  { distance: 50 }
+);
 
 const dialogVisible = ref(false);
 const saving = ref(false);
