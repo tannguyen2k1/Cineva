@@ -66,3 +66,25 @@
 - Language switcher belongs in the app shell (layout header) and on layout-less pages that need it (e.g. login). Persist via i18n cookie (`detectBrowserLanguage`).
 - Server/API `statusMessage` strings may stay as-is for now; UI should still prefer a client-side `t()` fallback when showing errors.
 - When adding a new page or feature UI: add keys first, then wire `t()` — do not ship untranslated strings.
+
+## 10. API Error Handling (CRITICAL)
+- **Always** wrap the main logic of API endpoints (`server/api/**/*.ts`) in a `try...catch` block.
+- In the `catch` block, log the error and throw a standardized error via `createError`. If the error is already an H3Error (has a `statusCode`), re-throw it. Otherwise, throw a 500 error.
+- Example:
+  ```typescript
+  export default defineEventHandler(async (event) => {
+    try {
+      // API logic
+    } catch (error: any) {
+      console.error('API Error:', error);
+      if (error.statusCode) {
+        throw error;
+      }
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Lỗi hệ thống',
+        message: error.message || 'Đã có lỗi xảy ra',
+      });
+    }
+  });
+  ```
