@@ -120,11 +120,13 @@
       </el-form>
     </div>
 
-    <AvatarCropDialog
-      v-model="cropOpen"
-      :file="cropFile"
-      @confirm="uploadCroppedAvatar"
-    />
+    <ClientOnly>
+      <AvatarCropDialog
+        v-model="cropOpen"
+        :file="cropFile"
+        @confirm="uploadCroppedAvatar"
+      />
+    </ClientOnly>
   </div>
 </template>
 
@@ -135,8 +137,6 @@ import { useAuthStore } from '~/stores/auth';
 import { Camera, Loading } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';
-import { withCacheBust } from '~/utils/avatar';
-import AvatarCropDialog from '~/components/AvatarCropDialog/index.vue';
 
 const authStore = useAuthStore();
 const formRef = ref<FormInstance>();
