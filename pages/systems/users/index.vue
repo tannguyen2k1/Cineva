@@ -510,4 +510,5 @@ const onDelete = async (row: UserRow) => {
 
 onMounted(() => fetchData());
 watch([currentPage, pageSize, searchQuery, statusFilter], () => fetchData());
+usePageRefresh(() => fetchData());
 </script>

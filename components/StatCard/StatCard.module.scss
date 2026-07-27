@@ -4,6 +4,10 @@
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
   transition: box-shadow 0.3s ease;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 
   &:hover {
     box-shadow: var(--shadow-md);
@@ -11,6 +15,9 @@
 
   :global(.el-card__body) {
     padding: 16px 18px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
   }
 }
 
@@ -64,10 +71,13 @@
 
 .footer {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 4px;
+  margin-top: auto;
+  min-height: 2.6em;
   font-size: 13px;
   font-weight: 500;
+  line-height: 1.3;
 }
 
 .toneSuccess {

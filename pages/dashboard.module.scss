@@ -21,6 +21,10 @@
   flex-shrink: 0;
   row-gap: 16px;
 
+  :global(.el-col) {
+    display: flex;
+  }
+
   @media (max-width: 1024px) {
     margin-bottom: 16px;
   }

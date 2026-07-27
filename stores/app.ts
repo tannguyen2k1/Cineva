@@ -1,15 +1,32 @@
 import { defineStore } from 'pinia';
-import { useWindowSize } from '@vueuse/core';
-import { computed } from 'vue';
+import { ref, computed } from 'vue';
+
+const MOBILE_MAX = 768;
+const TABLET_MAX = 1024;
+
+function readWidth() {
+  if (import.meta.client && typeof window !== 'undefined') {
+    return window.innerWidth;
+  }
+  return TABLET_MAX + 1;
+}
 
 export const useAppStore = defineStore('app', () => {
-  const { width } = useWindowSize();
+  const width = ref(readWidth());
 
-  const isMobile = computed(() => width.value <= 768);
-  const isTablet = computed(() => width.value > 768 && width.value <= 1024);
-  const isDesktop = computed(() => width.value > 1024);
+  if (import.meta.client) {
+    const onResize = () => {
+      width.value = window.innerWidth;
+    };
+    window.addEventListener('resize', onResize, { passive: true });
+  }
+
+  const isMobile = computed(() => width.value <= MOBILE_MAX);
+  const isTablet = computed(() => width.value > MOBILE_MAX && width.value <= TABLET_MAX);
+  const isDesktop = computed(() => width.value > TABLET_MAX);
 
   return {
+    width,
     isMobile,
     isTablet,
     isDesktop

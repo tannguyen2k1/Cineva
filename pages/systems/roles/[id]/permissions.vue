@@ -1,7 +1,6 @@
 <template>
   <div :class="styles.page">
     <div :class="styles.toolbar">
-      <el-button :icon="ArrowLeft" @click="goBack">Vai trò</el-button>
       <div :class="styles.toolbarMeta">
         <span :class="styles.roleName">{{ roleName || '…' }}</span>
         <span :class="styles.dot" aria-hidden="true" />
@@ -75,7 +74,6 @@
 <script setup lang="ts">
 import styles from './permissions.module.scss';
 import { ref, computed, onMounted } from 'vue';
-import { ArrowLeft } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import { useAuthStore } from '~/stores/auth';
 
@@ -189,4 +187,5 @@ const onSave = async () => {
 };
 
 onMounted(() => load());
+usePageRefresh(() => load());
 </script>

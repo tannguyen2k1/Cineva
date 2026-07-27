@@ -50,7 +50,8 @@
     "loading": "Đang tải...",
     "success": "Thành công",
     "failed": "Thất bại",
-    "actionFailed": "Thao tác thất bại"
+    "actionFailed": "Thao tác thất bại",
+    "pullToRefresh": "Kéo xuống để làm mới"
   },
   "login": {
     "title": "Đăng nhập",

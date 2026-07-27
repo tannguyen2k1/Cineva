@@ -10,7 +10,7 @@
 
         <div :class="styles.headerRight">
           <LocaleSwitcher />
-          
+
           <div :class="styles.desktopOnly">
             <ThemeSwitcher />
             <el-dropdown trigger="click" @command="handleCommand">
@@ -38,8 +38,21 @@
         </div>
       </el-header>
 
-      <el-main :class="styles.mainContent">
-        <slot />
+      <el-main :class="styles.mainShell">
+        <div ref="mainContentRef" id="app-scroll" :class="styles.mainContent">
+          <div
+            data-ptr-indicator
+            :class="styles.ptrIndicator"
+            :style="{ height: `${maxPull}px`, transform: `translate3d(0, ${-maxPull}px, 0)` }"
+          >
+            <el-icon :class="[styles.ptrIcon, status === 'ready' ? styles.ptrReady : '']">
+              <Loading v-if="status === 'refreshing'" class="is-loading" />
+              <Bottom v-else />
+            </el-icon>
+            <span v-if="label" :class="styles.ptrText">{{ label }}</span>
+          </div>
+          <slot />
+        </div>
       </el-main>
 
       <el-footer :class="styles.footer">
@@ -53,20 +66,35 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, provide } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useRoute, useRouter } from 'vue-router';
 import {
   User,
   ArrowDown,
-  SwitchButton
+  SwitchButton,
+  Bottom,
+  Loading
 } from '@element-plus/icons-vue';
 import styles from './default.module.scss';
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const authStore = useAuthStore();
 const route = useRoute();
 const router = useRouter();
+
+const mainContentRef = ref<HTMLElement | null>(null);
+
+const pageRefreshApi = providePageRefresh();
+provide('appScrollEl', mainContentRef);
+
+const ptrTexts = computed(() => ({
+  pullText: t('common.pullToRefresh'),
+  releaseText: t('common.refresh'),
+  refreshingText: t('common.loading')
+}));
+
+const { status, label, maxPull } = usePullToRefresh(mainContentRef, ptrTexts, pageRefreshApi);
 
 const pageTitleKeys: Record<string, string> = {
   '/': 'pages.dashboard',
@@ -77,8 +105,6 @@ const pageTitleKeys: Record<string, string> = {
   '/systems/tenants': 'pages.tenants',
   '/systems/logs': 'pages.logs'
 };
-
-
 
 const pageTitle = computed(() => {
   if (/^\/systems\/roles\/[^/]+\/permissions$/.test(route.path)) {

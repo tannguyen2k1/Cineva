@@ -201,24 +201,91 @@
 }
 
 @media (max-width: 768px) {
+  .toolbar {
+    padding: 10px 16px;
+    gap: 10px;
+  }
+
+
+  .toolbarMeta {
+    font-size: 13px;
+  }
+
+  .roleName {
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+  }
+
+  .alert {
+    margin: 8px 16px 0;
+  }
+
   .workspace {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
     margin: 12px 16px 16px;
+    overflow-y: auto;
   }
 
   .modules {
+    display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 6px;
+    padding: 10px 12px;
     border-right: none;
     border-bottom: 1px solid var(--border-color);
+    background: color-mix(in srgb, var(--bg-body) 55%, var(--bg-card));
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   .moduleItem {
     width: auto;
+    flex-shrink: 0;
+    padding: 7px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    justify-content: center;
+    gap: 6px;
+
+    &.moduleItemActive {
+      background: var(--primary-color);
+      border-color: var(--primary-color);
+      box-shadow: none;
+
+      .moduleLabel {
+        color: #fff;
+        font-weight: 600;
+      }
+
+      .moduleCount {
+        color: rgba(255, 255, 255, 0.8);
+      }
+    }
   }
 
-  .toolbar {
-    flex-wrap: wrap;
-    padding: 12px 16px;
+  .moduleCount {
+    font-size: 11px;
+    display: inline;
+  }
+
+  .content {
+    padding: 16px;
+  }
+
+  .permRow {
+    padding: 12px 14px;
+    gap: 10px;
   }
 }

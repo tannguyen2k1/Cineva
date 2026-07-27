@@ -20,62 +20,106 @@
         <el-button type="primary" :icon="Plus" @click="openCreate">{{ t('tenants.add') }}</el-button>
       </div>
 
-      <DataTable
-        :data="apiResponse?.data || []"
-        :total="apiResponse?.total || 0"
-        :loading="pending"
-        v-model:page-size="pageSize"
-        v-model:current-page="currentPage"
-        row-key="id"
-      >
-        <el-table-column prop="name" :label="t('tenants.name')" min-width="250">
-          <template #default="scope">
-            <span :class="styles.fwBold">{{ scope.row.name }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="domain" :label="t('tenants.domain')" min-width="150">
-          <template #default="scope">
-            <span style="color: var(--text-secondary)">{{ scope.row.domain || '-' }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="userCount" :label="t('tenants.userCount')" width="150" align="center">
-          <template #default="scope">
-            <el-tag size="small" type="info">{{ scope.row.userCount }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="isActive" :label="t('common.status')" width="120">
-          <template #default="scope">
-            <el-switch
-              :model-value="scope.row.isActive"
-              :disabled="scope.row.id === authStore.tenant_id || statusSavingId === scope.row.id"
-              @change="(val: string | number | boolean) => onToggleActive(scope.row, Boolean(val))"
-            />
-          </template>
-        </el-table-column>
-        <el-table-column prop="createdAt" :label="t('tenants.createdAt')" width="150">
-          <template #default="scope">
-            <span style="color: var(--text-secondary)">
-              {{ new Date(scope.row.createdAt).toLocaleDateString(dateLocale) }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column :label="t('common.actions')" width="120" align="right">
-          <template #default="scope">
-            <el-tooltip :content="t('common.edit')" placement="top">
-              <el-button type="primary" link :icon="Edit" @click="openEdit(scope.row)" />
-            </el-tooltip>
-            <el-tooltip :content="t('common.delete')" placement="top">
-              <el-button
-                type="danger"
-                link
-                :icon="Delete"
-                :disabled="scope.row.id === authStore.tenant_id"
-                @click="onDelete(scope.row)"
+      <ClientOnly>
+        <DataTable
+          v-if="!appStore.isMobile"
+          :data="apiResponse?.data || []"
+          :total="apiResponse?.total || 0"
+          :loading="pending"
+          v-model:page-size="pageSize"
+          v-model:current-page="currentPage"
+          row-key="id"
+        >
+          <el-table-column prop="name" :label="t('tenants.name')" min-width="250">
+            <template #default="scope">
+              <span :class="styles.fwBold">{{ scope.row.name }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="domain" :label="t('tenants.domain')" min-width="150">
+            <template #default="scope">
+              <span style="color: var(--text-secondary)">{{ scope.row.domain || '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="userCount" :label="t('tenants.userCount')" width="150" align="center">
+            <template #default="scope">
+              <el-tag size="small" type="info">{{ scope.row.userCount }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="isActive" :label="t('common.status')" width="120">
+            <template #default="scope">
+              <el-switch
+                :model-value="scope.row.isActive"
+                :disabled="scope.row.id === authStore.tenant_id || statusSavingId === scope.row.id"
+                @change="(val: string | number | boolean) => onToggleActive(scope.row, Boolean(val))"
               />
-            </el-tooltip>
-          </template>
-        </el-table-column>
-      </DataTable>
+            </template>
+          </el-table-column>
+          <el-table-column prop="createdAt" :label="t('tenants.createdAt')" width="150">
+            <template #default="scope">
+              <span style="color: var(--text-secondary)">
+                {{ new Date(scope.row.createdAt).toLocaleDateString(dateLocale) }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column :label="t('common.actions')" width="120" align="right">
+            <template #default="scope">
+              <el-tooltip :content="t('common.edit')" placement="top">
+                <el-button type="primary" link :icon="Edit" @click="openEdit(scope.row)" />
+              </el-tooltip>
+              <el-tooltip :content="t('common.delete')" placement="top">
+                <el-button
+                  type="danger"
+                  link
+                  :icon="Delete"
+                  :disabled="scope.row.id === authStore.tenant_id"
+                  @click="onDelete(scope.row)"
+                />
+              </el-tooltip>
+            </template>
+          </el-table-column>
+        </DataTable>
+
+        <div v-else ref="mobileListRef" :class="styles.mobileList">
+          <div v-for="tenant in mobileTenants" :key="tenant.id" :class="styles.tenantCard">
+            <div :class="styles.cardHeader">
+              <div :class="styles.tenantInfo">
+                <div :class="styles.tenantDetails">
+                  <span :class="styles.tenantName">{{ tenant.name }}</span>
+                  <span :class="styles.tenantDomain">{{ tenant.domain || '-' }}</span>
+                </div>
+              </div>
+
+              <div :class="styles.cardActions">
+                <el-button type="primary" link :icon="Edit" @click="openEdit(tenant as any)" />
+                <el-button
+                  type="danger"
+                  link
+                  :icon="Delete"
+                  :disabled="tenant.id === authStore.tenant_id"
+                  @click="onDelete(tenant as any)"
+                />
+              </div>
+            </div>
+
+            <div :class="styles.tenantUsers">
+              <el-tag size="small" type="info" effect="light" round>
+                {{ t('tenants.userCount') }}: {{ tenant.userCount }}
+              </el-tag>
+            </div>
+
+            <div :class="styles.cardFooter">
+              <span :class="styles.cardMeta">{{ t('common.status') }}</span>
+              <el-switch
+                :model-value="tenant.isActive"
+                :disabled="tenant.id === authStore.tenant_id || statusSavingId === tenant.id"
+                @change="(val: string | number | boolean) => onToggleActive(tenant as any, Boolean(val))"
+              />
+            </div>
+          </div>
+
+          <div v-if="pending" :class="styles.loadingMore">{{ t('common.loading') }}</div>
+        </div>
+      </ClientOnly>
     </div>
 
     <el-dialog
@@ -124,6 +168,8 @@ import { ref, reactive, computed, watch, onMounted } from 'vue';
 import { Plus, Edit, Delete, Search } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { useAuthStore } from '~/stores/auth';
+import { useAppStore } from '~/stores/app';
+import { useInfiniteScroll } from '@vueuse/core';
 
 interface TenantRow {
   id: string;
@@ -136,10 +182,16 @@ interface TenantRow {
 
 const { t, locale } = useI18n();
 const authStore = useAuthStore();
+const appStore = useAppStore();
 const currentPage = ref(1);
 const pageSize = ref(10);
 const searchQuery = ref('');
 const statusFilter = ref('');
+
+const mobileTenants = ref<TenantRow[]>([]);
+const mobilePage = ref(1);
+const hasMoreMobile = ref(true);
+const mobileListRef = ref<HTMLElement | null>(null);
 
 const apiResponse = ref<any>(null);
 const pending = ref(false);
@@ -175,14 +227,12 @@ const authHeaders = () => {
   return headers;
 };
 
-const fetchData = async () => {
+const fetchData = async (isLoadMore = false) => {
   pending.value = true;
   error.value = null;
   try {
-    const params: Record<string, any> = {
-      page: currentPage.value,
-      pageSize: pageSize.value
-    };
+    const pageToFetch = appStore.isMobile ? (isLoadMore ? mobilePage.value + 1 : 1) : currentPage.value;
+    const params: Record<string, any> = { page: pageToFetch, pageSize: pageSize.value };
     if (searchQuery.value) params.search = searchQuery.value;
     if (statusFilter.value) params.status = statusFilter.value;
 
@@ -191,6 +241,17 @@ const fetchData = async () => {
       headers: authHeaders()
     });
     apiResponse.value = res;
+
+    if (appStore.isMobile) {
+      if (!isLoadMore) {
+        mobileTenants.value = res.data || [];
+        mobilePage.value = 1;
+      } else {
+        mobileTenants.value.push(...(res.data || []));
+        mobilePage.value = pageToFetch;
+      }
+      hasMoreMobile.value = mobileTenants.value.length < (res.total || 0);
+    }
   } catch (err: any) {
     error.value = err;
     console.error('Fetch Tenants Error:', err);
@@ -198,6 +259,21 @@ const fetchData = async () => {
     pending.value = false;
   }
 };
+
+const loadMore = () => {
+  if (!appStore.isMobile) return;
+  if (pending.value || !hasMoreMobile.value) return;
+  fetchData(true);
+};
+
+useInfiniteScroll(
+  mobileListRef,
+  () => {
+    if (!appStore.isMobile) return;
+    if (!pending.value && hasMoreMobile.value) loadMore();
+  },
+  { distance: 50 }
+);
 
 const resetForm = () => {
   editingId.value = null;
@@ -331,4 +407,5 @@ const onDelete = async (row: TenantRow) => {
 
 onMounted(() => fetchData());
 watch([currentPage, pageSize, searchQuery, statusFilter], () => fetchData());
+usePageRefresh(() => fetchData());
 </script>

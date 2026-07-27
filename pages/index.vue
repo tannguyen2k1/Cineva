@@ -201,6 +201,8 @@ onMounted(async () => {
   openWs();
 });
 
+usePageRefresh(() => fetchStats());
+
 onBeforeUnmount(() => {
   closeWs();
 });

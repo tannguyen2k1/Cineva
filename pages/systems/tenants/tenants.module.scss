@@ -18,6 +18,12 @@
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+    height: auto;
+    overflow: visible;
+  }
 }
 
 .toolbar {
@@ -28,6 +34,11 @@
   margin-bottom: 20px;
   flex-shrink: 0;
   flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 .filterSection {
@@ -35,14 +46,28 @@
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 .searchInput {
   width: 320px;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
 }
 
 .filterSelect {
   width: 160px;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
 }
 
 .alert {
@@ -53,4 +78,96 @@
 .fwBold {
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.textSecondary {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.mobileList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 24px;
+}
+
+.tenantCard {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.tenantInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.tenantDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tenantName {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.tenantDomain {
+  font-size: 13px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+}
+
+.tenantUsers {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.cardActions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.cardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border-color);
+}
+
+.loadingMore {
+  text-align: center;
+  padding: 16px;
+  color: var(--text-secondary);
+  font-size: 13px;
 }

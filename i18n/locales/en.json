@@ -50,7 +50,8 @@
     "loading": "Loading...",
     "success": "Success",
     "failed": "Failed",
-    "actionFailed": "Action failed"
+    "actionFailed": "Action failed",
+    "pullToRefresh": "Pull down to refresh"
   },
   "login": {
     "title": "Sign in",
