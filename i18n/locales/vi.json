@@ -141,9 +141,8 @@
     "locked": "Đã khóa tenant",
     "cannotLockSelf": "Không thể khóa tenant đang đăng nhập",
     "cannotDeleteSelf": "Không thể xóa tenant đang đăng nhập",
-    "cannotDeleteInUse": "Không thể xóa: còn {count} người dùng trong tenant “{name}”",
     "deleteFailed": "Không thể xóa tenant",
-    "deleteConfirm": "Xóa tenant “{name}”? Bản ghi sẽ được ẩn (soft delete)."
+    "deleteConfirm": "Xóa workspace “{name}”?"
   },
   "logs": {
     "module": "Module",

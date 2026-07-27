@@ -372,23 +372,14 @@ const onDelete = async (row: TenantRow) => {
     return;
   }
 
-  if (row.userCount > 0) {
-    ElMessage.warning(
-      t('tenants.cannotDeleteInUse', { count: row.userCount, name: row.name })
-    );
-    return;
-  }
+  const confirmMessage = t('tenants.deleteConfirm', { name: row.name });
 
   try {
-    await ElMessageBox.confirm(
-      t('tenants.deleteConfirm', { name: row.name }),
-      t('common.confirmDelete'),
-      {
-        type: 'warning',
-        confirmButtonText: t('common.delete'),
-        cancelButtonText: t('common.cancel')
-      }
-    );
+    await ElMessageBox.confirm(confirmMessage, t('common.confirmDelete'), {
+      type: 'warning',
+      confirmButtonText: t('common.delete'),
+      cancelButtonText: t('common.cancel')
+    });
   } catch {
     return;
   }

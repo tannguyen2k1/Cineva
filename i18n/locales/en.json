@@ -141,9 +141,8 @@
     "locked": "Tenant locked",
     "cannotLockSelf": "Cannot lock the signed-in tenant",
     "cannotDeleteSelf": "Cannot delete the signed-in tenant",
-    "cannotDeleteInUse": "Cannot delete: {count} users remain in tenant “{name}”",
     "deleteFailed": "Could not delete tenant",
-    "deleteConfirm": "Delete tenant “{name}”? The record will be hidden (soft delete)."
+    "deleteConfirm": "Delete workspace “{name}”?"
   },
   "logs": {
     "module": "Module",

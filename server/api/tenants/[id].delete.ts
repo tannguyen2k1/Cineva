@@ -18,24 +18,12 @@ export default defineEventHandler(async (event) => {
       select: {
         id: true,
         name: true,
-        domain: true,
-        _count: {
-          select: {
-            users: { where: { deletedAt: null } }
-          }
-        }
+        domain: true
       }
     });
 
     if (!existing) {
       throw createError({ statusCode: 404, statusMessage: 'Không tìm thấy tenant' });
-    }
-
-    if (existing._count.users > 0) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: `Không thể xóa: còn ${existing._count.users} người dùng trong tenant này`
-      });
     }
 
     await prisma.tenant.update({
