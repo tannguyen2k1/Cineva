@@ -1,13 +1,18 @@
 import { defineNuxtRouteMiddleware, navigateTo, useCookie } from '#imports'
 
 export default defineNuxtRouteMiddleware((to) => {
-  const loggedIn = useCookie('auth_logged_in')
+  let isLoggedIn = useCookie('auth_logged_in').value === '1'
 
-  if (!loggedIn.value && to.path !== '/login') {
+  // SSR fallback: httpOnly cookie readable server-side
+  if (!isLoggedIn && import.meta.server) {
+    isLoggedIn = !!useCookie('auth_token').value
+  }
+
+  if (!isLoggedIn && to.path !== '/login') {
     return navigateTo('/login')
   }
 
-  if (loggedIn.value && to.path === '/login') {
+  if (isLoggedIn && to.path === '/login') {
     return navigateTo('/')
   }
 })

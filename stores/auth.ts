@@ -8,6 +8,8 @@ interface User {
   avatar?: string | null
 }
 
+let refreshPromise: Promise<boolean> | null = null
+
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null as User | null,
@@ -28,7 +30,6 @@ export const useAuthStore = defineStore('auth', {
         this.loggedIn = true
       }
 
-      // SSR fallback: httpOnly cookie is readable server-side
       if (!this.loggedIn && import.meta.server) {
         const authCookie = useCookie('auth_token')
         if (authCookie.value) {
@@ -69,23 +70,48 @@ export const useAuthStore = defineStore('auth', {
           this.tenant_id = data.tenant_id
           this.permissions = data.permissions
         }
-      } catch {
+      } catch (err: any) {
+        const status = err?.response?.status || err?.statusCode
+        if (status === 401) {
+          const refreshed = await this.tryRefresh()
+          if (refreshed) return
+        }
         this.logout()
       }
     },
 
-    async refreshToken() {
-      try {
-        const { data } = await $fetch<any>('/api/auth/refresh', { method: 'POST' })
-        if (data) {
-          this.user = data.user
-          this.tenant_id = data.tenant_id
-          this.permissions = data.permissions
-          this.loggedIn = true
+    /**
+     * Try to refresh the access token using the refresh_token cookie.
+     * De-dupes concurrent calls so only one refresh request fires.
+     * Returns true if refresh succeeded.
+     */
+    async tryRefresh(): Promise<boolean> {
+      if (refreshPromise) return refreshPromise
+
+      refreshPromise = (async () => {
+        try {
+          const { data } = await $fetch<any>('/api/auth/refresh', { method: 'POST' })
+          if (data) {
+            this.user = data.user
+            this.tenant_id = data.tenant_id
+            this.permissions = data.permissions
+            this.loggedIn = true
+            return true
+          }
+          return false
+        } catch {
+          return false
         }
-      } catch {
-        this.logout()
-      }
+      })()
+
+      const result = await refreshPromise
+      refreshPromise = null
+      return result
+    },
+
+    async refreshToken() {
+      const ok = await this.tryRefresh()
+      if (!ok) this.logout()
     },
 
     async logout() {
