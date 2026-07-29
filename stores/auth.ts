@@ -27,6 +27,15 @@ export const useAuthStore = defineStore('auth', {
       if (indicator.value === '1') {
         this.loggedIn = true
       }
+
+      // SSR fallback: httpOnly cookie is readable server-side
+      if (!this.loggedIn && import.meta.server) {
+        const authCookie = useCookie('auth_token')
+        if (authCookie.value) {
+          this.loggedIn = true
+        }
+      }
+
       const tenantCookie = useCookie('tenant_id')
       if (tenantCookie.value) {
         this.tenant_id = tenantCookie.value as string

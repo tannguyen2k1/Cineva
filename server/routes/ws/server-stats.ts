@@ -7,7 +7,7 @@ const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_RAW || '__missing_jwt_sec
 const INTERVAL_MS = 2000
 const timers = new Map<string, ReturnType<typeof setInterval>>()
 
-function pushStats(peer: { id: string; send: (data: string) => void }) {
+function pushStats(peer: any) {
   peer.send(
     JSON.stringify({
       type: 'server-stats',
@@ -16,28 +16,45 @@ function pushStats(peer: { id: string; send: (data: string) => void }) {
   )
 }
 
+function extractToken(peer: any): string | null {
+  try {
+    // crossws exposes the upgrade request on peer
+    const rawUrl: string =
+      peer.request?.url ||
+      peer.websocket?.url ||
+      peer.url ||
+      ''
+
+    if (!rawUrl) return null
+
+    // rawUrl may be a full URL or just a path
+    const url = rawUrl.startsWith('http')
+      ? new URL(rawUrl)
+      : new URL(rawUrl, 'http://localhost')
+
+    return url.searchParams.get('token')
+  } catch {
+    return null
+  }
+}
+
 export default defineWebSocketHandler({
   async open(peer) {
+    const token = extractToken(peer)
+
+    if (!token) {
+      peer.close(4001, 'Unauthorized')
+      return
+    }
+
     try {
-      const url = peer.url || (peer as any).request?.url || ''
-      const tokenMatch = url.match(/[?&]token=([^&]+)/)
-      const token = tokenMatch?.[1]
-
-      if (!token) {
-        peer.send(JSON.stringify({ type: 'error', message: 'Unauthorized' }))
-        peer.close(4001, 'Unauthorized')
-        return
-      }
-
       const { payload } = await jwtVerify(token, JWT_SECRET)
       if (!payload.userId || !payload.tenant_id) {
-        peer.send(JSON.stringify({ type: 'error', message: 'Invalid token' }))
         peer.close(4001, 'Invalid token')
         return
       }
     } catch {
-      peer.send(JSON.stringify({ type: 'error', message: 'Token expired or invalid' }))
-      peer.close(4001, 'Token expired or invalid')
+      peer.close(4001, 'Token expired')
       return
     }
 

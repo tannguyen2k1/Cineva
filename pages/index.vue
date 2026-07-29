@@ -85,7 +85,6 @@
 import { User, TopRight, Key, House, Right, Document, BottomRight } from '@element-plus/icons-vue';
 import styles from './dashboard.module.scss';
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import { useWebSocket } from '@vueuse/core';
 import type { Component } from 'vue';
 
 const { t, locale } = useI18n();
@@ -142,41 +141,45 @@ const statCards = computed(() => {
   ];
 });
 
-const wsUrlRef = ref<string | undefined>(undefined);
+let ws: WebSocket | null = null;
+const wsConnected = ref(false);
 
-const { status: wsStatus, open: openWs, close: closeWs } = useWebSocket(wsUrlRef, {
-  immediate: false,
-  autoReconnect: {
-    retries: 10,
-    delay: 2000
-  },
-  onMessage(_ws, event) {
-    try {
-      const payload = JSON.parse(typeof event.data === 'string' ? event.data : '');
-      if (payload?.type === 'error') return;
-      if (payload?.type !== 'server-stats' || !payload.data) return;
-      if (!statsData.value) {
-        statsData.value = { server: payload.data };
-        return;
-      }
-      statsData.value.server = payload.data;
-    } catch (err) {
-      console.error('WS server-stats parse error:', err);
+function onWsMessage(event: MessageEvent) {
+  try {
+    const payload = JSON.parse(typeof event.data === 'string' ? event.data : '');
+    if (payload?.type !== 'server-stats' || !payload.data) return;
+    if (!statsData.value) {
+      statsData.value = { server: payload.data };
+      return;
     }
+    statsData.value.server = payload.data;
+  } catch (err) {
+    console.error('WS server-stats parse error:', err);
   }
-});
-
-const wsConnected = computed(() => wsStatus.value === 'OPEN');
+}
 
 async function connectWs() {
   if (!import.meta.client) return;
   try {
     const { ticket } = await $fetch<{ ticket: string }>('/api/auth/ws-ticket');
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    wsUrlRef.value = `${protocol}//${window.location.host}/ws/server-stats?token=${ticket}`;
-    openWs();
+    const url = `${protocol}//${window.location.host}/ws/server-stats?token=${ticket}`;
+
+    ws = new WebSocket(url);
+    ws.onopen = () => { wsConnected.value = true; };
+    ws.onmessage = onWsMessage;
+    ws.onclose = () => { wsConnected.value = false; };
+    ws.onerror = () => { wsConnected.value = false; };
   } catch {
     console.error('Failed to get WS ticket');
+  }
+}
+
+function closeWs() {
+  if (ws) {
+    ws.close();
+    ws = null;
+    wsConnected.value = false;
   }
 }
 
