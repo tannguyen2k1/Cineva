@@ -16,6 +16,11 @@
 - **New Module (end-to-end)**: See `skills/nuxt-new-module` for the full walkthrough: Prisma → migration → permissions → API → page → i18n → sidebar.
 - **i18n**: See `skills/nuxt-i18n` for key naming conventions, workflow, and `t()` usage patterns.
 - **Mobile/Responsive**: See `skills/nuxt-mobile-patterns` for desktop table vs mobile card list, infinite scroll, and pull-to-refresh.
+- **Soft Delete**: See `skills/nuxt-soft-delete` for SOFT_DELETE_MODELS registry, delete handler pattern, and uniqueness handling.
+- **System Log**: See `skills/nuxt-system-log` for writeSystemLog API, action naming, and when to log.
+- **Tenant Isolation**: See `skills/nuxt-tenant-isolation` for getTenantPrisma, ownership checks, and common pitfalls.
+- **WebSocket / Realtime**: See `skills/nuxt-websocket` for ticket auth, server handler lifecycle, and native WebSocket client.
+- **File Upload**: See `skills/nuxt-file-upload` for MIME/size validation, safe filenames, tenant-scoped storage, and auth-gated serving.
 - **Always modularize code**: Keep `.vue` files clean. Extract complex business logic, composables, or API calls if files get too large.
 
 ## 3. Styling & CSS Rules (CRITICAL)
