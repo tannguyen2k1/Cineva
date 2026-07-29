@@ -9,9 +9,10 @@
 - **Multi-tenancy**: RBAC (Role-Based Access Control) with Tenant data isolation.
 
 ## 2. File Modularity & Structure
-- **Pages**: Placed in `pages/` (e.g., `pages/systems/users/index.vue`).
-- **Components**: Reusable UI parts go to `components/`.
-- **API Endpoints**: Placed in `server/api/` (e.g., `server/api/users/index.get.ts`).
+- **Pages**: Placed in `pages/` (e.g., `pages/systems/users/index.vue`). See `skills/nuxt-crud-page` for CRUD page template.
+- **Components**: Reusable UI parts go to `components/`. See `skills/nuxt-component` for component template.
+- **API Endpoints**: Placed in `server/api/` (e.g., `server/api/users/index.get.ts`). See `skills/nuxt-api-endpoint` for endpoint template.
+- **Security & Auth**: See `skills/nuxt-security` for auth flow, permission checks, and security checklist.
 - **Always modularize code**: Keep `.vue` files clean. Extract complex business logic, composables, or API calls if files get too large.
 
 ## 3. Styling & CSS Rules (CRITICAL)
@@ -24,14 +25,15 @@
   4. Apply classes via dynamic binding: `:class="styles.pageContainer"`.
 
 ## 4. API & Backend Rules
-- **Authentication**: JWT Tokens. Checked globally via `server/middleware/auth.ts`.
-- **Tenant Context**: Always extract `event.context.tenant_id` (from headers or JWT) and use it in Prisma queries to ensure strict data isolation.
+- **Authentication**: httpOnly cookie (`auth_token`) holding a short-lived JWT (15 min). Refresh via `refresh_token` cookie (7 days). Checked globally in `server/middleware/auth.ts`. See `.agents/skills/nuxt-security/SKILL.md` for full auth flow.
+- **Permission enforcement**: Every protected API handler must call `requirePermission(event, 'action:resource')` from `server/utils/requirePermission.ts` before business logic.
+- **Tenant Context**: `event.context.tenant_id` comes **only from the JWT payload** — never from client headers. Use it in all Prisma queries for strict data isolation.
 - **Error Handling**: Throw errors using `createError({ statusCode, statusMessage })`.
 - **Response Format**: APIs should consistently return `{ success: true, data: ..., total?: ... }`.
 - **System logs**: After successful mutating actions (create/update/delete/login/assign permissions), call `writeSystemLog` from `server/utils/systemLog.ts` in that API handler. Do not block the main response if logging fails.
 
 ## 5. Frontend Guidelines
-- **API Calls**: Use Nuxt's `$fetch` for client-side API requests. Include `Authorization: Bearer <token>` and `x-tenant-id` headers where necessary (usually handled via Pinia store data).
+- **API Calls**: Use Nuxt's `$fetch` for client-side API requests. **Do NOT pass `Authorization` or `x-tenant-id` headers** — the httpOnly cookie is sent automatically by the browser.
 - **Reactivity**: Use `ref` for primitives and simple values, `reactive` for objects/forms.
 - **Forms**: Use `el-form` with proper validation rules (`FormRules`) for all data entry.
 
@@ -41,11 +43,14 @@
 - **API File Names**: Nuxt 3 pattern `[name].[method].ts` (e.g., `index.get.ts`, `profile.put.ts`)
 
 ## 7. Security Best Practices (CRITICAL)
+- For full auth/security reference see `.agents/skills/nuxt-security/SKILL.md`.
 - **Always pay attention to security** in all implementation tasks.
-- Never expose sensitive information (like `password` hashes, secret keys) in API responses.
+- Never expose sensitive information (like `password` hashes, secret keys, tokens) in API responses.
 - Always validate and sanitize user inputs to prevent Injection and XSS.
 - Secure file uploads (restrict mime types, size, and use safe paths).
 - Ensure strict multi-tenant data isolation on EVERY database query.
+- Every new API endpoint must call `requirePermission()` with the appropriate permission key.
+- Never store JWT tokens in client-accessible JS state (`localStorage`, Pinia, non-httpOnly cookies).
 
 ## 8. Soft Delete (CRITICAL)
 - Models with `deletedAt DateTime?` (User, Role, Tenant, and any new soft-deletable model) must **not** be hard-deleted in normal CRUD.
