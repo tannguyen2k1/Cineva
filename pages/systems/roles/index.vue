@@ -136,7 +136,6 @@ import styles from './roles.module.scss';
 import { ref, reactive, computed, watch, onMounted } from 'vue';
 import { Plus, Edit, Delete, Setting, Search, User } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
-import { useAuthStore } from '~/stores/auth';
 import { useAppStore } from '~/stores/app';
 import { useInfiniteScroll } from '@vueuse/core';
 
@@ -148,7 +147,6 @@ interface RoleRow {
 }
 
 const { t } = useI18n();
-const authStore = useAuthStore();
 const appStore = useAppStore();
 const currentPage = ref(1);
 const pageSize = ref(10);
@@ -192,12 +190,6 @@ const formRules = computed<FormRules>(() => ({
   ]
 }));
 
-const authHeaders = () => {
-  const headers: Record<string, string> = {};
-  if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`;
-  if (authStore.tenant_id) headers['x-tenant-id'] = authStore.tenant_id;
-  return headers;
-};
 
 const fetchData = async (isLoadMore = false) => {
   pending.value = true;
@@ -212,7 +204,7 @@ const fetchData = async (isLoadMore = false) => {
 
     const res = await $fetch<any>('/api/roles', {
       params,
-      headers: authHeaders()
+      credentials: 'include'
     });
 
     apiResponse.value = res;
@@ -272,7 +264,7 @@ const onSubmit = async () => {
           name: form.name.trim(),
           description: form.description.trim() || null
         },
-        headers: authHeaders()
+        credentials: 'include'
       });
       ElMessage.success(t('roles.updated'));
     } else {
@@ -282,7 +274,7 @@ const onSubmit = async () => {
           name: form.name.trim(),
           description: form.description.trim() || null
         },
-        headers: authHeaders()
+        credentials: 'include'
       });
       ElMessage.success(t('roles.created'));
     }
@@ -320,7 +312,7 @@ const onDelete = async (row: RoleRow) => {
   try {
     await $fetch(`/api/roles/${row.id}`, {
       method: 'DELETE',
-      headers: authHeaders()
+      credentials: 'include'
     });
     ElMessage.success(t('roles.deleted'));
     await fetchData();

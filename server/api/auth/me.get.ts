@@ -1,83 +1,56 @@
-import { jwtVerify } from 'jose';
-import { prisma } from '../../utils/prisma';
-
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'super-secret-key-for-local-dev-only');
+import { prisma } from '../../utils/prisma'
 
 export default defineEventHandler(async (event) => {
-  // 1. Lấy token từ header hoặc cookie (tùy cách lưu, ở đây Nuxt gửi cookie auth_token)
-  let token = getCookie(event, 'auth_token');
-  
-  if (!token) {
-    const authHeader = getHeader(event, 'Authorization');
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.split(' ')[1];
-    }
+  const userId = event.context.user?.userId as string | undefined
+  const tenantId = event.context.tenant_id as string | undefined
+
+  if (!userId || !tenantId) {
+    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
 
-  if (!token) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized - No token' });
-  }
-
-  try {
-    // 2. Xác thực JWT
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    const userId = payload.userId as string;
-
-    // 3. Truy vấn DB lấy user và quyền
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        userRoles: {
-          include: {
-            role: {
-              include: {
-                rolePerms: {
-                  include: {
-                    permission: true
-                  }
-                }
+  const user = await prisma.user.findFirst({
+    where: { id: userId, tenant_id: tenantId, deletedAt: null },
+    include: {
+      userRoles: {
+        include: {
+          role: {
+            include: {
+              rolePerms: {
+                include: { permission: true }
               }
             }
           }
         }
       }
-    });
-
-    if (!user || user.deletedAt) {
-      throw createError({ statusCode: 401, statusMessage: 'User not found' });
     }
+  })
 
-    // 4. Rút trích danh sách quyền
-    const permissionsSet = new Set<string>();
-    if (user.userRoles) {
-      user.userRoles.forEach(ur => {
-        if (ur.role && ur.role.rolePerms) {
-          ur.role.rolePerms.forEach(rp => {
-            if (rp.permission) {
-              permissionsSet.add(`${rp.permission.action}:${rp.permission.resource}`);
-            }
-          });
-        }
-      });
-    }
-    const permissions = Array.from(permissionsSet);
-
-    // 5. Trả về
-    return {
-      success: true,
-      data: {
-        user: {
-          id: user.id,
-          username: user.username,
-          fullName: user.fullName,
-          email: user.email,
-          avatar: user.avatar
-        },
-        tenant_id: user.tenant_id,
-        permissions
-      }
-    };
-  } catch (err) {
-    throw createError({ statusCode: 401, statusMessage: 'Invalid or expired token' });
+  if (!user) {
+    throw createError({ statusCode: 401, statusMessage: 'User not found' })
   }
-});
+
+  const permissionsSet = new Set<string>()
+  user.userRoles.forEach(ur => {
+    ur.role.rolePerms.forEach(rp => {
+      if (rp.permission) {
+        permissionsSet.add(`${rp.permission.action}:${rp.permission.resource}`)
+      }
+    })
+  })
+  const permissions = Array.from(permissionsSet)
+
+  return {
+    success: true,
+    data: {
+      user: {
+        id: user.id,
+        username: user.username,
+        fullName: user.fullName,
+        email: user.email,
+        avatar: user.avatar
+      },
+      tenant_id: user.tenant_id,
+      permissions
+    }
+  }
+})

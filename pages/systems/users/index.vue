@@ -309,12 +309,6 @@ const formRules = computed<FormRules>(() => ({
 const roleOptions = ref<RoleOption[]>([]);
 const rolesLoading = ref(false);
 
-const authHeaders = () => {
-  const headers: Record<string, string> = {};
-  if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`;
-  if (authStore.tenant_id) headers['x-tenant-id'] = authStore.tenant_id;
-  return headers;
-};
 
 const fetchData = async (isLoadMore = false) => {
   pending.value = true;
@@ -330,7 +324,7 @@ const fetchData = async (isLoadMore = false) => {
 
     const res = await $fetch<any>('/api/users', {
       params,
-      headers: authHeaders()
+      credentials: 'include'
     });
     
     apiResponse.value = res;
@@ -362,7 +356,7 @@ const fetchRoles = async () => {
   try {
     const res = await $fetch<any>('/api/roles', {
       params: { page: 1, pageSize: 100 },
-      headers: authHeaders()
+      credentials: 'include'
     });
     roleOptions.value = (res?.data || []).map((r: any) => ({
       id: r.id,
@@ -425,7 +419,7 @@ const onSubmit = async () => {
       await $fetch(`/api/users/${editingId.value}`, {
         method: 'PUT',
         body: payload,
-        headers: authHeaders()
+        credentials: 'include'
       });
       ElMessage.success(t('users.updated'));
     } else {
@@ -439,7 +433,7 @@ const onSubmit = async () => {
           isActive: form.isActive,
           roleIds: form.roleIds
         },
-        headers: authHeaders()
+        credentials: 'include'
       });
       ElMessage.success(t('users.created'));
     }
@@ -465,7 +459,7 @@ const onToggleActive = async (row: UserRow, next: boolean) => {
     await $fetch(`/api/users/${row.id}`, {
       method: 'PUT',
       body: { isActive: next },
-      headers: authHeaders()
+      credentials: 'include'
     });
     ElMessage.success(next ? t('users.unlocked') : t('users.locked'));
   } catch (err: any) {
@@ -499,7 +493,7 @@ const onDelete = async (row: UserRow) => {
   try {
     await $fetch(`/api/users/${row.id}`, {
       method: 'DELETE',
-      headers: authHeaders()
+      credentials: 'include'
     });
     ElMessage.success(t('users.deleted'));
     await fetchData();

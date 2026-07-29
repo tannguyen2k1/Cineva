@@ -6,8 +6,10 @@ import {
   permissionKey,
   type PermissionAction
 } from '../../utils/systemPermissions';
+import { requirePermission } from '../../utils/requirePermission';
 
 export default defineEventHandler(async (event) => {
+  requirePermission(event, 'read:roles');
   try {
     const tenant_id = event.context.tenant_id;
 

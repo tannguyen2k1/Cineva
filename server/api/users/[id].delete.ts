@@ -1,8 +1,11 @@
 import { getTenantPrisma } from '../../utils/prisma';
 import { getActorUserId, writeSystemLog } from '../../utils/systemLog';
+import { requirePermission } from '../../utils/requirePermission';
 
 export default defineEventHandler(async (event) => {
   try {
+    requirePermission(event, 'delete:users');
+
     const tenant_id = event.context.tenant_id;
     const currentUser = event.context.user as { userId?: string } | undefined;
 

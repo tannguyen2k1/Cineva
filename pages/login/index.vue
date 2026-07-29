@@ -139,7 +139,7 @@ const handleLogin = async () => {
           }
         });
 
-        authStore.setAuth(data.token, data.user, data.tenant_id, data.permissions);
+        authStore.setAuth(data.user, data.tenant_id, data.permissions);
         const displayName = data.user?.fullName || data.user?.username || form.username;
         ElMessage.success(t('login.welcome', { name: displayName }));
         navigateTo('/');

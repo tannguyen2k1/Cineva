@@ -3,9 +3,11 @@ import { prisma, getTenantPrisma } from '../../utils/prisma';
 import { ensureSystemPermissions } from '../../utils/systemPermissions';
 import { getActorUserId, writeSystemLog } from '../../utils/systemLog';
 import { getDefaultAdminCredentials } from '../../utils/defaultAdmin';
+import { requirePermission } from '../../utils/requirePermission';
 
 export default defineEventHandler(async (event) => {
   try {
+    requirePermission(event, 'create:tenants');
     const body = await readBody(event);
     const name = String(body?.name || '').trim();
     const domainRaw = body?.domain != null ? String(body.domain).trim() : '';

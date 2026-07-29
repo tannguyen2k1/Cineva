@@ -157,10 +157,7 @@ const form = reactive({
 
 onMounted(async () => {
   try {
-    const headers: any = {};
-    if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`;
-
-    const { data } = await $fetch<any>('/api/auth/me', { headers });
+    const { data } = await $fetch<any>('/api/auth/me');
     if (data) {
       form.fullName = data.user.fullName || '';
       form.email = data.user.email || '';
@@ -191,13 +188,8 @@ const uploadCroppedAvatar = async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
 
-    const headers: Record<string, string> = {};
-    if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`;
-    if (authStore.tenant_id) headers['x-tenant-id'] = authStore.tenant_id;
-
     const res = await $fetch<any>('/api/users/avatar', {
       method: 'POST',
-      headers,
       body: formData
     });
 
@@ -233,9 +225,6 @@ const handleUpdate = async () => {
       errorMessage.value = '';
 
       try {
-        const headers: any = {};
-        if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`;
-
         const payload: any = {
           fullName: form.fullName,
           email: form.email
@@ -247,7 +236,6 @@ const handleUpdate = async () => {
 
         const res = await $fetch<any>('/api/users/profile', {
           method: 'PUT',
-          headers,
           body: payload
         });
 

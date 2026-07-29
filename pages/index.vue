@@ -86,11 +86,9 @@ import { User, TopRight, Key, House, Right, Document, BottomRight } from '@eleme
 import styles from './dashboard.module.scss';
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useWebSocket } from '@vueuse/core';
-import { useAuthStore } from '~/stores/auth';
 import type { Component } from 'vue';
 
 const { t, locale } = useI18n();
-const authStore = useAuthStore();
 const statsData = ref<any>(null);
 const pending = ref(false);
 const dateLocale = computed(() => (locale.value === 'en' ? 'en-US' : 'vi-VN'));
@@ -144,13 +142,9 @@ const statCards = computed(() => {
   ];
 });
 
-const wsUrl = computed(() => {
-  if (!import.meta.client) return undefined;
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${window.location.host}/ws/server-stats`;
-});
+const wsUrlRef = ref<string | undefined>(undefined);
 
-const { status: wsStatus, open: openWs, close: closeWs } = useWebSocket(wsUrl, {
+const { status: wsStatus, open: openWs, close: closeWs } = useWebSocket(wsUrlRef, {
   immediate: false,
   autoReconnect: {
     retries: 10,
@@ -159,6 +153,7 @@ const { status: wsStatus, open: openWs, close: closeWs } = useWebSocket(wsUrl, {
   onMessage(_ws, event) {
     try {
       const payload = JSON.parse(typeof event.data === 'string' ? event.data : '');
+      if (payload?.type === 'error') return;
       if (payload?.type !== 'server-stats' || !payload.data) return;
       if (!statsData.value) {
         statsData.value = { server: payload.data };
@@ -173,14 +168,22 @@ const { status: wsStatus, open: openWs, close: closeWs } = useWebSocket(wsUrl, {
 
 const wsConnected = computed(() => wsStatus.value === 'OPEN');
 
+async function connectWs() {
+  if (!import.meta.client) return;
+  try {
+    const { ticket } = await $fetch<{ ticket: string }>('/api/auth/ws-ticket');
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    wsUrlRef.value = `${protocol}//${window.location.host}/ws/server-stats?token=${ticket}`;
+    openWs();
+  } catch {
+    console.error('Failed to get WS ticket');
+  }
+}
+
 const fetchStats = async () => {
   pending.value = true;
   try {
-    const headers: any = {};
-    if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`;
-    if (authStore.tenant_id) headers['x-tenant-id'] = authStore.tenant_id;
-
-    const res = await $fetch<any>('/api/dashboard/stats', { headers });
+    const res = await $fetch<any>('/api/dashboard/stats');
     if (res.success) {
       statsData.value = res.data;
     }
@@ -198,7 +201,7 @@ const formatDate = (dateString: string) => {
 
 onMounted(async () => {
   await fetchStats();
-  openWs();
+  connectWs();
 });
 
 usePageRefresh(() => fetchStats());

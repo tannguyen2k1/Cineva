@@ -1,9 +1,12 @@
 import bcrypt from 'bcryptjs';
 import { getTenantPrisma } from '../../utils/prisma';
 import { getActorUserId, writeSystemLog } from '../../utils/systemLog';
+import { requirePermission } from '../../utils/requirePermission';
 
 export default defineEventHandler(async (event) => {
   try {
+    requirePermission(event, 'update:users');
+
     const tenant_id = event.context.tenant_id;
 
     if (!tenant_id) {

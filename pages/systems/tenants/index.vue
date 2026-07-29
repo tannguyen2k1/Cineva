@@ -220,12 +220,6 @@ const formRules = computed<FormRules>(() => ({
   ]
 }));
 
-const authHeaders = () => {
-  const headers: Record<string, string> = {};
-  if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`;
-  if (authStore.tenant_id) headers['x-tenant-id'] = authStore.tenant_id;
-  return headers;
-};
 
 const fetchData = async (isLoadMore = false) => {
   pending.value = true;
@@ -238,7 +232,7 @@ const fetchData = async (isLoadMore = false) => {
 
     const res = await $fetch<any>('/api/tenants', {
       params,
-      headers: authHeaders()
+      credentials: 'include'
     });
     apiResponse.value = res;
 
@@ -313,7 +307,7 @@ const onSubmit = async () => {
           domain: form.domain.trim() || null,
           isActive: form.isActive
         },
-        headers: authHeaders()
+        credentials: 'include'
       });
       ElMessage.success(t('tenants.updated'));
     } else {
@@ -324,7 +318,7 @@ const onSubmit = async () => {
           domain: form.domain.trim() || null,
           isActive: form.isActive
         },
-        headers: authHeaders()
+        credentials: 'include'
       });
       const creds = created?.data?.defaultAdmin;
       ElMessage.success(
@@ -355,7 +349,7 @@ const onToggleActive = async (row: TenantRow, next: boolean) => {
     await $fetch(`/api/tenants/${row.id}`, {
       method: 'PUT',
       body: { isActive: next },
-      headers: authHeaders()
+      credentials: 'include'
     });
     ElMessage.success(next ? t('tenants.unlocked') : t('tenants.locked'));
   } catch (err: any) {
@@ -387,7 +381,7 @@ const onDelete = async (row: TenantRow) => {
   try {
     await $fetch(`/api/tenants/${row.id}`, {
       method: 'DELETE',
-      headers: authHeaders()
+      credentials: 'include'
     });
     ElMessage.success(t('tenants.deleted'));
     await fetchData();

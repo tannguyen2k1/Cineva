@@ -1,7 +1,10 @@
 import { getTenantPrisma } from '../../../utils/prisma';
+import { requirePermission } from '../../../utils/requirePermission';
 
 export default defineEventHandler(async (event) => {
   try {
+    requirePermission(event, 'read:roles');
+
     const tenant_id = event.context.tenant_id;
 
     if (!tenant_id) {

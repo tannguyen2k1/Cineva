@@ -1,85 +1,100 @@
-import { defineStore } from 'pinia';
+import { defineStore } from 'pinia'
 
 interface User {
-  id: string;
-  username: string;
-  fullName: string | null;
-  email?: string | null;
-  avatar?: string | null;
+  id: string
+  username: string
+  fullName: string | null
+  email?: string | null
+  avatar?: string | null
 }
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null as User | null,
     tenant_id: null as string | null,
-    token: null as string | null,
-    permissions: [] as string[]
+    permissions: [] as string[],
+    loggedIn: false
   }),
-  
+
   getters: {
-    isLoggedIn: (state) => !!state.token,
+    isLoggedIn: (state) => state.loggedIn,
     hasPermission: (state) => (permission: string) => state.permissions.includes(permission)
   },
 
   actions: {
     initAuth() {
-      const tokenCookie = useCookie('auth_token');
-      const tenantCookie = useCookie('tenant_id');
-      if (tokenCookie.value) {
-        this.token = tokenCookie.value as string;
+      const indicator = useCookie('auth_logged_in')
+      if (indicator.value === '1') {
+        this.loggedIn = true
       }
+      const tenantCookie = useCookie('tenant_id')
       if (tenantCookie.value) {
-        this.tenant_id = tenantCookie.value as string;
+        this.tenant_id = tenantCookie.value as string
       }
     },
 
-    setAuth(token: string, user: User, tenant_id: string, permissions: string[] = []) {
-      this.token = token;
-      this.user = user;
-      this.tenant_id = tenant_id;
-      this.permissions = permissions;
-      
-      const tokenCookie = useCookie('auth_token', { maxAge: 60 * 60 * 2 });
-      tokenCookie.value = token;
+    setAuth(user: User, tenant_id: string, permissions: string[] = []) {
+      this.user = user
+      this.tenant_id = tenant_id
+      this.permissions = permissions
+      this.loggedIn = true
 
-      const tenantCookie = useCookie('tenant_id');
-      tenantCookie.value = tenant_id;
+      const tenantCookie = useCookie('tenant_id')
+      tenantCookie.value = tenant_id
     },
-    
+
     async fetchUser() {
-      if (!this.token) return;
+      if (!this.loggedIn) return
       try {
-        const headers: any = {
-          'Authorization': `Bearer ${this.token}`
-        };
+        const headers: Record<string, string> = {}
         if (import.meta.server) {
-          const cookieHeaders = useRequestHeaders(['cookie']);
-          Object.assign(headers, cookieHeaders);
+          const cookieHeaders = useRequestHeaders(['cookie'])
+          if (cookieHeaders.cookie) {
+            headers.cookie = cookieHeaders.cookie
+          }
         }
-        
-        const { data } = await $fetch<any>('/api/auth/me', { headers });
+
+        const { data } = await $fetch<any>('/api/auth/me', { headers })
         if (data) {
-          this.user = data.user;
-          this.tenant_id = data.tenant_id;
-          this.permissions = data.permissions;
+          this.user = data.user
+          this.tenant_id = data.tenant_id
+          this.permissions = data.permissions
         }
-      } catch (err) {
-        this.logout();
+      } catch {
+        this.logout()
       }
     },
 
-    logout() {
-      this.token = null;
-      this.user = null;
-      this.tenant_id = null;
-      this.permissions = [];
-      
-      const tokenCookie = useCookie('auth_token');
-      tokenCookie.value = null;
-      const tenantCookie = useCookie('tenant_id');
-      tenantCookie.value = null;
-      
-      navigateTo('/login');
+    async refreshToken() {
+      try {
+        const { data } = await $fetch<any>('/api/auth/refresh', { method: 'POST' })
+        if (data) {
+          this.user = data.user
+          this.tenant_id = data.tenant_id
+          this.permissions = data.permissions
+          this.loggedIn = true
+        }
+      } catch {
+        this.logout()
+      }
+    },
+
+    async logout() {
+      try {
+        await $fetch('/api/auth/logout', { method: 'POST' })
+      } catch {
+        // best-effort
+      }
+
+      this.user = null
+      this.tenant_id = null
+      this.permissions = []
+      this.loggedIn = false
+
+      const tenantCookie = useCookie('tenant_id')
+      tenantCookie.value = null
+
+      navigateTo('/login')
     }
   }
-});
+})

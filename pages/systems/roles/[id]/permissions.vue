@@ -75,7 +75,6 @@
 import styles from './permissions.module.scss';
 import { ref, computed, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
-import { useAuthStore } from '~/stores/auth';
 
 interface PermissionItem {
   id: string;
@@ -93,7 +92,6 @@ interface PermissionGroup {
 
 const route = useRoute();
 const router = useRouter();
-const authStore = useAuthStore();
 
 const roleId = computed(() => String(route.params.id || ''));
 
@@ -109,12 +107,6 @@ const activeGroup = computed(
   () => permissionGroups.value.find(g => g.resource === activeTab.value) || null
 );
 
-const authHeaders = () => {
-  const headers: Record<string, string> = {};
-  if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`;
-  if (authStore.tenant_id) headers['x-tenant-id'] = authStore.tenant_id;
-  return headers;
-};
 
 const selectedCount = (group: PermissionGroup) =>
   group.permissions.filter(p => selectedIds.value.includes(p.id)).length;
@@ -154,8 +146,8 @@ const load = async () => {
   error.value = '';
   try {
     const [permsRes, assignedRes] = await Promise.all([
-      $fetch<any>('/api/permissions', { headers: authHeaders() }),
-      $fetch<any>(`/api/roles/${roleId.value}/permissions`, { headers: authHeaders() })
+      $fetch<any>('/api/permissions'),
+      $fetch<any>(`/api/roles/${roleId.value}/permissions`)
     ]);
 
     permissionGroups.value = permsRes?.data || [];
@@ -174,8 +166,7 @@ const onSave = async () => {
   try {
     await $fetch(`/api/roles/${roleId.value}/permissions`, {
       method: 'PUT',
-      body: { permissionIds: selectedIds.value },
-      headers: authHeaders()
+      body: { permissionIds: selectedIds.value }
     });
     ElMessage.success('Đã lưu phân quyền');
     await router.push('/systems/roles');

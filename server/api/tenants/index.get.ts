@@ -1,7 +1,9 @@
 import { prisma } from '../../utils/prisma';
+import { requirePermission } from '../../utils/requirePermission';
 
 export default defineEventHandler(async (event) => {
   try {
+    requirePermission(event, 'read:tenants');
     // Bỏ qua check tenant_id vì query bảng Tenant không phụ thuộc vào Tenant ID
     
     const query = getQuery(event);

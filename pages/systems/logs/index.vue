@@ -123,7 +123,6 @@
 import styles from './logs.module.scss';
 import { ref, computed, watch, onMounted, inject, type Ref } from 'vue';
 import { Search, User } from '@element-plus/icons-vue';
-import { useAuthStore } from '~/stores/auth';
 import { useAppStore } from '~/stores/app';
 import { useInfiniteScroll } from '@vueuse/core';
 
@@ -138,7 +137,6 @@ interface LogRow {
 }
 
 const { t, locale } = useI18n();
-const authStore = useAuthStore();
 const appStore = useAppStore();
 
 const currentPage = ref(1);
@@ -174,12 +172,6 @@ const actionOptions = [
   'DELETE_TENANT'
 ];
 
-const authHeaders = () => {
-  const headers: Record<string, string> = {};
-  if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`;
-  if (authStore.tenant_id) headers['x-tenant-id'] = authStore.tenant_id;
-  return headers;
-};
 
 const formatDateTime = (value: string) =>
   new Date(value).toLocaleString(dateLocale.value, {
@@ -257,7 +249,7 @@ const fetchData = async (isLoadMore = false) => {
 
     const res = await $fetch<any>('/api/logs', {
       params,
-      headers: authHeaders()
+      credentials: 'include'
     });
 
     apiResponse.value = res;

@@ -1,8 +1,10 @@
 import { prisma } from '../../utils/prisma';
 import { getActorUserId, writeSystemLog } from '../../utils/systemLog';
+import { requirePermission } from '../../utils/requirePermission';
 
 export default defineEventHandler(async (event) => {
   try {
+    requirePermission(event, 'delete:tenants');
     const id = getRouterParam(event, 'id');
     if (!id) {
       throw createError({ statusCode: 400, statusMessage: 'Thiếu id tenant' });
