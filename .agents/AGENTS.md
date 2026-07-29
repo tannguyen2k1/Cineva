@@ -13,6 +13,9 @@
 - **Components**: Reusable UI parts go to `components/`. See `skills/nuxt-component` for component template.
 - **API Endpoints**: Placed in `server/api/` (e.g., `server/api/users/index.get.ts`). See `skills/nuxt-api-endpoint` for endpoint template.
 - **Security & Auth**: See `skills/nuxt-security` for auth flow, permission checks, and security checklist.
+- **New Module (end-to-end)**: See `skills/nuxt-new-module` for the full walkthrough: Prisma → migration → permissions → API → page → i18n → sidebar.
+- **i18n**: See `skills/nuxt-i18n` for key naming conventions, workflow, and `t()` usage patterns.
+- **Mobile/Responsive**: See `skills/nuxt-mobile-patterns` for desktop table vs mobile card list, infinite scroll, and pull-to-refresh.
 - **Always modularize code**: Keep `.vue` files clean. Extract complex business logic, composables, or API calls if files get too large.
 
 ## 3. Styling & CSS Rules (CRITICAL)
