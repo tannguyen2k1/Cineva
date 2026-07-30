@@ -105,7 +105,8 @@ so the DB has the permission rows and Admin role gets them automatically.
 ## Step 5: API endpoints
 
 Create 4 files under `server/api/{resource}/`. Follow the `nuxt-api-endpoint` skill
-for the full skeleton. Quick reference:
+for the full skeleton (including `defineRouteMeta` OpenAPI metadata on every file).
+Quick reference:
 
 ### `server/api/products/index.get.ts` (list)
 

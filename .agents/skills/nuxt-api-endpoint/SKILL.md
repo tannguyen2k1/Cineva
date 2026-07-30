@@ -3,9 +3,9 @@ name: nuxt-api-endpoint
 description: >-
   Template and checklist for creating new Nuxt server API endpoints in this project.
   Covers the standard skeleton: permission check, tenant scoping, input validation,
-  Prisma query, system log, error handling, and response format.
+  Prisma query, system log, error handling, response format, and OpenAPI docs metadata.
   Use when creating a new API route, adding CRUD endpoints, or scaffolding server handlers.
-  Triggers on "create API", "new endpoint", "server/api", "add route", "CRUD API".
+  Triggers on "create API", "new endpoint", "server/api", "add route", "CRUD API", "openapi", "api docs".
 ---
 
 # Creating API Endpoints
@@ -131,6 +131,100 @@ await writeSystemLog({
 return { success: true }
 ```
 
+## OpenAPI docs (required for every new endpoint)
+
+Nitro auto-generates the spec from `defineRouteMeta({ openAPI: ... })` on each handler.
+Config lives in `nuxt.config.ts` → `nitro.openAPI` (Scalar UI at `/api/docs`, spec at `/api/openapi.json`).
+
+**Every new endpoint must include `defineRouteMeta` before `defineEventHandler`.**
+
+### Protected endpoint (most routes)
+
+```typescript
+defineRouteMeta({
+  openAPI: {
+    tags: ['Products'],  // PascalCase module name — groups routes in /api/docs
+    description: 'List products in the current tenant (paginated). Requires `read:products`.',
+    parameters: [  // GET query params only
+      { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
+      { in: 'query', name: 'pageSize', schema: { type: 'integer', default: 10 } },
+      { in: 'query', name: 'search', schema: { type: 'string' } }
+    ],
+    security: [{ bearerAuth: [] }]  // omit for public routes
+  }
+})
+```
+
+### POST / PUT with body
+
+```typescript
+defineRouteMeta({
+  openAPI: {
+    tags: ['Products'],
+    description: 'Create a product. Requires `create:products`.',
+    requestBody: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['name'],
+            properties: {
+              name: { type: 'string' },
+              price: { type: 'number' }
+            }
+          }
+        }
+      }
+    },
+    security: [{ bearerAuth: [] }]
+  }
+})
+```
+
+### Nested resource (e.g. role permissions)
+
+File: `server/api/roles/[id]/permissions.put.ts` → `PUT /api/roles/:id/permissions`
+
+Use the **parent module tag** (`Roles`), not a separate `Permissions` tag:
+
+```typescript
+defineRouteMeta({
+  openAPI: {
+    tags: ['Roles'],
+    description: 'Replace permissions assigned to a role. Requires `update:roles`.',
+    security: [{ bearerAuth: [] }]
+  }
+})
+```
+
+Catalog-only routes (`GET /api/permissions`) use tag `Permissions`.
+
+### Public / auth routes
+
+- **Do not** set `security` on login, register, refresh, logout.
+- `bearerAuth` scheme is defined once in `server/api/auth/login.post.ts` via `openAPI.$global` — do not duplicate it.
+- New public routes must be added to `PUBLIC_EXACT` or `PUBLIC_PREFIX` in `server/middleware/auth.ts`.
+
+### Tag naming
+
+| Module | Tag |
+|--------|-----|
+| users | `Users` |
+| roles (+ nested permissions) | `Roles` |
+| permissions catalog | `Permissions` |
+| tenants | `Tenants` |
+| logs | `Logs` |
+| dashboard | `Dashboard` |
+| auth | `Auth` |
+| new module | PascalCase of resource name |
+
+### Testing via docs UI
+
+1. Login at `/login` in the browser (cookies are sent automatically).
+2. Open `/api/docs` — protected endpoints work without manually setting Bearer.
+3. Login endpoint is hard to test in Scalar (Turnstile) — use the UI instead.
+
 ## Checklist
 
 - [ ] File named `[name].[method].ts` under correct folder
@@ -143,3 +237,5 @@ return { success: true }
 - [ ] Response format: `{ success: true, data, total?, page?, pageSize? }`
 - [ ] try/catch with standard error re-throw pattern
 - [ ] If new permission needed, add to `SYSTEM_MODULES` in `systemPermissions.ts`
+- [ ] `defineRouteMeta({ openAPI: { tags, description, security?, parameters?, requestBody? } })` added
+- [ ] Public route (if any) registered in `server/middleware/auth.ts` `PUBLIC_EXACT` or `PUBLIC_PREFIX`

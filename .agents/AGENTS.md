@@ -39,6 +39,7 @@
 - **Error Handling**: Throw errors using `createError({ statusCode, statusMessage })`.
 - **Response Format**: APIs should consistently return `{ success: true, data: ..., total?: ... }`.
 - **System logs**: After successful mutating actions (create/update/delete/login/assign permissions), call `writeSystemLog` from `server/utils/systemLog.ts` in that API handler. Do not block the main response if logging fails.
+- **API docs (OpenAPI)**: Nitro generates docs from `defineRouteMeta({ openAPI: ... })` on each handler. Scalar UI: `/api/docs`, spec: `/api/openapi.json`. Every new endpoint must include OpenAPI metadata (tags, description, `security` for protected routes). See `skills/nuxt-api-endpoint` for patterns. Public routes must be listed in `server/middleware/auth.ts` (`PUBLIC_EXACT` / `PUBLIC_PREFIX`).
 
 ## 5. Frontend Guidelines
 - **API Calls**: Use Nuxt's `$fetch` for client-side API requests. **Do NOT pass `Authorization` or `x-tenant-id` headers** — the httpOnly cookie is sent automatically by the browser.
