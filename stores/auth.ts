@@ -85,7 +85,14 @@ export const useAuthStore = defineStore('auth', {
           const refreshed = await this.tryRefresh()
           if (refreshed) return
         }
-        this.logout()
+        if (import.meta.client) {
+          await this.logout()
+        } else {
+          this.user = null
+          this.tenant_id = null
+          this.permissions = []
+          this.loggedIn = false
+        }
       }
     },
 
@@ -135,13 +142,16 @@ export const useAuthStore = defineStore('auth', {
       this.permissions = []
       this.loggedIn = false
 
+      // useCookie / navigateTo require Nuxt context — client only
+      if (!import.meta.client) return
+
       const tenantCookie = useCookie('tenant_id')
       tenantCookie.value = null
 
       const authIndicator = useCookie('auth_logged_in')
       authIndicator.value = null
 
-      navigateTo('/login')
+      await navigateTo('/login')
     }
   }
 })
