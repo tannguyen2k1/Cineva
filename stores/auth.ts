@@ -51,6 +51,15 @@ export const useAuthStore = defineStore('auth', {
 
       const tenantCookie = useCookie('tenant_id')
       tenantCookie.value = tenant_id
+
+      // Sync indicator cookie immediately so route middleware sees logged-in state
+      // before the Set-Cookie from the login response is reflected in useCookie.
+      const authIndicator = useCookie('auth_logged_in', {
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 7 * 24 * 60 * 60
+      })
+      authIndicator.value = '1'
     },
 
     async fetchUser() {
@@ -128,6 +137,9 @@ export const useAuthStore = defineStore('auth', {
 
       const tenantCookie = useCookie('tenant_id')
       tenantCookie.value = null
+
+      const authIndicator = useCookie('auth_logged_in')
+      authIndicator.value = null
 
       navigateTo('/login')
     }
