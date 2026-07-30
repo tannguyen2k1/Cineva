@@ -59,7 +59,20 @@ export default defineNuxtConfig({
 
   nitro: {
     experimental: {
-      websocket: true
+      websocket: true,
+      openAPI: true
+    },
+    openAPI: {
+      meta: {
+        title: 'Admin Pro API',
+        description: 'Multi-tenant SaaS REST API. Auth via httpOnly cookies or `Authorization: Bearer <token>`.',
+        version: '1.0.0'
+      },
+      route: '/api/openapi.json',
+      ui: {
+        scalar: { route: '/api/docs' },
+        swagger: { route: '/api/swagger' }
+      }
     }
   }
 })

@@ -18,6 +18,42 @@ const ACCESS_COOKIE_MAX_AGE = 15 * 60 // 15 minutes
 
 const IS_PROD = process.env.NODE_ENV === 'production'
 
+defineRouteMeta({
+  openAPI: {
+    $global: {
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+            description: 'Access token from login (15 min). Use cookie jar or copy auth_token cookie value.'
+          }
+        }
+      }
+    },
+    tags: ['Auth'],
+    description: 'Login with workspace credentials. Sets httpOnly auth cookies (auth_token, refresh_token).',
+    requestBody: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['tenant_id', 'username', 'password', 'turnstileToken'],
+            properties: {
+              tenant_id: { type: 'string', example: 'default' },
+              username: { type: 'string' },
+              password: { type: 'string', format: 'password' },
+              turnstileToken: { type: 'string' }
+            }
+          }
+        }
+      }
+    }
+  }
+})
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)

@@ -1,6 +1,14 @@
 import { prisma } from '../../utils/prisma';
 import { requirePermission } from '../../utils/requirePermission';
 
+defineRouteMeta({
+  openAPI: {
+    tags: ['Tenants'],
+    description: 'List tenants / workspaces.',
+    security: [{ bearerAuth: [] }]
+  }
+})
+
 export default defineEventHandler(async (event) => {
   try {
     requirePermission(event, 'read:tenants');

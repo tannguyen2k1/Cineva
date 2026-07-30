@@ -3,6 +3,14 @@ import { getTenantPrisma } from '../../utils/prisma';
 import { getActorUserId, writeSystemLog } from '../../utils/systemLog';
 import { requirePermission } from '../../utils/requirePermission';
 
+defineRouteMeta({
+  openAPI: {
+    tags: ['Users'],
+    description: 'Update a user by ID.',
+    security: [{ bearerAuth: [] }]
+  }
+})
+
 export default defineEventHandler(async (event) => {
   try {
     requirePermission(event, 'update:users');

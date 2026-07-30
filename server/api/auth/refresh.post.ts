@@ -8,6 +8,13 @@ const ACCESS_TOKEN_TTL = '15m'
 const ACCESS_COOKIE_MAX_AGE = 15 * 60
 const IS_PROD = process.env.NODE_ENV === 'production'
 
+defineRouteMeta({
+  openAPI: {
+    tags: ['Auth'],
+    description: 'Refresh the access token using the refresh_token cookie.'
+  }
+})
+
 export default defineEventHandler(async (event) => {
   const refreshToken = getCookie(event, 'refresh_token')
   if (!refreshToken) {

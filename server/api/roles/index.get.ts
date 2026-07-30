@@ -1,6 +1,14 @@
 import { getTenantPrisma } from '../../utils/prisma';
 import { requirePermission } from '../../utils/requirePermission';
 
+defineRouteMeta({
+  openAPI: {
+    tags: ['Roles'],
+    description: 'List roles in the current tenant.',
+    security: [{ bearerAuth: [] }]
+  }
+})
+
 export default defineEventHandler(async (event) => {
   try {
     requirePermission(event, 'read:roles');

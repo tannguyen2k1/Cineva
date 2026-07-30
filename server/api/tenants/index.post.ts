@@ -5,6 +5,14 @@ import { getActorUserId, writeSystemLog } from '../../utils/systemLog';
 import { getDefaultAdminCredentials } from '../../utils/defaultAdmin';
 import { requirePermission } from '../../utils/requirePermission';
 
+defineRouteMeta({
+  openAPI: {
+    tags: ['Tenants'],
+    description: 'Create a new tenant / workspace.',
+    security: [{ bearerAuth: [] }]
+  }
+})
+
 export default defineEventHandler(async (event) => {
   try {
     requirePermission(event, 'create:tenants');

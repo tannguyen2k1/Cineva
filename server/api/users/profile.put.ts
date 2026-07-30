@@ -1,6 +1,14 @@
 import { prisma } from '../../utils/prisma';
 import bcrypt from 'bcryptjs';
 
+defineRouteMeta({
+  openAPI: {
+    tags: ['Users'],
+    description: 'Update the signed-in user profile.',
+    security: [{ bearerAuth: [] }]
+  }
+})
+
 export default defineEventHandler(async (event) => {
   const userId = event.context.user?.userId;
   if (!userId) {

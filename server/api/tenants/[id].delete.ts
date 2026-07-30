@@ -2,6 +2,14 @@ import { prisma } from '../../utils/prisma';
 import { getActorUserId, writeSystemLog } from '../../utils/systemLog';
 import { requirePermission } from '../../utils/requirePermission';
 
+defineRouteMeta({
+  openAPI: {
+    tags: ['Tenants'],
+    description: 'Soft-delete a tenant by ID.',
+    security: [{ bearerAuth: [] }]
+  }
+})
+
 export default defineEventHandler(async (event) => {
   try {
     requirePermission(event, 'delete:tenants');

@@ -4,6 +4,14 @@ import path from 'path';
 import { prisma } from '../../utils/prisma';
 import crypto from 'crypto';
 
+defineRouteMeta({
+  openAPI: {
+    tags: ['Users'],
+    description: 'Upload avatar image for the signed-in user.',
+    security: [{ bearerAuth: [] }]
+  }
+})
+
 export default defineEventHandler(async (event) => {
   try {
     const userId = event.context.user?.userId;

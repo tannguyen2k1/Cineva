@@ -8,6 +8,14 @@ import {
 } from '../../utils/systemPermissions';
 import { requirePermission } from '../../utils/requirePermission';
 
+defineRouteMeta({
+  openAPI: {
+    tags: ['Permissions'],
+    description: 'Permission catalog grouped by module.',
+    security: [{ bearerAuth: [] }]
+  }
+})
+
 export default defineEventHandler(async (event) => {
   requirePermission(event, 'read:roles');
   try {

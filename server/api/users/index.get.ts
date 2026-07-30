@@ -1,6 +1,20 @@
 import { getTenantPrisma } from '../../utils/prisma';
 import { requirePermission } from '../../utils/requirePermission';
 
+defineRouteMeta({
+  openAPI: {
+    tags: ['Users'],
+    description: 'List users in the current tenant (paginated). Requires `read:users` permission.',
+    parameters: [
+      { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
+      { in: 'query', name: 'pageSize', schema: { type: 'integer', default: 10 } },
+      { in: 'query', name: 'search', schema: { type: 'string' } },
+      { in: 'query', name: 'status', schema: { type: 'string', enum: ['active', 'inactive'] } }
+    ],
+    security: [{ bearerAuth: [] }]
+  }
+})
+
 export default defineEventHandler(async (event) => {
   try {
     requirePermission(event, 'read:users');

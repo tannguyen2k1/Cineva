@@ -2,6 +2,14 @@ import { getTenantPrisma } from '../../utils/prisma';
 import { getActorUserId, writeSystemLog } from '../../utils/systemLog';
 import { requirePermission } from '../../utils/requirePermission';
 
+defineRouteMeta({
+  openAPI: {
+    tags: ['Roles'],
+    description: 'Create a new role.',
+    security: [{ bearerAuth: [] }]
+  }
+})
+
 export default defineEventHandler(async (event) => {
   try {
     requirePermission(event, 'create:roles');

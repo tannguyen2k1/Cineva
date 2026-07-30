@@ -8,12 +8,19 @@ if (!JWT_SECRET_RAW) {
 const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_RAW || '__missing_jwt_secret__')
 
 /** Routes that don't require authentication */
-const PUBLIC_ROUTES = ['/api/auth/login', '/api/auth/register', '/api/auth/refresh', '/api/auth/logout']
+const PUBLIC_EXACT = new Set(['/api', '/api/docs', '/api/swagger', '/api/openapi.json'])
+const PUBLIC_PREFIX = [
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/auth/refresh',
+  '/api/auth/logout',
+]
 
 export default defineEventHandler(async (event) => {
   const pathname = getRequestURL(event).pathname
-  if (!pathname.startsWith('/api/')) return
-  if (PUBLIC_ROUTES.some(r => pathname.startsWith(r))) return
+  if (!pathname.startsWith('/api/') && pathname !== '/api') return
+  if (PUBLIC_EXACT.has(pathname)) return
+  if (PUBLIC_PREFIX.some(r => pathname.startsWith(r))) return
 
   const token = extractToken(event)
   if (!token) {

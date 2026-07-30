@@ -2,6 +2,14 @@ import { getTenantPrisma } from '../../utils/prisma';
 import { getServerStats } from '../../utils/serverStats';
 import { requirePermission } from '../../utils/requirePermission';
 
+defineRouteMeta({
+  openAPI: {
+    tags: ['Dashboard'],
+    description: 'Dashboard statistics and recent activity.',
+    security: [{ bearerAuth: [] }]
+  }
+})
+
 export default defineEventHandler(async (event) => {
   try {
     requirePermission(event, 'read:dashboard');

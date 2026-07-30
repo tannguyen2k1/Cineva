@@ -1,5 +1,13 @@
 import { prisma } from '../../utils/prisma'
 
+defineRouteMeta({
+  openAPI: {
+    tags: ['Auth'],
+    description: 'Returns the current authenticated user and their permissions.',
+    security: [{ bearerAuth: [] }]
+  }
+})
+
 export default defineEventHandler(async (event) => {
   const userId = event.context.user?.userId as string | undefined
   const tenantId = event.context.tenant_id as string | undefined
