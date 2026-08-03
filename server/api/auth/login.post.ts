@@ -26,7 +26,6 @@ defineRouteMeta({
           bearerAuth: {
             type: 'http',
             scheme: 'bearer',
-            bearerFormat: 'JWT',
             description: 'Access token from login (15 min). Use cookie jar or copy auth_token cookie value.'
           }
         }
