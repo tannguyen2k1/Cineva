@@ -1,7 +1,7 @@
 ---
 name: nuxt-i18n
 description: >-
-  Internationalization workflow for this Nuxt 3 project using @nuxtjs/i18n.
+  Internationalization workflow for the Nuxt frontend using @nuxtjs/i18n.
   Covers file locations, key naming conventions, adding new translations,
   keeping vi/en in sync, using t() correctly in components/forms/dialogs,
   and Element Plus locale integration.
@@ -15,7 +15,7 @@ description: >-
 
 ## Stack
 
-- **Module**: `@nuxtjs/i18n` (configured in `nuxt.config.ts`)
+- **Module**: `@nuxtjs/i18n` (configured in `frontend/nuxt.config.ts`)
 - **Default locale**: `vi` (Vietnamese)
 - **Strategy**: `no_prefix` (no `/vi/` or `/en/` path prefix)
 - **Detection**: Cookie-based (`i18n_redirected`), fallback `vi`
@@ -23,7 +23,7 @@ description: >-
 ## File locations
 
 ```
-i18n/
+frontend/i18n/
 └── locales/
     ├── vi.json    ← Vietnamese (default, authoritative)
     └── en.json    ← English

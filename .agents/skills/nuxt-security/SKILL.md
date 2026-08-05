@@ -1,142 +1,77 @@
 ---
 name: nuxt-security
 description: >-
-  Authentication, authorization, and security patterns for this Nuxt 3 SaaS project.
-  Covers httpOnly cookie auth flow, JWT access/refresh tokens, server-side permission
-  enforcement, tenant isolation, CSRF/XSS prevention, and WebSocket auth.
-  Use when adding API endpoints, modifying auth flows, reviewing security, or
-  troubleshooting 401/403 errors. Triggers on "auth", "login", "token", "cookie",
-  "permission", "401", "403", "security", "CSRF", "XSS", "httpOnly", "refresh token".
+  Authentication, authorization, and security for this monorepo (Nuxt FE + FastAPI BE).
+  Covers httpOnly cookie auth, access/refresh JWT with DB-backed refresh rotation,
+  permission checks, tenant isolation, CSRF/XSS notes, and WebSocket tickets.
+  Use when adding API endpoints, modifying auth, reviewing security, or debugging 401/403.
+  Triggers on "auth", "login", "token", "cookie", "permission", "401", "403", "security",
+  "CSRF", "XSS", "httpOnly", "refresh token".
 ---
 
-# Nuxt Security & Auth Patterns
+# Security & Auth
 
-## Auth Architecture
+## Architecture
 
 ```
-Browser ──cookie──► Nitro middleware ──context──► API handler
-  │                  (auth.ts)                    (requirePermission)
-  │
-  ├─ auth_token    httpOnly, secure, sameSite=lax, path=/        (15 min)
-  ├─ refresh_token httpOnly, secure, sameSite=lax, path=/api/auth (7 days)
-  └─ auth_logged_in NON-httpOnly indicator "1" (client reads for UI state only)
+Browser ──cookie──► Nuxt (:3000) ──proxy /api──► FastAPI (:8000)
+                      │                            │
+                      │                            ├─ deps.get_current_user
+                      │                            └─ require_permission
+Cookies (set by FastAPI, proxied through Nuxt):
+  auth_token      httpOnly, path=/, 15m          (access JWT)
+  refresh_token   httpOnly, path=/api/auth, 7d   (refresh JWT + DB row)
+  auth_logged_in  readable "1"                   (UI only)
 ```
 
-**No token is ever exposed to client JS.** The browser sends cookies automatically.
+**Never store JWT in localStorage / Pinia.** Cookies only.
 
-## Server Middleware: `server/middleware/auth.ts`
+## Tokens
 
-- Reads token from `getCookie(event, 'auth_token')` first, then `Authorization` header as fallback for API clients.
-- Verifies JWT with `jose.jwtVerify`. `JWT_SECRET` must come from env — no hardcoded fallback.
-- Loads user + permissions from DB and attaches to `event.context`:
-  - `event.context.user` — `{ userId, username }`
-  - `event.context.tenant_id` — from JWT payload (never from client header)
-  - `event.context.permissions` — `Set<string>` of `"action:resource"` keys
-- Public routes skipped: `/api/auth/login`, `/api/auth/register`, `/api/auth/refresh`, `/api/auth/logout`.
+| Kind | Cookie / use | Claims | Persist |
+|------|----------------|--------|---------|
+| Access | `auth_token` | `type=access`, `sub`/`userId`, `username`, `tenant_id`, `jti` | No (stateless) |
+| Refresh | `refresh_token` | `type=refresh`, `userId`, `tenant_id`, `jti` | Yes — `refresh_tokens` table, SHA-256 hash |
+| WS ticket | query `?token=` | `type=ws-ticket`, 30s | No |
 
-### Adding a new public route
+### Refresh rotation (`backend/app/services/auth.py` + `refresh_sessions.py`)
 
-Add its prefix to the `PUBLIC_ROUTES` array in `server/middleware/auth.ts`.
+1. Login → create access + refresh; insert `RefreshToken` (jti, family_id, token_hash).
+2. `POST /api/auth/refresh` → validate JWT + DB row active → **revoke old**, issue new refresh in same `family_id`, new access.
+3. Reuse of revoked refresh → revoke **entire family** (theft signal).
+4. Logout / password change → revoke family or all user sessions.
 
-## Permission Enforcement
+### Access enforcement (`backend/app/api/deps.py`)
 
-Every protected API handler must call `requirePermission` before business logic:
+- Cookie `auth_token` first, else `Authorization: Bearer`.
+- Reject if `type != access`.
+- Reload user from DB (active, not soft-deleted); build permission set.
 
-```typescript
-import { requirePermission } from '../../utils/requirePermission'
+## Permissions
 
-export default defineEventHandler(async (event) => {
-  requirePermission(event, 'read:users')
-  // ... business logic
-})
+Catalog: `backend/app/core/permissions.py` (`SYSTEM_MODULES`).  
+Key format: `action:resource` (e.g. `read:users`).
+
+```python
+current: CurrentUser = Depends(require_permission("read:users"))
+# current.tenant_id — ONLY from JWT, never from client body/header
 ```
 
-Available permissions follow `action:resource` format from `server/utils/systemPermissions.ts`:
+## Public routes
 
-| Resource | Actions |
-|----------|---------|
-| dashboard | read |
-| users | read, create, update, delete |
-| roles | read, create, update, delete |
-| tenants | read, create, update, delete |
-| logs | read |
+No auth: `/api/auth/login`, `/logout`, `/refresh`, `/api/docs`, `/api/openapi.json`, `/health`.
 
-When adding a new module, add its entry to `SYSTEM_MODULES` in `systemPermissions.ts`.
+## Frontend
 
-## Login & Token Flow
+- `$fetch('/api/...')` relative — Nuxt proxies to FastAPI (`NUXT_API_PROXY`).
+- Do **not** send `Authorization` or `x-tenant-id` from the browser for normal UI calls.
+- Indicator cookie `auth_logged_in` for route middleware only.
 
-### Login (`POST /api/auth/login`)
-1. Validates credentials + Turnstile CAPTCHA.
-2. Sets three cookies via `setCookie()`:
-   - `auth_token` (access, 15 min, httpOnly)
-   - `refresh_token` (7 day, httpOnly, path=/api/auth)
-   - `auth_logged_in` ("1", non-httpOnly, for client UI state)
-3. Returns user info + permissions in body (no token in body).
+## Checklist
 
-### Refresh (`POST /api/auth/refresh`)
-1. Reads `refresh_token` cookie.
-2. Verifies JWT and checks `type === 'refresh'`.
-3. Re-validates user is active in DB.
-4. Issues new `auth_token` cookie.
-5. Returns updated user/permissions.
-
-### Logout (`POST /api/auth/logout`)
-Clears all three auth cookies with `maxAge: 0`.
-
-### Client store (`stores/auth.ts`)
-- `loggedIn` mirrors the `auth_logged_in` cookie (non-secret).
-- `setAuth(user, tenant_id, permissions)` — no token parameter.
-- `fetchUser()` — calls `/api/auth/me` (cookie sent automatically).
-- `refreshToken()` — calls `/api/auth/refresh`.
-- `logout()` — calls `/api/auth/logout`, clears state, redirects to `/login`.
-
-## Client API Calls
-
-**Do NOT pass `Authorization` headers or `x-tenant-id` headers.** The httpOnly cookie is sent automatically by the browser. All `$fetch` calls are plain:
-
-```typescript
-// Correct
-const res = await $fetch('/api/users', { method: 'GET' })
-
-// Wrong — exposes token to XSS
-const res = await $fetch('/api/users', {
-  headers: { Authorization: `Bearer ${token}` }
-})
-```
-
-For SSR (server-side rendering in plugins), forward cookies explicitly:
-
-```typescript
-const headers: Record<string, string> = {}
-if (import.meta.server) {
-  const cookieHeaders = useRequestHeaders(['cookie'])
-  if (cookieHeaders.cookie) headers.cookie = cookieHeaders.cookie
-}
-await $fetch('/api/auth/me', { headers })
-```
-
-## WebSocket Auth
-
-WebSocket handlers can't read httpOnly cookies. Use a short-lived ticket:
-
-1. Client calls `GET /api/auth/ws-ticket` → returns `{ ticket }` (30s TTL JWT).
-2. Client connects: `ws://host/ws/endpoint?token=<ticket>`.
-3. Server handler verifies ticket in `open()` before pushing data.
-
-## Tenant Isolation
-
-- `tenant_id` comes **only** from the JWT payload in server middleware.
-- All Prisma queries must scope by `tenant_id` from `event.context.tenant_id`.
-- `getTenantPrisma(tenant_id)` already adds tenant-scoped filters.
-- Never trust client-supplied tenant identifiers.
-
-## Security Checklist for New Features
-
-- [ ] API handler calls `requirePermission()` with correct permission key
-- [ ] Prisma queries scoped to `event.context.tenant_id`
-- [ ] No token/secret in API response body
-- [ ] No `Authorization` header construction on client side
-- [ ] User input validated/sanitized before DB write
-- [ ] File uploads: restrict MIME type, size, use safe filename
-- [ ] New i18n keys added for error messages (no hardcoded strings)
-- [ ] System log written for mutating actions via `writeSystemLog()`
+- [ ] Protected route uses `require_permission` / `get_current_user`
+- [ ] Queries scoped by `current.tenant_id`
+- [ ] Mutating actions call `write_system_log`
+- [ ] Soft delete uses `deleted_at`, not hard delete
+- [ ] No secrets in API responses / client storage
+- [ ] New permissions added to `SYSTEM_MODULES`

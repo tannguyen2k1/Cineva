@@ -1,22 +1,22 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, time, timezone
 
-from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.core.permissions import ACTION_LABELS, SYSTEM_MODULES, permission_key
-from app.models import Permission, Role, SystemLog, Tenant, User
+from app.repositories import permission as permission_repo
+from app.repositories import role as role_repo
+from app.repositories import system_log as system_log_repo
+from app.repositories import tenant as tenant_repo
+from app.repositories import user as user_repo
 from app.services.permissions_sync import ensure_system_permissions
 from app.services.server_stats import get_server_stats
 
 
 async def list_permission_catalog(db: AsyncSession, tenant_id: str) -> dict:
     await ensure_system_permissions(db, tenant_id)
-    result = await db.execute(select(Permission).where(Permission.tenant_id == tenant_id))
-    permissions = result.scalars().all()
+    permissions = await permission_repo.list_by_tenant(db, tenant_id)
     by_key = {permission_key(p.action, p.resource): p for p in permissions}
 
     data = []
@@ -53,40 +53,17 @@ async def list_logs(
     start_date: str | None = None,
     end_date: str | None = None,
 ) -> dict:
-    filters = [SystemLog.tenant_id == tenant_id]
-    if search:
-        like = f"%{search}%"
-        filters.append(
-            or_(
-                SystemLog.action.ilike(like),
-                SystemLog.resource.ilike(like),
-                SystemLog.details.ilike(like),
-            )
-        )
-    if resource:
-        filters.append(SystemLog.resource == resource)
-    if action:
-        filters.append(SystemLog.action == action)
-    if start_date:
-        start = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
-        filters.append(SystemLog.created_at >= start)
-    if end_date:
-        end = datetime.fromisoformat(end_date)
-        end = datetime.combine(end.date(), time(23, 59, 59, 999000), tzinfo=timezone.utc)
-        filters.append(SystemLog.created_at <= end)
-
-    total = (
-        await db.execute(select(func.count()).select_from(SystemLog).where(*filters))
-    ).scalar_one()
-    result = await db.execute(
-        select(SystemLog)
-        .where(*filters)
-        .options(selectinload(SystemLog.user))
-        .order_by(SystemLog.created_at.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
+    logs, total = await system_log_repo.list_logs_page(
+        db,
+        tenant_id=tenant_id,
+        page=page,
+        page_size=page_size,
+        search=search,
+        resource=resource,
+        action=action,
+        start_date=start_date,
+        end_date=end_date,
     )
-    logs = result.scalars().all()
     data = []
     for log in logs:
         details = log.details
@@ -116,39 +93,13 @@ async def list_logs(
 
 
 async def dashboard_stats(db: AsyncSession, tenant_id: str) -> dict:
-    users = (
-        await db.execute(
-            select(func.count()).select_from(User).where(
-                User.tenant_id == tenant_id, User.deleted_at.is_(None)
-            )
-        )
-    ).scalar_one()
-    roles = (
-        await db.execute(
-            select(func.count()).select_from(Role).where(
-                Role.tenant_id == tenant_id, Role.deleted_at.is_(None)
-            )
-        )
-    ).scalar_one()
-    tenants = (
-        await db.execute(
-            select(func.count()).select_from(Tenant).where(Tenant.deleted_at.is_(None))
-        )
-    ).scalar_one()
-    logs_count = (
-        await db.execute(
-            select(func.count()).select_from(SystemLog).where(SystemLog.tenant_id == tenant_id)
-        )
-    ).scalar_one()
+    users = await user_repo.count_active_in_tenant(db, tenant_id)
+    roles = await role_repo.count_active_in_tenant(db, tenant_id)
+    tenants = await tenant_repo.count_active(db)
+    logs_count = await system_log_repo.count_in_tenant(db, tenant_id)
 
-    recent_logs_result = await db.execute(
-        select(SystemLog)
-        .where(SystemLog.tenant_id == tenant_id)
-        .order_by(SystemLog.created_at.desc())
-        .limit(20)
-    )
     recent_logs = []
-    for log in recent_logs_result.scalars().all():
+    for log in await system_log_repo.list_recent(db, tenant_id, limit=20):
         action_upper = (log.action or "").upper()
         if "LỖI" in action_upper or "ERROR" in action_upper:
             log_type = "danger"
@@ -172,12 +123,6 @@ async def dashboard_stats(db: AsyncSession, tenant_id: str) -> dict:
             }
         )
 
-    recent_users_result = await db.execute(
-        select(User)
-        .where(User.tenant_id == tenant_id, User.deleted_at.is_(None))
-        .order_by(User.created_at.desc())
-        .limit(4)
-    )
     recent_users = [
         {
             "id": u.id,
@@ -186,7 +131,7 @@ async def dashboard_stats(db: AsyncSession, tenant_id: str) -> dict:
             "avatar": u.avatar,
             "createdAt": u.created_at,
         }
-        for u in recent_users_result.scalars().all()
+        for u in await user_repo.list_recent(db, tenant_id, limit=4)
     ]
 
     return {

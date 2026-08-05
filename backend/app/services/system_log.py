@@ -4,6 +4,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import SystemLog
+from app.repositories import system_log as system_log_repo
 
 
 async def write_system_log(
@@ -18,15 +19,18 @@ async def write_system_log(
     try:
         details_str = None
         if details is not None:
-            details_str = details if isinstance(details, str) else json.dumps(details, ensure_ascii=False)
-        db.add(
+            details_str = (
+                details if isinstance(details, str) else json.dumps(details, ensure_ascii=False)
+            )
+        await system_log_repo.add_log(
+            db,
             SystemLog(
                 tenant_id=tenant_id,
                 user_id=user_id,
                 action=action,
                 resource=resource,
                 details=details_str,
-            )
+            ),
         )
         await db.commit()
     except Exception as exc:  # noqa: BLE001 — audit must never break main flow

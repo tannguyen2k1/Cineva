@@ -1,7 +1,7 @@
 ---
 name: nuxt-mobile-patterns
 description: >-
-  Responsive patterns for this Nuxt 3 project: desktop DataTable vs mobile card list,
+  Responsive patterns for the Nuxt frontend: desktop DataTable vs mobile card list,
   infinite scroll, pull-to-refresh, CSS breakpoints, and mobile-first layout conventions.
   Use when building responsive pages, adding mobile views, implementing infinite scroll,
   or debugging mobile layout issues.
@@ -17,7 +17,7 @@ This project uses a **dual-view** approach:
 - **Desktop** (>768px): `<DataTable>` with server-side pagination.
 - **Mobile** (≤768px): Card list with client-side infinite scroll.
 
-Detection: `appStore.isMobile` from `stores/app.ts`.
+Detection: `appStore.isMobile` from `frontend/stores/app.ts`.
 CSS breakpoint: `@media (max-width: 768px)`.
 
 ## Dual-view template

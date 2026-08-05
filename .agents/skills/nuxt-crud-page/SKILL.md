@@ -1,7 +1,7 @@
 ---
 name: nuxt-crud-page
 description: >-
-  Template for creating CRUD listing pages in this Nuxt 3 SaaS project.
+  Template for creating CRUD listing pages in the Nuxt frontend of this monorepo.
   Covers desktop DataTable + mobile card list with infinite scroll,
   search/filter toolbar, create/edit dialog, status toggle, delete confirm,
   CSS Modules, and i18n integration.
@@ -15,10 +15,12 @@ description: >-
 ## File structure
 
 ```
-pages/{section}/{resource}/
+frontend/pages/{section}/{resource}/
 ├── index.vue               # Page component
 └── {resource}.module.scss   # CSS Modules styles
 ```
+
+API calls use relative `/api/{resource}` (Nuxt proxies to FastAPI). Backend endpoints: see `skills/fastapi-endpoint`.
 
 ## Script setup structure
 

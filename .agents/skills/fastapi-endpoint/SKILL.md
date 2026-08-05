@@ -15,13 +15,15 @@ description: >-
 
 ```
 backend/app/
-  api/routes/{resource}.py   # HTTP handlers
-  services/{resource}.py     # business logic
-  models/entities.py         # SQLAlchemy (or split files)
-  schemas/                   # Pydantic I/O
-  api/deps.py                # get_current_user, require_permission
+  api/routes/{resource}.py      # HTTP handlers
+  services/{resource}.py        # business logic / orchestration
+  repositories/{resource}.py    # SQLAlchemy queries only
+  models/{resource}.py          # one SQLAlchemy model per file
+  schemas/{resource}.py         # Pydantic I/O (split by domain)
+  api/deps.py                   # get_current_user, require_permission
 ```
 
+Do **not** use a monolithic `entities.py` or a single schemas bag — one file per model/domain.
 Register the router in `app/api/router.py` under prefix `/api`.
 
 ## Route skeleton
@@ -60,13 +62,14 @@ async def create_thing(
     return await things_service.create_thing(db, current.tenant_id, current.id, body)
 ```
 
-## Service rules
+## Layer rules
 
-1. Scope queries with `tenant_id` from `CurrentUser` (never from request body for authz).
-2. Soft-deletable models: filter `deleted_at.is_(None)`; delete = set `deleted_at` (+ `is_active=False` when present).
-3. After successful mutate, call `write_system_log(...)` (swallows errors).
-4. Raise `HTTPException(status_code=..., detail="...")` — main app maps to `statusMessage`.
-5. Response shape: `{ "success": True, "data": ..., "total"?, "page"?, "pageSize"? }`.
+1. Routes call services; services call repositories (no `select()` in routes).
+2. Scope queries with `tenant_id` from `CurrentUser` (never from request body for authz).
+3. Soft-deletable models: filter `deleted_at.is_(None)`; delete = set `deleted_at` (+ `is_active=False` when present).
+4. After successful mutate, call `write_system_log(...)` (swallows errors).
+5. Raise `HTTPException(status_code=..., detail="...")` — main app maps to `statusMessage`.
+6. Response shape: `{ "success": True, "data": ..., "total"?, "page"?, "pageSize"? }`.
 
 ## Permissions catalog
 
@@ -77,6 +80,11 @@ If a new module needs permissions, add to `SYSTEM_MODULES` in `app/core/permissi
 - Tags on `APIRouter(..., tags=["Things"])` group docs in `/api/docs`.
 - Public auth routes: no `require_permission`; do not require Bearer.
 - Docs UI: Scalar at `/api/docs` (`scalar-fastapi`). Spec: `/api/openapi.json`.
+
+## Auth reminder
+
+Access JWT must have `type=access`. Refresh is DB-backed with rotation — see `skills/nuxt-security`.
+Do not reintroduce Nitro/`server/api` handlers.
 
 ## Checklist
 

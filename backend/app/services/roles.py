@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 from fastapi import HTTPException
-from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-from app.models import Permission, Role, RolePermission, User, UserRole
+from app.models import Role
+from app.repositories import permission as permission_repo
+from app.repositories import role as role_repo
 from app.schemas import RoleCreate, RolePermissionsUpdate, RoleUpdate
 from app.services.system_log import write_system_log
 
@@ -20,37 +18,19 @@ async def list_roles(
     page_size: int = 10,
     search: str | None = None,
 ) -> dict:
-    filters = [Role.tenant_id == tenant_id, Role.deleted_at.is_(None)]
-    if search:
-        like = f"%{search}%"
-        filters.append(or_(Role.name.ilike(like), Role.description.ilike(like)))
-
-    total = (
-        await db.execute(select(func.count()).select_from(Role).where(*filters))
-    ).scalar_one()
-    result = await db.execute(
-        select(Role)
-        .where(*filters)
-        .options(selectinload(Role.user_roles).selectinload(UserRole.user))
-        .order_by(Role.created_at.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
+    roles, total = await role_repo.list_roles_page(
+        db, tenant_id=tenant_id, page=page, page_size=page_size, search=search
     )
-    roles = result.scalars().all()
-    data = []
-    for role in roles:
-        user_count = sum(
-            1 for ur in role.user_roles if ur.user and ur.user.deleted_at is None
-        )
-        data.append(
-            {
-                "id": role.id,
-                "name": role.name,
-                "description": role.description,
-                "userCount": user_count,
-                "createdAt": role.created_at,
-            }
-        )
+    data = [
+        {
+            "id": role.id,
+            "name": role.name,
+            "description": role.description,
+            "userCount": role_repo.active_user_count(role),
+            "createdAt": role.created_at,
+        }
+        for role in roles
+    ]
     return {
         "success": True,
         "data": data,
@@ -67,16 +47,12 @@ async def create_role(
     if not name:
         raise HTTPException(status_code=400, detail="Tên vai trò là bắt buộc")
 
-    existing = await db.execute(
-        select(Role).where(
-            Role.tenant_id == tenant_id, Role.name == name, Role.deleted_at.is_(None)
-        )
-    )
-    if existing.scalar_one_or_none():
+    if await role_repo.find_by_name(db, tenant_id=tenant_id, name=name):
         raise HTTPException(status_code=409, detail="Tên vai trò đã tồn tại")
 
-    role = Role(tenant_id=tenant_id, name=name, description=body.description)
-    db.add(role)
+    role = await role_repo.add_role(
+        db, Role(tenant_id=tenant_id, name=name, description=body.description)
+    )
     await db.commit()
     await db.refresh(role)
     await write_system_log(
@@ -102,12 +78,9 @@ async def create_role(
 async def update_role(
     db: AsyncSession, tenant_id: str, actor_id: str | None, role_id: str, body: RoleUpdate
 ) -> dict:
-    result = await db.execute(
-        select(Role)
-        .where(Role.id == role_id, Role.tenant_id == tenant_id, Role.deleted_at.is_(None))
-        .options(selectinload(Role.user_roles).selectinload(UserRole.user))
+    role = await role_repo.get_by_id(
+        db, role_id=role_id, tenant_id=tenant_id, with_users=True
     )
-    role = result.scalar_one_or_none()
     if not role:
         raise HTTPException(status_code=404, detail="Không tìm thấy vai trò")
 
@@ -115,15 +88,9 @@ async def update_role(
         name = body.name.strip()
         if not name:
             raise HTTPException(status_code=400, detail="Tên vai trò không được trống")
-        dup = await db.execute(
-            select(Role).where(
-                Role.tenant_id == tenant_id,
-                Role.name == name,
-                Role.deleted_at.is_(None),
-                Role.id != role_id,
-            )
-        )
-        if dup.scalar_one_or_none():
+        if await role_repo.find_by_name(
+            db, tenant_id=tenant_id, name=name, exclude_id=role_id
+        ):
             raise HTTPException(status_code=409, detail="Tên vai trò đã tồn tại")
         role.name = name
     if body.description is not None:
@@ -131,7 +98,6 @@ async def update_role(
 
     await db.commit()
     await db.refresh(role)
-    user_count = sum(1 for ur in role.user_roles if ur.user and ur.user.deleted_at is None)
     await write_system_log(
         db,
         tenant_id=tenant_id,
@@ -147,7 +113,7 @@ async def update_role(
             "name": role.name,
             "description": role.description,
             "createdAt": role.created_at,
-            "userCount": user_count,
+            "userCount": role_repo.active_user_count(role),
         },
     }
 
@@ -155,23 +121,19 @@ async def update_role(
 async def delete_role(
     db: AsyncSession, tenant_id: str, actor_id: str | None, role_id: str
 ) -> dict:
-    result = await db.execute(
-        select(Role)
-        .where(Role.id == role_id, Role.tenant_id == tenant_id, Role.deleted_at.is_(None))
-        .options(selectinload(Role.user_roles).selectinload(UserRole.user))
+    role = await role_repo.get_by_id(
+        db, role_id=role_id, tenant_id=tenant_id, with_users=True
     )
-    role = result.scalar_one_or_none()
     if not role:
         raise HTTPException(status_code=404, detail="Không tìm thấy vai trò")
 
-    active_users = sum(1 for ur in role.user_roles if ur.user and ur.user.deleted_at is None)
-    if active_users > 0:
+    if role_repo.active_user_count(role) > 0:
         raise HTTPException(
             status_code=400,
             detail="Không thể xóa vai trò đang được gán cho người dùng",
         )
 
-    role.deleted_at = datetime.now(timezone.utc)
+    await role_repo.soft_delete(db, role)
     await db.commit()
     await write_system_log(
         db,
@@ -185,18 +147,11 @@ async def delete_role(
 
 
 async def get_role_permissions(db: AsyncSession, tenant_id: str, role_id: str) -> dict:
-    result = await db.execute(
-        select(Role).where(
-            Role.id == role_id, Role.tenant_id == tenant_id, Role.deleted_at.is_(None)
-        )
-    )
-    role = result.scalar_one_or_none()
+    role = await role_repo.get_by_id(db, role_id=role_id, tenant_id=tenant_id)
     if not role:
         raise HTTPException(status_code=404, detail="Không tìm thấy vai trò")
 
-    perms = (
-        await db.execute(select(RolePermission).where(RolePermission.role_id == role_id))
-    ).scalars().all()
+    perms = await role_repo.list_role_permissions(db, role_id)
     return {
         "success": True,
         "data": {
@@ -214,38 +169,21 @@ async def update_role_permissions(
     role_id: str,
     body: RolePermissionsUpdate,
 ) -> dict:
-    result = await db.execute(
-        select(Role).where(
-            Role.id == role_id, Role.tenant_id == tenant_id, Role.deleted_at.is_(None)
-        )
-    )
-    role = result.scalar_one_or_none()
+    role = await role_repo.get_by_id(db, role_id=role_id, tenant_id=tenant_id)
     if not role:
         raise HTTPException(status_code=404, detail="Không tìm thấy vai trò")
 
     permission_ids = body.permissionIds or []
     if permission_ids:
-        found = (
-            await db.execute(
-                select(Permission).where(
-                    Permission.tenant_id == tenant_id,
-                    Permission.id.in_(permission_ids),
-                )
-            )
-        ).scalars().all()
+        found = await permission_repo.get_ids_in_tenant(
+            db, tenant_id=tenant_id, permission_ids=permission_ids
+        )
         if len(found) != len(permission_ids):
             raise HTTPException(status_code=400, detail="Một hoặc nhiều quyền không hợp lệ")
 
-    existing = (
-        await db.execute(select(RolePermission).where(RolePermission.role_id == role_id))
-    ).scalars().all()
-    for rp in existing:
-        await db.delete(rp)
-    await db.flush()
-
-    for pid in permission_ids:
-        db.add(RolePermission(role_id=role_id, permission_id=pid, tenant_id=tenant_id))
-
+    await role_repo.replace_role_permissions(
+        db, role_id=role_id, tenant_id=tenant_id, permission_ids=permission_ids
+    )
     await db.commit()
     await write_system_log(
         db,

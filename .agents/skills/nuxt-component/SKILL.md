@@ -1,7 +1,7 @@
 ---
 name: nuxt-component
 description: >-
-  Template for creating reusable Vue components in this Nuxt 3 project.
+  Template for creating reusable Vue components in the Nuxt frontend of this monorepo.
   Covers the standard structure: index.vue + CSS Modules (.module.scss),
   defineProps, Element Plus integration, and naming conventions.
   Use when creating a new component, extracting a reusable UI piece,
@@ -14,12 +14,12 @@ description: >-
 ## File structure
 
 ```
-components/{ComponentName}/
+frontend/components/{ComponentName}/
 ├── index.vue                    # Component file
 └── {ComponentName}.module.scss  # Styles (CSS Modules)
 ```
 
-Nuxt auto-imports from `components/` — no manual registration needed.
+Nuxt auto-imports from `frontend/components/` — no manual registration needed.
 Use PascalCase for directory name: `StatCard`, `DataTable`, `UserProfile`.
 
 ## Component template

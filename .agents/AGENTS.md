@@ -41,8 +41,9 @@ New endpoints: follow `skills/fastapi-endpoint`.
 ## 4. Auth & security (CRITICAL)
 
 - Cookies: `auth_token` (15m httpOnly), `refresh_token` (7d, path `/api/auth`), `auth_logged_in` (readable)
-- JWT HS256 (`JWT_SECRET`); claims `userId`, `username`, `tenant_id`
-- Protected routes: `Depends(require_permission("action:resource"))`
+- JWT HS256 (`JWT_SECRET`); access claims: `type=access`, `sub`/`userId`, `tenant_id`, `jti`
+- Refresh tokens are **persisted** (table `refresh_tokens`, SHA-256 hash): rotation on every `/api/auth/refresh`, family revoke on reuse, revoke on logout / password change
+- Protected routes: `Depends(require_permission("action:resource"))` — rejects non-access token types
 - Public: `/api/auth/login|logout|refresh`, `/api/docs`, `/api/openapi.json`, `/health`
 - Soft delete: `deleted_at` on User / Role / Tenant — never hard-delete in normal CRUD
 - System log: `write_system_log` after successful mutating actions (non-fatal)
@@ -63,6 +64,21 @@ Sync with `ensure_system_permissions` on login / tenant bootstrap. Admin role al
 `docker-compose.yml`: `db` (Postgres **5432**), `api` (8000), `web` (3000).  
 Local backend: `DATABASE_URL=...@localhost:5432/multi_tenant_db`.
 
-## 8. Legacy skills
+## 8. Skills map
 
-Prisma / Nitro server skills (`nuxt-api-endpoint`, `prisma-*`, parts of `nuxt-security` referencing `server/`) are **legacy** — do not use for new work. Prefer `fastapi-endpoint` and this AGENTS.md.
+| Need | Skill |
+|------|--------|
+| New API / OpenAPI | `fastapi-endpoint` |
+| New module E2E | `nuxt-new-module` |
+| Auth / security | `nuxt-security` |
+| Soft delete | `nuxt-soft-delete` |
+| Tenant scope | `nuxt-tenant-isolation` |
+| Audit log | `nuxt-system-log` |
+| WebSocket | `nuxt-websocket` |
+| File upload | `nuxt-file-upload` |
+| CRUD UI page | `nuxt-crud-page` |
+| Vue component | `nuxt-component` |
+| i18n | `nuxt-i18n` |
+| Mobile UI | `nuxt-mobile-patterns` |
+
+**Legacy (do not use):** `nuxt-api-endpoint`, `prisma-cli`, `prisma-client-api`, `prisma-upgrade-v7`.

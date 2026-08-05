@@ -14,15 +14,17 @@ description: >-
 ## Overview
 
 ```
-1. SQLAlchemy model       → backend/app/models/
+1. SQLAlchemy model       → backend/app/models/<name>.py (one file per model)
 2. Alembic migration      → backend/alembic/versions/
 3. Permissions catalog    → backend/app/core/permissions.py
-4. Schemas + service      → backend/app/schemas/, app/services/
-5. API routes             → backend/app/api/routes/ (+ register in router.py)
+4. Schema + repository    → backend/app/schemas/<name>.py, app/repositories/<name>.py
+5. Service + API routes   → backend/app/services/, app/api/routes/ (+ router.py)
 6. CRUD page              → frontend/pages/ (see nuxt-crud-page)
 7. i18n                   → frontend/i18n/locales/vi.json + en.json
 8. Sidebar                → frontend layout / nav
 ```
+
+Do **not** dump models into `entities.py` or all schemas into one bag file — split by domain.
 
 Follow `skills/fastapi-endpoint` for API details and `skills/nuxt-crud-page` for UI.
 

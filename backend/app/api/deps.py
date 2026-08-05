@@ -3,13 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from fastapi import Cookie, Depends, Header, HTTPException, status
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-from app.core.security import safe_decode_token
+from app.core.security import TOKEN_TYPE_ACCESS, safe_decode_token
 from app.db.session import get_db
-from app.models import Role, RolePermission, User, UserRole
+from app.models import User
+from app.repositories import user as user_repo
 from app.services.permissions_sync import collect_permissions_from_user
 
 
@@ -22,22 +21,13 @@ class CurrentUser:
 
 
 async def _load_user(db: AsyncSession, user_id: str, tenant_id: str) -> User | None:
-    result = await db.execute(
-        select(User)
-        .where(
-            User.id == user_id,
-            User.tenant_id == tenant_id,
-            User.deleted_at.is_(None),
-            User.is_active.is_(True),
-        )
-        .options(
-            selectinload(User.user_roles)
-            .selectinload(UserRole.role)
-            .selectinload(Role.role_permissions)
-            .selectinload(RolePermission.permission)
-        )
+    return await user_repo.get_by_id(
+        db,
+        user_id=user_id,
+        tenant_id=tenant_id,
+        with_permissions=True,
+        active_only=True,
     )
-    return result.scalar_one_or_none()
 
 
 def extract_token(
@@ -65,7 +55,13 @@ async def get_current_user(
             detail="Unauthorized: Token expired or invalid",
         )
 
-    user_id = payload.get("userId")
+    if payload.get("type") != TOKEN_TYPE_ACCESS:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized: Invalid token type",
+        )
+
+    user_id = payload.get("userId") or payload.get("sub")
     tenant_id = payload.get("tenant_id")
     if not user_id or not tenant_id:
         raise HTTPException(

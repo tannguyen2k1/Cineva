@@ -18,12 +18,16 @@ async def login(
     return await auth_service.login(db, body, response)
 
 
-@router.post("/logout", summary="Clear auth cookies")
-async def logout(response: Response):
-    return auth_service.logout(response)
+@router.post("/logout", summary="Revoke refresh session and clear cookies")
+async def logout(
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    refresh_token: str | None = Cookie(default=None),
+):
+    return await auth_service.logout(db, response, refresh_token)
 
 
-@router.post("/refresh", summary="Refresh access token")
+@router.post("/refresh", summary="Rotate refresh token and issue new access token")
 async def refresh(
     response: Response,
     db: AsyncSession = Depends(get_db),
