@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import new_jti
-from app.models import RefreshToken
+from app.models import RefreshToken, User
 from app.repositories import refresh_token as refresh_token_repo
 
 
@@ -59,7 +60,15 @@ async def revoke_family(db: AsyncSession, family_id: str) -> None:
 
 
 async def revoke_user_sessions(db: AsyncSession, user_id: str) -> None:
-    """Revoke all refresh sessions for a user (password change / force logout)."""
+    """Revoke all refresh sessions + invalidate access JWTs for a user.
+
+    Sets tokens_invalid_before so every device's access token fails immediately
+    (not only after TTL / jti denylist of the current cookie).
+    """
+    now = datetime.now(timezone.utc)
+    await db.execute(
+        update(User).where(User.id == user_id).values(tokens_invalid_before=now)
+    )
     await refresh_token_repo.revoke_user_sessions(db, user_id)
 
 

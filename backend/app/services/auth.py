@@ -17,6 +17,7 @@ from app.models import User
 from app.repositories import tenant as tenant_repo
 from app.repositories import user as user_repo
 from app.schemas import AuthDataOut, AuthUserOut, LoginRequest
+from app.services.access_denylist import revoke_access_token
 from app.services.permissions_sync import collect_permissions_from_user, ensure_system_permissions
 from app.services.refresh_sessions import (
     create_refresh_session,
@@ -105,7 +106,13 @@ async def login(db: AsyncSession, body: LoginRequest, response: Response) -> dic
     }
 
 
-async def refresh(db: AsyncSession, refresh_token: str | None, response: Response) -> dict:
+async def refresh(
+    db: AsyncSession,
+    refresh_token: str | None,
+    response: Response,
+    *,
+    access_token: str | None = None,
+) -> dict:
     if not refresh_token:
         raise HTTPException(status_code=401, detail="No refresh token")
 
@@ -146,7 +153,8 @@ async def refresh(db: AsyncSession, refresh_token: str | None, response: Respons
         clear_auth_cookies(response)
         raise HTTPException(status_code=401, detail="User not found or disabled")
 
-    # Rotate: revoke current, issue new refresh in same family
+    # Rotate: revoke current access + refresh, issue new pair in same family
+    await revoke_access_token(db, access_token)
     new_jti_val = new_jti()
     await revoke_token(db, row, replaced_by=new_jti_val)
 
@@ -207,17 +215,22 @@ async def me(db: AsyncSession, user_id: str, tenant_id: str) -> dict:
 
 
 async def logout(
-    db: AsyncSession, response: Response, refresh_token: str | None
+    db: AsyncSession,
+    response: Response,
+    refresh_token: str | None,
+    *,
+    access_token: str | None = None,
 ) -> dict:
+    await revoke_access_token(db, access_token)
     if refresh_token:
         payload = safe_decode_token(refresh_token)
         row = await get_active_refresh_by_raw(db, refresh_token)
         if row and row.revoked_at is None:
             await revoke_family(db, row.family_id)
-            await db.commit()
         elif payload and payload.get("type") == TOKEN_TYPE_REFRESH:
             # Token already rotated/expired — still clear cookies
             pass
+    await db.commit()
     clear_auth_cookies(response)
     return {"success": True}
 

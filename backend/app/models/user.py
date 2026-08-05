@@ -33,6 +33,10 @@ class User(Base):
     avatar: Mapped[str | None] = mapped_column(String(512), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Access JWTs with iat < this are rejected (password change / force logout all devices)
+    tokens_invalid_before: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     tenant_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )

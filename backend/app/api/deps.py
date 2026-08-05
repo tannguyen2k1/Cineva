@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from fastapi import Cookie, Depends, Header, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +10,7 @@ from app.core.security import TOKEN_TYPE_ACCESS, safe_decode_token
 from app.db.session import get_db
 from app.models import User
 from app.repositories import user as user_repo
+from app.services.access_denylist import is_access_revoked
 from app.services.permissions_sync import collect_permissions_from_user
 
 
@@ -28,6 +30,17 @@ async def _load_user(db: AsyncSession, user_id: str, tenant_id: str) -> User | N
         with_permissions=True,
         active_only=True,
     )
+
+
+def _token_issued_at(payload: dict) -> datetime | None:
+    iat = payload.get("iat")
+    if iat is None:
+        return None
+    if isinstance(iat, (int, float)):
+        return datetime.fromtimestamp(iat, tz=timezone.utc)
+    if isinstance(iat, datetime):
+        return iat if iat.tzinfo else iat.replace(tzinfo=timezone.utc)
+    return None
 
 
 def extract_token(
@@ -61,6 +74,13 @@ async def get_current_user(
             detail="Unauthorized: Invalid token type",
         )
 
+    jti = payload.get("jti")
+    if await is_access_revoked(db, jti):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized: Token revoked",
+        )
+
     user_id = payload.get("userId") or payload.get("sub")
     tenant_id = payload.get("tenant_id")
     if not user_id or not tenant_id:
@@ -75,6 +95,17 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Unauthorized: User not found or disabled",
         )
+
+    issued_at = _token_issued_at(payload)
+    cutoff = user.tokens_invalid_before
+    if cutoff is not None and issued_at is not None:
+        if cutoff.tzinfo is None:
+            cutoff = cutoff.replace(tzinfo=timezone.utc)
+        if issued_at < cutoff:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Unauthorized: Token revoked",
+            )
 
     return CurrentUser(
         id=user.id,

@@ -18,13 +18,16 @@ async def login(
     return await auth_service.login(db, body, response)
 
 
-@router.post("/logout", summary="Revoke refresh session and clear cookies")
+@router.post("/logout", summary="Revoke access jti + refresh session and clear cookies")
 async def logout(
     response: Response,
     db: AsyncSession = Depends(get_db),
     refresh_token: str | None = Cookie(default=None),
+    auth_token: str | None = Cookie(default=None),
 ):
-    return await auth_service.logout(db, response, refresh_token)
+    return await auth_service.logout(
+        db, response, refresh_token, access_token=auth_token
+    )
 
 
 @router.post("/refresh", summary="Rotate refresh token and issue new access token")
@@ -32,8 +35,11 @@ async def refresh(
     response: Response,
     db: AsyncSession = Depends(get_db),
     refresh_token: str | None = Cookie(default=None),
+    auth_token: str | None = Cookie(default=None),
 ):
-    return await auth_service.refresh(db, refresh_token, response)
+    return await auth_service.refresh(
+        db, refresh_token, response, access_token=auth_token
+    )
 
 
 @router.get("/me", summary="Current user", responses={401: {"description": "Unauthorized"}})
