@@ -57,7 +57,7 @@
           <el-table-column prop="createdAt" :label="t('tenants.createdAt')" width="150">
             <template #default="scope">
               <span style="color: var(--text-secondary)">
-                {{ new Date(scope.row.createdAt).toLocaleDateString(dateLocale) }}
+                {{ formatDate(scope.row.createdAt) }}
               </span>
             </template>
           </el-table-column>
@@ -169,6 +169,7 @@ import { Plus, Edit, Delete, Search } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { useAuthStore } from '~/stores/auth';
 import { useAppStore } from '~/stores/app';
+import { useDateTime } from '~/composables/useDateTime';
 import { useInfiniteScroll } from '@vueuse/core';
 
 interface TenantRow {
@@ -180,9 +181,10 @@ interface TenantRow {
   createdAt: string;
 }
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const authStore = useAuthStore();
 const appStore = useAppStore();
+const { formatDate } = useDateTime();
 const currentPage = ref(1);
 const pageSize = ref(10);
 const searchQuery = ref('');
@@ -211,7 +213,6 @@ const form = reactive({
 });
 
 const isEdit = computed(() => !!editingId.value);
-const dateLocale = computed(() => (locale.value === 'en' ? 'en-US' : 'vi-VN'));
 
 const formRules = computed<FormRules>(() => ({
   name: [

@@ -30,13 +30,16 @@ Always filter active rows:
 ## Delete handler
 
 ```python
-row.deleted_at = datetime.now(timezone.utc)
+from app.core.timeutil import utcnow
+
+row.deleted_at = utcnow()
 if hasattr(row, "is_active"):
     row.is_active = False
 await db.commit()
 ```
 
 Do **not** `db.delete(row)` for normal CRUD.
+Do **not** use `datetime.now()` without timezone — always `utcnow()`.
 
 ## Uniqueness
 

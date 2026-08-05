@@ -9,10 +9,12 @@ from app.api.rate_limit import RateLimitMiddleware
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.core.errors import register_exception_handlers
+from app.core.timeutil import register_fastapi_utc_json
 from app.services.server_stats import ensure_upload_dirs
 from app.websocket.server_stats import router as ws_router
 
 settings = get_settings()
+register_fastapi_utc_json()
 
 app = FastAPI(
     title="Admin Pro API",

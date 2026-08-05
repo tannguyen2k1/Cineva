@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime, time, timezone
-
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.timeutil import parse_filter_instant
 from app.models import SystemLog
 
 
@@ -50,12 +49,9 @@ async def list_logs_page(
     if action:
         filters.append(SystemLog.action == action)
     if start_date:
-        start = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
-        filters.append(SystemLog.created_at >= start)
+        filters.append(SystemLog.created_at >= parse_filter_instant(start_date, end=False))
     if end_date:
-        end = datetime.fromisoformat(end_date)
-        end = datetime.combine(end.date(), time(23, 59, 59, 999000), tzinfo=timezone.utc)
-        filters.append(SystemLog.created_at <= end)
+        filters.append(SystemLog.created_at <= parse_filter_instant(end_date, end=True))
 
     total = await count_logs(db, *filters)
     result = await db.execute(

@@ -93,6 +93,12 @@ No auth: `/api/auth/login`, `/logout`, `/refresh`, `/api/docs`, `/api/openapi.js
 - Do **not** send `Authorization` or `x-tenant-id` from the browser for normal UI calls.
 - Indicator cookie `auth_logged_in` for route middleware only.
 
+## Timezone
+
+- Backend stores UTC (`DateTime(timezone=True)` / `timestamptz`). Helpers: `app.core.timeutil`.
+- API JSON datetimes use `...Z`. JWT `iat`/`exp` are unix seconds (UTC).
+- Frontend: `composables/useDateTime.ts` + `utils/datetime.ts` — parse API UTC, display local; date filters send local day → `toISOString()`.
+
 ## Checklist
 
 - [ ] Protected route uses `require_permission` / `get_current_user`

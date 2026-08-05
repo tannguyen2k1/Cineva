@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import TOKEN_TYPE_ACCESS, safe_decode_token
+from app.core.timeutil import as_utc, from_unix_ts
 from app.repositories import revoked_access_token as denylist_repo
 
 
@@ -13,9 +14,9 @@ def _exp_from_payload(payload: dict) -> datetime | None:
     if exp is None:
         return None
     if isinstance(exp, (int, float)):
-        return datetime.fromtimestamp(exp, tz=timezone.utc)
+        return from_unix_ts(exp)
     if isinstance(exp, datetime):
-        return exp if exp.tzinfo else exp.replace(tzinfo=timezone.utc)
+        return as_utc(exp)
     return None
 
 

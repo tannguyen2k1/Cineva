@@ -22,6 +22,20 @@ frontend/pages/{section}/{resource}/
 
 API calls use relative `/api/{resource}` (Nuxt proxies to FastAPI). Backend endpoints: see `skills/fastapi-endpoint`.
 
+## DateTime display
+
+API returns UTC (`...Z`). Always format via:
+
+```typescript
+import { useDateTime } from '~/composables/useDateTime'
+
+const { formatDate, formatDateTime, localDayStartToIso, localDayEndToIso } = useDateTime()
+// table: {{ formatDateTime(row.createdAt) }}
+// filter: params.startDate = localDayStartToIso(day)
+```
+
+Do **not** use `new Date(row.createdAt).toLocaleString(...)` in pages.
+
 ## Script setup structure
 
 ```typescript
@@ -215,6 +229,7 @@ Add to both `i18n/locales/vi.json` and `en.json`:
 - [ ] Delete uses `ElMessageBox.confirm` then soft-delete API
 - [ ] Status toggle via `el-switch` calling PUT API
 - [ ] All user-facing strings use `t()` from `useI18n()`
+- [ ] Datetime columns use `useDateTime()` (`formatDate` / `formatDateTime`)
 - [ ] i18n keys added to both `vi.json` and `en.json`
 - [ ] `usePageRefresh(() => fetchData())` for pull-to-refresh support
 - [ ] Corresponding API endpoints exist (GET list, POST create, PUT update, DELETE)

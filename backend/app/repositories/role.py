@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.timeutil import utcnow
 from app.models import Role, RolePermission, UserRole
 
 
@@ -107,7 +106,7 @@ async def add_role(db: AsyncSession, role: Role) -> Role:
 
 
 async def soft_delete(db: AsyncSession, role: Role) -> None:
-    role.deleted_at = datetime.now(timezone.utc)
+    role.deleted_at = utcnow()
 
 
 async def list_role_permissions(db: AsyncSession, role_id: str) -> list[RolePermission]:

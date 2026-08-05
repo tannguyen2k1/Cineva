@@ -36,4 +36,12 @@ Add module to `SYSTEM_MODULES` in `backend/app/core/permissions.py`.
 ## Soft delete
 
 If the resource is soft-deletable: `deleted_at` column, list filters `deleted_at IS NULL`,
-delete handler sets `deleted_at` (and `is_active=False` when applicable).
+delete handler sets `deleted_at` via `utcnow()` (and `is_active=False` when applicable).
+
+## DateTime
+
+Follow **AGENTS.md §5**:
+
+- Model: `DateTime(timezone=True)` only
+- Write now: `from app.core.timeutil import utcnow`
+- FE columns: `useDateTime().formatDate` / `formatDateTime` — never raw `new Date(api)`

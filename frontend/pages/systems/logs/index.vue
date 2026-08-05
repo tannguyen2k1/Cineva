@@ -124,6 +124,7 @@ import styles from './logs.module.scss';
 import { ref, computed, watch, onMounted, inject, type Ref } from 'vue';
 import { Search, User } from '@element-plus/icons-vue';
 import { useAppStore } from '~/stores/app';
+import { useDateTime } from '~/composables/useDateTime';
 import { useInfiniteScroll } from '@vueuse/core';
 
 interface LogRow {
@@ -136,8 +137,9 @@ interface LogRow {
   actorUsername?: string | null;
 }
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const appStore = useAppStore();
+const { formatDateTime, localDayStartToIso, localDayEndToIso } = useDateTime();
 
 const currentPage = ref(1);
 const pageSize = ref(10);
@@ -155,8 +157,6 @@ const apiResponse = ref<any>(null);
 const pending = ref(false);
 const error = ref<any>(null);
 
-const dateLocale = computed(() => (locale.value === 'en' ? 'en-US' : 'vi-VN'));
-
 const resourceOptions = ['User', 'Role', 'Tenant', 'Auth'];
 const actionOptions = [
   'LOGIN',
@@ -172,15 +172,6 @@ const actionOptions = [
   'DELETE_TENANT'
 ];
 
-
-const formatDateTime = (value: string) =>
-  new Date(value).toLocaleString(dateLocale.value, {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
 
 const formatDetails = (value?: string | null) => {
   if (!value) return '-';
@@ -244,8 +235,8 @@ const fetchData = async (isLoadMore = false) => {
     if (searchQuery.value) params.search = searchQuery.value;
     if (resourceFilter.value) params.resource = resourceFilter.value;
     if (actionFilter.value) params.action = actionFilter.value;
-    if (dateRange.value?.[0]) params.startDate = dateRange.value[0];
-    if (dateRange.value?.[1]) params.endDate = dateRange.value[1];
+    if (dateRange.value?.[0]) params.startDate = localDayStartToIso(dateRange.value[0]);
+    if (dateRange.value?.[1]) params.endDate = localDayEndToIso(dateRange.value[1]);
 
     const res = await $fetch<any>('/api/logs', {
       params,

@@ -3,10 +3,11 @@ from __future__ import annotations
 import os
 import platform
 import random
-from datetime import datetime, timezone
 from pathlib import Path
 
 import psutil
+
+from app.core.timeutil import to_iso_utc
 
 
 def get_server_stats() -> dict:
@@ -37,7 +38,7 @@ def get_server_stats() -> dict:
         "disk": disk_pct,
         "diskUsed": disk_used,
         "diskTotal": disk_total,
-        "updatedAt": datetime.now(timezone.utc).isoformat(),
+        "updatedAt": to_iso_utc(),
     }
 
 

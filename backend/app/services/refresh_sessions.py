@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import new_jti
+from app.core.timeutil import as_utc, utcnow
 from app.models import RefreshToken, User
 from app.repositories import refresh_token as refresh_token_repo
 
@@ -39,11 +40,9 @@ async def get_active_refresh_by_raw(
         return None
     if row.revoked_at is not None:
         return row  # caller handles reuse / revoked
-    now = datetime.now(timezone.utc)
+    now = utcnow()
     exp = row.expires_at
-    if exp.tzinfo is None:
-        exp = exp.replace(tzinfo=timezone.utc)
-    if exp <= now:
+    if as_utc(exp) <= now:
         return None
     return row
 
@@ -65,7 +64,7 @@ async def revoke_user_sessions(db: AsyncSession, user_id: str) -> None:
     Sets tokens_invalid_before so every device's access token fails immediately
     (not only after TTL / jti denylist of the current cookie).
     """
-    now = datetime.now(timezone.utc)
+    now = utcnow()
     await db.execute(
         update(User).where(User.id == user_id).values(tokens_invalid_before=now)
     )

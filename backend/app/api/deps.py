@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 
 from fastapi import Cookie, Depends, Header, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import TOKEN_TYPE_ACCESS, safe_decode_token
+from app.core.timeutil import as_utc, from_unix_ts, is_jwt_issued_before
 from app.db.session import get_db
 from app.models import User
 from app.repositories import user as user_repo
@@ -37,9 +38,9 @@ def _token_issued_at(payload: dict) -> datetime | None:
     if iat is None:
         return None
     if isinstance(iat, (int, float)):
-        return datetime.fromtimestamp(iat, tz=timezone.utc)
+        return from_unix_ts(iat)
     if isinstance(iat, datetime):
-        return iat if iat.tzinfo else iat.replace(tzinfo=timezone.utc)
+        return as_utc(iat)
     return None
 
 
@@ -99,9 +100,7 @@ async def get_current_user(
     issued_at = _token_issued_at(payload)
     cutoff = user.tokens_invalid_before
     if cutoff is not None and issued_at is not None:
-        if cutoff.tzinfo is None:
-            cutoff = cutoff.replace(tzinfo=timezone.utc)
-        if issued_at < cutoff:
+        if is_jwt_issued_before(issued_at, as_utc(cutoff)):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Unauthorized: Token revoked",

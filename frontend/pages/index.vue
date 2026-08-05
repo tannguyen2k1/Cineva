@@ -28,7 +28,7 @@
             <el-timeline-item
               v-for="log in statsData.recentLogs"
               :key="log.id"
-              :timestamp="formatDate(log.createdAt)"
+              :timestamp="formatDateTime(log.createdAt)"
               placement="top"
               :type="log.type"
             >
@@ -70,7 +70,7 @@
                 :gap="12"
               />
               <span :class="styles.memberDate">
-                {{ new Date(u.createdAt).toLocaleDateString(dateLocale) }}
+                {{ formatDate(u.createdAt) }}
               </span>
             </div>
           </div>
@@ -86,11 +86,12 @@ import { User, TopRight, Key, House, Right, Document, BottomRight } from '@eleme
 import styles from './dashboard.module.scss';
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import type { Component } from 'vue';
+import { useDateTime } from '~/composables/useDateTime';
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
+const { formatDate, formatDateTime } = useDateTime();
 const statsData = ref<any>(null);
 const pending = ref(false);
-const dateLocale = computed(() => (locale.value === 'en' ? 'en-US' : 'vi-VN'));
 
 type IconTone = 'Blue' | 'Green' | 'Amber' | 'Red';
 type TrendTone = 'Success' | 'Warning' | 'Danger';
@@ -196,11 +197,6 @@ const fetchStats = async () => {
   } finally {
     pending.value = false;
   }
-};
-
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return date.toLocaleString(locale.value === 'en' ? 'en-US' : 'vi-VN');
 };
 
 onMounted(async () => {

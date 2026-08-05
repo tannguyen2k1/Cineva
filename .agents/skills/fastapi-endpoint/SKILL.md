@@ -109,12 +109,18 @@ If a new module needs permissions, add to `SYSTEM_MODULES` in `app/core/permissi
 Access JWT must have `type=access`. Refresh is DB-backed with rotation — see `skills/nuxt-security`.
 Do not reintroduce Nitro/`server/api` handlers.
 
+## DateTime
+
+- Columns: `DateTime(timezone=True)` only; write “now” with `utcnow()` from `app.core.timeutil`.
+- See **AGENTS.md §5** for full contract (UTC API / local UI).
+
 ## Checklist
 
 - [ ] Router registered in `app/api/router.py`
 - [ ] `require_permission("action:resource")` on protected routes
 - [ ] Tenant scoped queries + soft-delete filters
 - [ ] Pydantic schemas for body / documented fields
+- [ ] Datetime columns are timezone-aware UTC; no naive `datetime.now()`
 - [ ] `write_system_log` on create/update/delete
 - [ ] Permission keys added to `SYSTEM_MODULES` if new module
 - [ ] Frontend paths still use `/api/...` (Nuxt proxy)

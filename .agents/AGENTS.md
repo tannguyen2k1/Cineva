@@ -53,22 +53,59 @@ New endpoints: follow `skills/fastapi-endpoint`.
 - System log: `write_system_log` after successful mutating actions (non-fatal)
 - Errors: FastAPI returns `{ statusCode, statusMessage, message }` for UI compatibility
 
-## 5. Permissions
+## 5. DateTime / timezone (CRITICAL)
+
+**Contract:** DB + API = UTC · UI = local browser time.
+
+### Backend
+
+| Layer | Rule |
+|-------|------|
+| Column | Always `DateTime(timezone=True)` → Postgres `timestamptz`. Never naive `DateTime()`. |
+| Naming | snake_case: `created_at`, `updated_at`, `deleted_at`, `expires_at`, … |
+| Write “now” | `from app.core.timeutil import utcnow` — **never** `datetime.now()` without tz |
+| Compare / normalize | `as_utc()`, `unix_ts()` / `from_unix_ts()` for JWT |
+| API JSON | UTC ISO ending with `Z` (`to_iso_utc` / `register_fastapi_utc_json`) |
+| Date filters | Accept ISO from FE via `parse_filter_instant` (full ISO preferred) |
+
+Typical model stamp:
+
+```python
+created_at: Mapped[datetime] = mapped_column(
+    DateTime(timezone=True), server_default=func.now(), nullable=False
+)
+updated_at: Mapped[datetime] = mapped_column(
+    DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+)
+```
+
+### Frontend
+
+| Need | Use |
+|------|-----|
+| Show datetime / date | `useDateTime()` → `formatDateTime` / `formatDate` |
+| Parse API string | `parseApiDate` (handles `Z` / `+00:00` / naive-as-UTC) |
+| Date-range filter | `localDayStartToIso` / `localDayEndToIso` then send as `startDate`/`endDate` |
+| Forbidden | `new Date(apiString).toLocaleString(...)` ad-hoc in pages |
+
+Helpers: `frontend/composables/useDateTime.ts`, `frontend/utils/datetime.ts`.
+
+## 6. Permissions
 
 Catalog in `backend/app/core/permissions.py` (`SYSTEM_MODULES`). Runtime key: `action:resource` (e.g. `read:users`).  
 Sync with `ensure_system_permissions` on login / tenant bootstrap. Admin role always gets full catalog.
 
-## 6. Internationalization
+## 7. Internationalization
 
 - `@nuxtjs/i18n` in frontend. Default `vi`. Keep `vi.json` / `en.json` in sync.
 - Never hardcode UI copy — use `t()`.
 
-## 7. Docker
+## 8. Docker
 
 `docker-compose.yml`: `db` (Postgres **5432**), `api` (8000), `web` (3000).  
 Local backend: `DATABASE_URL=...@localhost:5432/multi_tenant_db`.
 
-## 8. Skills map
+## 9. Skills map
 
 | Need | Skill |
 |------|--------|

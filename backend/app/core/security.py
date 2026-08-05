@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import hashlib
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from typing import Any
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from app.core.config import get_settings
+from app.core.timeutil import from_unix_ts, unix_ts
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -36,7 +37,7 @@ def new_jti() -> str:
 
 def create_access_token(*, user_id: str, username: str, tenant_id: str) -> str:
     settings = get_settings()
-    now = datetime.now(timezone.utc)
+    now = unix_ts()
     payload = {
         "sub": user_id,
         "userId": user_id,
@@ -45,15 +46,16 @@ def create_access_token(*, user_id: str, username: str, tenant_id: str) -> str:
         "type": TOKEN_TYPE_ACCESS,
         "jti": new_jti(),
         "iat": now,
-        "exp": now + timedelta(minutes=settings.access_token_ttl_minutes),
+        "exp": now + settings.access_token_ttl_minutes * 60,
     }
     return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
 
 
 def create_refresh_token(*, user_id: str, tenant_id: str, jti: str) -> tuple[str, datetime]:
     settings = get_settings()
-    now = datetime.now(timezone.utc)
-    expires_at = now + timedelta(days=settings.refresh_token_ttl_days)
+    now = unix_ts()
+    exp = now + settings.refresh_token_ttl_days * 24 * 60 * 60
+    expires_at = from_unix_ts(exp)
     payload = {
         "sub": user_id,
         "userId": user_id,
@@ -61,7 +63,7 @@ def create_refresh_token(*, user_id: str, tenant_id: str, jti: str) -> tuple[str
         "type": TOKEN_TYPE_REFRESH,
         "jti": jti,
         "iat": now,
-        "exp": expires_at,
+        "exp": exp,
     }
     token = jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
     return token, expires_at
@@ -69,7 +71,7 @@ def create_refresh_token(*, user_id: str, tenant_id: str, jti: str) -> tuple[str
 
 def create_ws_ticket(*, user_id: str, tenant_id: str) -> str:
     settings = get_settings()
-    now = datetime.now(timezone.utc)
+    now = unix_ts()
     payload = {
         "sub": user_id,
         "userId": user_id,
@@ -77,7 +79,7 @@ def create_ws_ticket(*, user_id: str, tenant_id: str) -> str:
         "type": TOKEN_TYPE_WS,
         "jti": new_jti(),
         "iat": now,
-        "exp": now + timedelta(seconds=settings.ws_ticket_ttl_seconds),
+        "exp": now + settings.ws_ticket_ttl_seconds,
     }
     return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
 

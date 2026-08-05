@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.timeutil import utcnow
 from app.models import Tenant
 
 
@@ -90,7 +89,7 @@ async def add_tenant(db: AsyncSession, tenant: Tenant) -> Tenant:
 
 
 async def soft_delete(db: AsyncSession, tenant: Tenant) -> None:
-    tenant.deleted_at = datetime.now(timezone.utc)
+    tenant.deleted_at = utcnow()
     tenant.is_active = False
     if tenant.domain:
         tenant.domain = f"{tenant.domain}__deleted__{tenant.id[:8]}"

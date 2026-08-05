@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_token
+from app.core.timeutil import as_utc, utcnow
 from app.models import RefreshToken
 
 
@@ -25,7 +26,7 @@ async def create(
         user_id=user_id,
         tenant_id=tenant_id,
         token_hash=hash_token(raw_token),
-        expires_at=expires_at,
+        expires_at=as_utc(expires_at),
     )
     db.add(row)
     await db.flush()
@@ -42,13 +43,13 @@ async def get_by_raw_token(db: AsyncSession, raw_token: str) -> RefreshToken | N
 
 
 async def revoke(db: AsyncSession, row: RefreshToken, *, replaced_by: str | None = None) -> None:
-    row.revoked_at = datetime.now(timezone.utc)
+    row.revoked_at = utcnow()
     if replaced_by:
         row.replaced_by = replaced_by
 
 
 async def revoke_family(db: AsyncSession, family_id: str) -> None:
-    now = datetime.now(timezone.utc)
+    now = utcnow()
     await db.execute(
         update(RefreshToken)
         .where(RefreshToken.family_id == family_id, RefreshToken.revoked_at.is_(None))
@@ -57,7 +58,7 @@ async def revoke_family(db: AsyncSession, family_id: str) -> None:
 
 
 async def revoke_user_sessions(db: AsyncSession, user_id: str) -> None:
-    now = datetime.now(timezone.utc)
+    now = utcnow()
     await db.execute(
         update(RefreshToken)
         .where(RefreshToken.user_id == user_id, RefreshToken.revoked_at.is_(None))
