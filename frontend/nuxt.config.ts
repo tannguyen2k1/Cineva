@@ -1,4 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import process from 'node:process'
+
 const apiProxy = process.env.NUXT_API_PROXY || 'http://127.0.0.1:8000'
 /** Native browser WebSocket cannot rely on Vite/Nitro HTTP proxy — connect to FastAPI directly. */
 const wsBaseDefault = apiProxy.replace(/^http/, 'ws')
@@ -10,17 +12,21 @@ export default defineNuxtConfig({
   app: {
     head: {
       meta: [
-        { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover' }
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover' },
+        { name: 'color-scheme', content: 'light dark' }
       ],
       link: [
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: 'anonymous' },
         { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap' }
-      ]
+      ],
+      // Apply dark class before first paint (matches VueUse useDark storage key)
+      script: [{ src: '/theme-init.js', tagPosition: 'head' }]
     }
   },
 
   css: [
+    'element-plus/dist/index.css',
     '~/assets/scss/main.scss'
   ],
 
@@ -32,7 +38,8 @@ export default defineNuxtConfig({
     '@nuxtjs/i18n'
   ],
   elementPlus: {
-    // Config cho Element Plus nếu cần
+    // Global CSS above — avoid late on-demand style inject (FOUC / broken layout flash)
+    importStyle: false
   },
 
   i18n: {

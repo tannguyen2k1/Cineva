@@ -65,7 +65,7 @@ html.dark {
 
 /* --- BASE STYLES --- */
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   background-color: var(--bg-body);
   color: var(--text-primary);
   margin: 0;

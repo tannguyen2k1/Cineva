@@ -1,7 +1,7 @@
 @keyframes layoutFadeIn {
   from {
-    opacity: 0;
-    transform: translateY(6px);
+    opacity: 0.96;
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -127,7 +127,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  animation: layoutFadeIn 0.4s ease-out 0.05s both;
+  animation: layoutFadeIn 0.25s ease-out both;
   background: var(--bg-card);
 
   > * {
