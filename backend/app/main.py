@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from scalar_fastapi import get_scalar_api_reference
 
 from app.api.csrf import CsrfMiddleware
+from app.api.rate_limit import RateLimitMiddleware
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.core.errors import register_exception_handlers
@@ -22,8 +23,9 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
 )
 
-# Last added = outermost. CORS wraps CSRF so preflight succeeds first.
+# Last added = outermost. Order: CORS → RateLimit → CSRF → app
 app.add_middleware(CsrfMiddleware)
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,

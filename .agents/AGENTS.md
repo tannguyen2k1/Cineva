@@ -46,6 +46,7 @@ New endpoints: follow `skills/fastapi-endpoint`.
 - Refresh tokens are **persisted** (table `refresh_tokens`, SHA-256 hash): rotation on every `/api/auth/refresh`, family revoke on reuse, revoke on logout / password change
 - Access JWT `jti` denylist (`revoked_access_tokens`) on logout / refresh rotation
 - CSRF double-submit: cookie `csrf_token` + header `X-CSRF-Token` on cookie-authenticated mutating requests
+- Rate limit (per IP, in-memory): login 5/min, refresh 30/min, ws-ticket 20/min, other `/api/*` 120/min — env `RATE_LIMIT_*`
 - Protected routes: `Depends(require_permission("action:resource"))` — rejects non-access token types
 - Public: `/api/auth/login|logout|refresh`, `/api/docs`, `/api/openapi.json`, `/health`
 - Soft delete: `deleted_at` on User / Role / Tenant — never hard-delete in normal CRUD

@@ -19,6 +19,12 @@ class Settings(BaseSettings):
     refresh_token_ttl_days: int = 7
     ws_ticket_ttl_seconds: int = 30
 
+    # Per-IP sliding window (requests / 60s). 0 = disabled for that bucket.
+    rate_limit_login: int = 5
+    rate_limit_refresh: int = 30
+    rate_limit_ws_ticket: int = 20
+    rate_limit_api: int = 120
+
     @property
     def is_prod(self) -> bool:
         return self.environment.lower() == "production"

@@ -13,9 +13,12 @@ from app.core.errors import error_body
 
 UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
-# Login has no CSRF cookie yet; Turnstile covers bots. Docs/health are public.
+# Login: no CSRF cookie yet (Turnstile covers bots).
+# Logout: must work even if csrf_token missing (pre-CSRF sessions / cleared cookie);
+# SameSite=Lax already blocks classic cross-site logout CSRF for cookie auth.
 CSRF_EXEMPT_PREFIXES = (
     "/api/auth/login",
+    "/api/auth/logout",
     "/api/docs",
     "/api/openapi.json",
     "/health",

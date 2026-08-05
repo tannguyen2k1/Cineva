@@ -55,8 +55,23 @@ Cookies (set by FastAPI, proxied through Nuxt):
 ### CSRF (double-submit)
 
 - Mutating methods (`POST`/`PUT`/`PATCH`/`DELETE`) require header `X-CSRF-Token` == cookie `csrf_token`.
-- Exempt: `/api/auth/login`, docs, health, uploads.
+- Exempt: `/api/auth/login`, `/api/auth/logout`, docs, health, uploads.
 - FE: `frontend/plugins/csrf.client.ts` attaches the header on `$fetch`.
+- Only enforced when `auth_token` or `refresh_token` cookies are present (Bearer-only clients skip).
+
+### Rate limit
+
+In-memory sliding window per IP (`backend/app/api/rate_limit.py`):
+
+| Path | Default |
+|------|---------|
+| `POST /api/auth/login` | 5 / min |
+| `POST /api/auth/refresh` | 30 / min |
+| `GET /api/auth/ws-ticket` | 20 / min |
+| other `/api/*` | 120 / min |
+
+Env: `RATE_LIMIT_LOGIN`, `RATE_LIMIT_REFRESH`, `RATE_LIMIT_WS_TICKET`, `RATE_LIMIT_API` (0 = off).  
+429 body uses Nuxt shape + `Retry-After`. Multi-worker/multi-host: terminate limits at gateway or swap store to Redis.
 
 ## Permissions
 
