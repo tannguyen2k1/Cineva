@@ -58,7 +58,9 @@ Cookies (set by FastAPI, proxied through Nuxt):
 - Exempt: `/api/auth/login`, `/api/auth/logout`, docs, health, uploads.
 - FE: `frontend/utils/apiFetch.ts` (`apiFetch`) attaches the header; pages call `useApiFetch()` which wraps it and retries once after a 401 refresh.
 - Never call bare `$fetch` for `/api/**` — Nuxt snapshots `globalThis.$fetch`, so a plugin cannot add the CSRF interceptor to it and mutations will 403.
-- Only enforced when `auth_token` or `refresh_token` cookies are present (Bearer-only clients skip).
+- Requests with `Authorization: Bearer ...` skip CSRF even if login also set cookies.
+- Scalar: login/refresh returns `data.accessToken` → Authorize with `BearerAuth`
+  (`persist_auth=True` on `/api/docs`).
 
 ### Rate limit
 

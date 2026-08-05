@@ -33,8 +33,12 @@ def _is_exempt(path: str) -> bool:
 class CsrfMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if request.method in UNSAFE_METHODS and not _is_exempt(request.url.path):
-            # CSRF only matters when the browser auto-sends auth cookies.
-            # Bearer-only clients (e.g. Scalar Try-it) are not cookie CSRF targets.
+            # Cookie CSRF only. Bearer clients (Scalar Authorize, scripts) skip —
+            # even if login also set cookies in the same browser.
+            auth = request.headers.get("authorization") or ""
+            if auth.lower().startswith("bearer "):
+                return await call_next(request)
+
             has_cookie_session = bool(
                 request.cookies.get("auth_token") or request.cookies.get("refresh_token")
             )

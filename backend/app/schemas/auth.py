@@ -20,3 +20,5 @@ class AuthUserOut(ORMModel):
 class AuthDataOut(BaseModel):
     user: AuthUserOut
     permissions: list[str]
+    # Present on login/refresh for API clients & Scalar Authorize (FE uses cookies)
+    accessToken: str | None = None

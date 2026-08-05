@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from scalar_fastapi import get_scalar_api_reference
@@ -16,9 +17,20 @@ from app.websocket.server_stats import router as ws_router
 settings = get_settings()
 register_fastapi_utc_json()
 
+PUBLIC_OPENAPI_PATHS = {
+    "/api/auth/login",
+    "/api/auth/logout",
+    "/api/auth/refresh",
+}
+
 app = FastAPI(
     title="Admin Pro API",
-    description="REST API. Auth via httpOnly cookies or Authorization: Bearer <token>.",
+    description=(
+        "Single-organization REST API.\n\n"
+        "**Scalar / API clients:** `POST /api/auth/login` → copy `data.accessToken` → "
+        "Authorize (HTTP Bearer). Cookie session is for the Nuxt UI; Bearer skips CSRF.\n\n"
+        "Turnstile test keys accept token `XXXX.DUMMY.TOKEN.XXXX`."
+    ),
     version="1.0.0",
     docs_url=None,
     redoc_url=None,
@@ -45,6 +57,45 @@ app.include_router(api_router)
 app.include_router(ws_router)
 
 
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+    components = schema.setdefault("components", {})
+    components["securitySchemes"] = {
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": (
+                "Paste `data.accessToken` from `POST /api/auth/login` "
+                "(or `/api/auth/refresh`). Used by Scalar Authorize."
+            ),
+        }
+    }
+    schema["security"] = [{"BearerAuth": []}]
+
+    for path, methods in schema.get("paths", {}).items():
+        if path not in PUBLIC_OPENAPI_PATHS:
+            continue
+        for method, operation in methods.items():
+            if method.startswith("x-") or not isinstance(operation, dict):
+                continue
+            operation["security"] = []
+
+    app.openapi_schema = schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
+
+
 @app.get("/api", include_in_schema=False)
 async def api_root():
     return RedirectResponse(url="/api/docs")
@@ -55,6 +106,10 @@ async def scalar_docs():
     return get_scalar_api_reference(
         openapi_url=app.openapi_url,
         title=app.title,
+        persist_auth=True,
+        authentication={
+            "preferredSecurityScheme": "BearerAuth",
+        },
     )
 
 

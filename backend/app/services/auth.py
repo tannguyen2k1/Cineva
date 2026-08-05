@@ -35,7 +35,7 @@ async def _issue_session(
     *,
     user: User,
     family_id: str | None = None,
-) -> list[str]:
+) -> tuple[list[str], str]:
     permissions = collect_permissions_from_user(user)
     access = create_access_token(user_id=user.id, username=user.username)
 
@@ -53,7 +53,7 @@ async def _issue_session(
     await db.commit()
 
     set_auth_cookies(response, access_token=access, refresh_token=refresh)
-    return permissions
+    return permissions, access
 
 
 async def login(db: AsyncSession, body: LoginRequest, response: Response) -> dict:
@@ -76,7 +76,7 @@ async def login(db: AsyncSession, body: LoginRequest, response: Response) -> dic
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Tài khoản đã bị khóa")
 
-    permissions = await _issue_session(db, response, user=user)
+    permissions, access = await _issue_session(db, response, user=user)
 
     await write_system_log(
         db,
@@ -91,6 +91,7 @@ async def login(db: AsyncSession, body: LoginRequest, response: Response) -> dic
         "data": AuthDataOut(
             user=AuthUserOut(id=user.id, username=user.username, fullName=user.full_name),
             permissions=permissions,
+            accessToken=access,
         ).model_dump(),
     }
 
@@ -170,6 +171,7 @@ async def refresh(
                 avatar=user.avatar,
             ),
             permissions=permissions,
+            accessToken=access,
         ).model_dump(),
     }
 

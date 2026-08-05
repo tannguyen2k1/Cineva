@@ -45,7 +45,8 @@ New endpoints: follow `skills/fastapi-endpoint`.
 - JWT HS256 (`JWT_SECRET`); access claims: `type=access`, `sub`/`userId`, `jti`
 - Refresh tokens are **persisted** (table `refresh_tokens`, SHA-256 hash): rotation on every `/api/auth/refresh`, family revoke on reuse, revoke on logout / password change
 - Access JWT `jti` denylist (`revoked_access_tokens`) on logout / refresh rotation
-- CSRF double-submit: cookie `csrf_token` + header `X-CSRF-Token` on cookie-authenticated mutating requests
+- CSRF double-submit: cookie `csrf_token` + header `X-CSRF-Token` on cookie-authenticated mutating requests; requests with `Authorization: Bearer` skip CSRF
+- Scalar (`/api/docs`): login/refresh returns `data.accessToken`; Authorize with HTTP Bearer (`persist_auth` enabled)
 - Rate limit (per IP, in-memory): login 5/min, refresh 30/min, ws-ticket 20/min, other `/api/*` 120/min — env `RATE_LIMIT_*`
 - Protected routes: `Depends(require_permission("action:resource"))` — rejects non-access token types
 - Public: `/api/auth/login|logout|refresh`, `/api/docs`, `/api/openapi.json`, `/health`
