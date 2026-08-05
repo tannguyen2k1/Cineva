@@ -1,0 +1,1 @@
+"""Admin Pro FastAPI backend."""

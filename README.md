@@ -1,111 +1,77 @@
-# Nuxt 3 Premium SaaS Template
+# Admin Pro — Nuxt frontend + FastAPI backend
 
-A modern, highly optimized, and responsive SaaS Administration Dashboard template built with Nuxt 3, Vue 3, Element Plus, and Prisma ORM. 
-
-Designed for high-performance enterprise applications, this template features out-of-the-box Multi-tenancy, Role-Based Access Control (RBAC), and a seamless responsive UI that adapts intelligently from Desktop to Mobile.
-
-## 🚀 Features
-
-### Frontend (UI/UX)
-- **Framework**: Powered by [Nuxt 3](https://nuxt.com/) and Vue 3 (Composition API, `<script setup>`).
-- **Premium Design System**: Customized [Element Plus](https://element-plus.org/) with SCSS Modules (`.module.scss`) for scoped, conflict-free styling. No Tailwind dependency.
-- **Responsive & Mobile-First**: 
-  - **Desktop/Tablet**: Comprehensive Data Tables, Persistent Sidebar, and dense information layout.
-  - **Mobile**: Transforms into a mobile-native experience using Bottom Navigation, Infinity Scroll, and Touch-friendly Card Layouts.
-- **Dark/Light Mode**: First-class theme switcher out-of-the-box.
-- **Internationalization (i18n)**: Multi-language support (`vi` / `en`) via `@nuxtjs/i18n`.
-
-### Backend (API & Database)
-- **Database / ORM**: [Prisma](https://www.prisma.io/). Type-safe database queries.
-- **Multi-tenancy Architecture**: Strict data isolation by Tenant ID via middleware and Prisma queries.
-- **Authentication**: JWT-based authentication system.
-- **RBAC (Role-Based Access Control)**: Granular permissions, Admin/User roles.
-- **Soft Deletes**: Safe deletion mechanism for critical tables (Users, Roles, Tenants).
-- **System Logging**: Automatic tracking of mutating actions (Create/Update/Delete).
-
-## 📂 Project Structure
+Monorepo tách FE/BE:
 
 ```
-├── assets/
-│   ├── scss/          # Global styles, CSS Variables, and Design Tokens
-├── components/        # Reusable Vue components (UI blocks, Mobile Nav, Sidebar)
-├── i18n/              # Locales (en.json, vi.json)
-├── layouts/           # Application layouts (Default, Auth, Mobile optimized)
-├── pages/             # Application views (Dashboard, Users, Roles, etc.)
-├── prisma/            # Prisma schema, migrations, and seed files
-├── server/
-│   ├── api/           # Nuxt Nitro API endpoints (CRUD operations)
-│   ├── middleware/    # Auth and Tenant verification
-│   └── utils/         # Helper functions (System logs, Prisma client)
-├── stores/            # Pinia global state management (Auth, App layout state)
-└── nuxt.config.ts     # Nuxt configuration
+frontend/   Nuxt 4 UI (Element Plus, i18n, Pinia)
+backend/    FastAPI + SQLAlchemy 2 + Alembic + Scalar docs
 ```
 
-## 🛠️ Setup & Installation
+## Quick start (local)
 
-Make sure to install dependencies:
+### 1. Database
 
 ```bash
-# npm
+docker compose up -d db
+```
+
+### 2. Backend
+
+```bash
+cd backend
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+copy .env.example .env   # chỉnh JWT_SECRET / DB nếu cần
+alembic upgrade head
+python scripts/seed.py
+uvicorn app.main:app --reload --port 8000
+```
+
+- API docs (Scalar): http://localhost:8000/api/docs  
+- OpenAPI JSON: http://localhost:8000/api/openapi.json  
+
+Default admin (seed): workspace `default` / `admin` / `admin123456`
+
+### 3. Frontend
+
+```bash
+cd frontend
+copy .env.example .env   # Turnstile / API proxy nếu cần
 npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-```
-
-### Environment Variables
-
-Create a `.env` file in the root directory and configure your database and JWT secret:
-
-```env
-DATABASE_URL="postgresql://user:password@localhost:5432/mydb?schema=public"
-JWT_SECRET="your_super_secret_key_here"
-```
-
-### Database Setup
-
-Run Prisma migrations to initialize your database schema:
-
-```bash
-npx prisma migrate dev
-npx prisma generate
-```
-
-*(Optional) Seed the database with default Admin user and roles:*
-```bash
-npx prisma db seed
-```
-
-## 💻 Development Server
-
-Start the development server on `http://localhost:3000`:
-
-```bash
 npm run dev
 ```
 
-## 📦 Production
+App: http://localhost:3000  
 
-Build the application for production:
+Nuxt proxy `/api` và `/uploads` → FastAPI (`NUXT_API_PROXY`).  
+WebSocket nối thẳng FastAPI (`NUXT_PUBLIC_WS_BASE`, mặc định `ws://127.0.0.1:8000`).
 
-```bash
-npm run build
-```
-
-Locally preview production build:
+## Docker (full stack)
 
 ```bash
-npm run preview
+docker compose up --build
 ```
 
-## 🎨 Styling Guidelines
-- **Always** use CSS Modules (`[name].module.scss`) for component and page styling.
-- **Never** use `<style scoped>` directly in `.vue` files.
-- Use camelCase for CSS classes (e.g., `.pageContainer`, `.fwBold`).
-- Apply classes via dynamic binding: `:class="styles.pageContainer"`.
+- Web: http://localhost:3000  
+- API: http://localhost:8000  
+- Docs: http://localhost:8000/api/docs  
 
----
-*Built with ❤️ using Nuxt & Element Plus.*
+## Architecture
+
+```
+Browser → Nuxt (:3000) ──proxy /api──→ FastAPI (:8000) → Postgres
+                      └──proxy /ws──→ FastAPI WebSocket
+```
+
+Backend layers: `api/routes` → `services` → SQLAlchemy `models` (+ Pydantic `schemas`).  
+Auth: httpOnly cookies `auth_token` / `refresh_token` + `auth_logged_in` (giống contract cũ).
+
+## Env
+
+| File | Purpose |
+|------|---------|
+| `backend/.env` | `DATABASE_URL`, `JWT_SECRET`, `TURNSTILE_SECRET_KEY`, admin defaults |
+| `frontend/.env` | `NUXT_PUBLIC_TURNSTILE_SITE_KEY`, `NUXT_API_PROXY`, `NUXT_PUBLIC_WS_BASE` |
+
+**Note:** Schema SQLAlchemy dùng snake_case (`users`, `full_name`, …). Nếu volume Postgres cũ từ Prisma (PascalCase), reset volume: `docker compose down -v`.

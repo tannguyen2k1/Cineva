@@ -1,29 +1,17 @@
-# Nuxt dev/build outputs
-.output
-.data
-.nuxt
-.nitro
-.cache
-dist
-
-# Node dependencies
-node_modules
-
-# Logs
-/logs
-*.log
-
-# Misc
-.DS_Store
-.fleet
-.idea
-
-# Local env files
+# Root
 .env
 .env.*
 !.env.example
-
-# User uploads
-/public/uploads/
-
-/app/generated/prisma
+node_modules/
+.nuxt/
+.output/
+frontend/node_modules/
+frontend/.nuxt/
+frontend/.output/
+backend/.venv/
+backend/uploads/
+backend/**/__pycache__/
+backend/**/*.pyc
+.codegraph/
+.DS_Store
+*.log

@@ -1,8 +1,7 @@
-
 services:
   db:
     image: postgres:15-alpine
-    container_name: nuxt_postgres
+    container_name: admin_postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password123
@@ -13,19 +12,43 @@ services:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
 
-  web:
+  api:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
-    container_name: nuxt_web
+    container_name: admin_api
     ports:
-      - "3000:3000"
+      - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:password123@db:5432/multi_tenant_db?schema=public
+      - DATABASE_URL=postgresql+asyncpg://postgres:password123@db:5432/multi_tenant_db
       - JWT_SECRET=super-secret-key-for-prod
+      - DEFAULT_ADMIN_USERNAME=admin
+      - DEFAULT_ADMIN_PASSWORD=admin123456
+      - TURNSTILE_SECRET_KEY=${NUXT_TURNSTILE_SECRET_KEY:-1x0000000000000000000000000000000AA}
+      - ENVIRONMENT=production
+      - CORS_ORIGINS=http://localhost:3000
+      - UPLOAD_DIR=uploads
+    volumes:
+      - api_uploads:/app/uploads
     depends_on:
       - db
     restart: unless-stopped
 
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: admin_web
+    ports:
+      - "3000:3000"
+    environment:
+      - NUXT_API_PROXY=http://api:8000
+      - NUXT_PUBLIC_WS_BASE=ws://localhost:8000
+      - NUXT_PUBLIC_TURNSTILE_SITE_KEY=${NUXT_PUBLIC_TURNSTILE_SITE_KEY:-}
+    depends_on:
+      - api
+    restart: unless-stopped
+
 volumes:
   pgdata:
+  api_uploads:
