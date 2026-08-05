@@ -19,15 +19,13 @@ from app.services.permissions_sync import collect_permissions_from_user
 class CurrentUser:
     id: str
     username: str
-    tenant_id: str
     permissions: set[str]
 
 
-async def _load_user(db: AsyncSession, user_id: str, tenant_id: str) -> User | None:
+async def _load_user(db: AsyncSession, user_id: str) -> User | None:
     return await user_repo.get_by_id(
         db,
         user_id=user_id,
-        tenant_id=tenant_id,
         with_permissions=True,
         active_only=True,
     )
@@ -83,14 +81,13 @@ async def get_current_user(
         )
 
     user_id = payload.get("userId") or payload.get("sub")
-    tenant_id = payload.get("tenant_id")
-    if not user_id or not tenant_id:
+    if not user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Unauthorized: Malformed token",
         )
 
-    user = await _load_user(db, user_id, tenant_id)
+    user = await _load_user(db, user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -109,7 +106,6 @@ async def get_current_user(
     return CurrentUser(
         id=user.id,
         username=user.username,
-        tenant_id=user.tenant_id,
         permissions=set(collect_permissions_from_user(user)),
     )
 

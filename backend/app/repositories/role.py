@@ -21,12 +21,11 @@ async def count_roles(db: AsyncSession, *filters) -> int:
 async def list_roles_page(
     db: AsyncSession,
     *,
-    tenant_id: str,
     page: int,
     page_size: int,
     search: str | None = None,
 ) -> tuple[list[Role], int]:
-    filters = [Role.tenant_id == tenant_id, Role.deleted_at.is_(None)]
+    filters = [Role.deleted_at.is_(None)]
     if search:
         like = f"%{search}%"
         filters.append(or_(Role.name.ilike(like), Role.description.ilike(like)))
@@ -47,12 +46,10 @@ async def get_by_id(
     db: AsyncSession,
     *,
     role_id: str,
-    tenant_id: str,
     with_users: bool = False,
 ) -> Role | None:
     stmt = select(Role).where(
         Role.id == role_id,
-        Role.tenant_id == tenant_id,
         Role.deleted_at.is_(None),
     )
     if with_users:
@@ -61,10 +58,9 @@ async def get_by_id(
 
 
 async def find_by_name(
-    db: AsyncSession, *, tenant_id: str, name: str, exclude_id: str | None = None
+    db: AsyncSession, *, name: str, exclude_id: str | None = None
 ) -> Role | None:
     filters = [
-        Role.tenant_id == tenant_id,
         Role.name == name,
         Role.deleted_at.is_(None),
     ]
@@ -73,8 +69,8 @@ async def find_by_name(
     return (await db.execute(select(Role).where(*filters))).scalar_one_or_none()
 
 
-async def get_ids_in_tenant(
-    db: AsyncSession, *, tenant_id: str, role_ids: list[str]
+async def get_ids(
+    db: AsyncSession, *, role_ids: list[str]
 ) -> list[Role]:
     if not role_ids:
         return []
@@ -82,7 +78,6 @@ async def get_ids_in_tenant(
         (
             await db.execute(
                 select(Role).where(
-                    Role.tenant_id == tenant_id,
                     Role.id.in_(role_ids),
                     Role.deleted_at.is_(None),
                 )
@@ -93,10 +88,8 @@ async def get_ids_in_tenant(
     )
 
 
-async def count_active_in_tenant(db: AsyncSession, tenant_id: str) -> int:
-    return await count_roles(
-        db, Role.tenant_id == tenant_id, Role.deleted_at.is_(None)
-    )
+async def count_active(db: AsyncSession) -> int:
+    return await count_roles(db, Role.deleted_at.is_(None))
 
 
 async def add_role(db: AsyncSession, role: Role) -> Role:
@@ -125,7 +118,6 @@ async def replace_role_permissions(
     db: AsyncSession,
     *,
     role_id: str,
-    tenant_id: str,
     permission_ids: list[str],
 ) -> None:
     existing = await list_role_permissions(db, role_id)
@@ -134,7 +126,7 @@ async def replace_role_permissions(
     await db.flush()
     for pid in permission_ids:
         db.add(
-            RolePermission(role_id=role_id, permission_id=pid, tenant_id=tenant_id)
+            RolePermission(role_id=role_id, permission_id=pid)
         )
 
 

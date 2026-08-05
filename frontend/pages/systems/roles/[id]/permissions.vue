@@ -146,8 +146,8 @@ const load = async () => {
   error.value = '';
   try {
     const [permsRes, assignedRes] = await Promise.all([
-      $fetch<any>('/api/permissions'),
-      $fetch<any>(`/api/roles/${roleId.value}/permissions`)
+      useApiFetch('/api/permissions'),
+      useApiFetch(`/api/roles/${roleId.value}/permissions`)
     ]);
 
     permissionGroups.value = permsRes?.data || [];
@@ -164,7 +164,7 @@ const load = async () => {
 const onSave = async () => {
   saving.value = true;
   try {
-    await $fetch(`/api/roles/${roleId.value}/permissions`, {
+    await useApiFetch(`/api/roles/${roleId.value}/permissions`, {
       method: 'PUT',
       body: { permissionIds: selectedIds.value }
     });

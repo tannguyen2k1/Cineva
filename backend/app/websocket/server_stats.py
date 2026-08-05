@@ -15,7 +15,6 @@ async def server_stats_ws(websocket: WebSocket):
     if (
         not payload
         or not (payload.get("userId") or payload.get("sub"))
-        or not payload.get("tenant_id")
         or token_type not in (TOKEN_TYPE_WS, TOKEN_TYPE_ACCESS)
     ):
         await websocket.close(code=4001)

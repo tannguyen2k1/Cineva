@@ -13,7 +13,7 @@ backend/    FastAPI + SQLAlchemy 2 + Alembic + Scalar docs
 - **State**: Pinia (`frontend/stores/`)
 - **API**: FastAPI under `backend/app/` — layers: `api/routes` → `services` → `repositories` → `models` / `schemas`
 - **DB**: PostgreSQL via SQLAlchemy 2 (async) + Alembic migrations
-- **Multi-tenancy**: RBAC with `tenant_id` from JWT only (never from client headers)
+- **Single-org**: global RBAC (no multi-tenant / no `tenant_id`)
 
 ## 2. Frontend structure (`frontend/`)
 
@@ -21,7 +21,7 @@ backend/    FastAPI + SQLAlchemy 2 + Alembic + Scalar docs
 - **Components**: `frontend/components/` — see `skills/nuxt-component`
 - **i18n**: `frontend/i18n/locales/` — see `skills/nuxt-i18n`
 - **Mobile**: see `skills/nuxt-mobile-patterns`
-- **API calls**: relative `$fetch('/api/...')` — Nuxt proxies `/api` and `/uploads` to FastAPI (`NUXT_API_PROXY`). Do **not** send `Authorization` / `x-tenant-id` (cookies).
+- **API calls**: relative `useApiFetch('/api/...')` (CSRF header + 401 refresh, from `utils/apiFetch.ts`) — Nuxt proxies `/api` and `/uploads` to FastAPI (`NUXT_API_PROXY`). Never bare `$fetch` for `/api/**`. Do **not** send `Authorization` (cookies).
 - **Styling**: ALWAYS CSS Modules (`.module.scss`). NEVER `<style scoped>`.
 
 ## 3. Backend structure (`backend/`)
@@ -42,14 +42,14 @@ New endpoints: follow `skills/fastapi-endpoint`.
 ## 4. Auth & security (CRITICAL)
 
 - Cookies: `auth_token` (15m httpOnly), `refresh_token` (7d, path `/api/auth`), `auth_logged_in` (readable)
-- JWT HS256 (`JWT_SECRET`); access claims: `type=access`, `sub`/`userId`, `tenant_id`, `jti`
+- JWT HS256 (`JWT_SECRET`); access claims: `type=access`, `sub`/`userId`, `jti`
 - Refresh tokens are **persisted** (table `refresh_tokens`, SHA-256 hash): rotation on every `/api/auth/refresh`, family revoke on reuse, revoke on logout / password change
 - Access JWT `jti` denylist (`revoked_access_tokens`) on logout / refresh rotation
 - CSRF double-submit: cookie `csrf_token` + header `X-CSRF-Token` on cookie-authenticated mutating requests
 - Rate limit (per IP, in-memory): login 5/min, refresh 30/min, ws-ticket 20/min, other `/api/*` 120/min — env `RATE_LIMIT_*`
 - Protected routes: `Depends(require_permission("action:resource"))` — rejects non-access token types
 - Public: `/api/auth/login|logout|refresh`, `/api/docs`, `/api/openapi.json`, `/health`
-- Soft delete: `deleted_at` on User / Role / Tenant — never hard-delete in normal CRUD
+- Soft delete: `deleted_at` on User / Role — never hard-delete in normal CRUD
 - System log: `write_system_log` after successful mutating actions (non-fatal)
 - Errors: FastAPI returns `{ statusCode, statusMessage, message }` for UI compatibility
 
@@ -93,7 +93,7 @@ Helpers: `frontend/composables/useDateTime.ts`, `frontend/utils/datetime.ts`.
 ## 6. Permissions
 
 Catalog in `backend/app/core/permissions.py` (`SYSTEM_MODULES`). Runtime key: `action:resource` (e.g. `read:users`).  
-Sync with `ensure_system_permissions` on login / tenant bootstrap. Admin role always gets full catalog.
+Sync with `ensure_system_permissions` on login / seed. Admin role always gets full catalog.
 
 ## 7. Internationalization
 
@@ -103,7 +103,7 @@ Sync with `ensure_system_permissions` on login / tenant bootstrap. Admin role al
 ## 8. Docker
 
 `docker-compose.yml`: `db` (Postgres **5432**), `api` (8000), `web` (3000).  
-Local backend: `DATABASE_URL=...@localhost:5432/multi_tenant_db`.
+Local backend: `DATABASE_URL=...@localhost:5432/app_db`.
 
 ## 9. Skills map
 
@@ -113,7 +113,6 @@ Local backend: `DATABASE_URL=...@localhost:5432/multi_tenant_db`.
 | New module E2E | `nuxt-new-module` |
 | Auth / security | `nuxt-security` |
 | Soft delete | `nuxt-soft-delete` |
-| Tenant scope | `nuxt-tenant-isolation` |
 | Audit log | `nuxt-system-log` |
 | WebSocket | `nuxt-websocket` |
 | File upload | `nuxt-file-upload` |
@@ -122,4 +121,4 @@ Local backend: `DATABASE_URL=...@localhost:5432/multi_tenant_db`.
 | i18n | `nuxt-i18n` |
 | Mobile UI | `nuxt-mobile-patterns` |
 
-**Legacy (do not use):** `nuxt-api-endpoint`, `prisma-cli`, `prisma-client-api`, `prisma-upgrade-v7`.
+**Legacy (do not use):** `nuxt-api-endpoint`, `nuxt-tenant-isolation`, `prisma-cli`, `prisma-client-api`, `prisma-upgrade-v7`.

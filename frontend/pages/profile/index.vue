@@ -157,7 +157,7 @@ const form = reactive({
 
 onMounted(async () => {
   try {
-    const { data } = await $fetch<any>('/api/auth/me');
+    const { data } = await useApiFetch('/api/auth/me');
     if (data) {
       form.fullName = data.user.fullName || '';
       form.email = data.user.email || '';
@@ -188,7 +188,7 @@ const uploadCroppedAvatar = async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
 
-    const res = await $fetch<any>('/api/users/avatar', {
+    const res = await useApiFetch('/api/users/avatar', {
       method: 'POST',
       body: formData
     });
@@ -234,7 +234,7 @@ const handleUpdate = async () => {
           payload.password = form.password;
         }
 
-        const res = await $fetch<any>('/api/users/profile', {
+        const res = await useApiFetch('/api/users/profile', {
           method: 'PUT',
           body: payload
         });

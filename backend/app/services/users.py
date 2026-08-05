@@ -39,7 +39,6 @@ def _serialize_user(user: User) -> dict:
 
 async def list_users(
     db: AsyncSession,
-    tenant_id: str,
     *,
     page: int = 1,
     page_size: int = 10,
@@ -48,7 +47,6 @@ async def list_users(
 ) -> dict:
     users, total = await user_repo.list_users_page(
         db,
-        tenant_id=tenant_id,
         page=page,
         page_size=page_size,
         search=search,
@@ -64,29 +62,24 @@ async def list_users(
 
 
 async def create_user(
-    db: AsyncSession, tenant_id: str, actor_id: str | None, body: UserCreate
+    db: AsyncSession, actor_id: str | None, body: UserCreate
 ) -> dict:
     if not body.username or not body.password:
         raise HTTPException(status_code=400, detail="Username và password là bắt buộc")
     if len(body.password) < 6:
         raise HTTPException(status_code=400, detail="Mật khẩu tối thiểu 6 ký tự")
 
-    if await user_repo.find_active_username(
-        db, tenant_id=tenant_id, username=body.username
-    ):
+    if await user_repo.find_active_username(db, username=body.username):
         raise HTTPException(status_code=409, detail="Username đã tồn tại")
 
     if body.roleIds:
-        roles = await role_repo.get_ids_in_tenant(
-            db, tenant_id=tenant_id, role_ids=body.roleIds
-        )
+        roles = await role_repo.get_ids(db, role_ids=body.roleIds)
         if len(roles) != len(body.roleIds):
             raise HTTPException(status_code=400, detail="Một hoặc nhiều vai trò không hợp lệ")
 
     user = await user_repo.add_user(
         db,
         User(
-            tenant_id=tenant_id,
             username=body.username.strip(),
             password=hash_password(body.password),
             full_name=body.fullName,
@@ -94,19 +87,14 @@ async def create_user(
             is_active=body.isActive,
         ),
     )
-    await user_repo.add_user_roles(
-        db, user_id=user.id, tenant_id=tenant_id, role_ids=body.roleIds
-    )
+    await user_repo.add_user_roles(db, user_id=user.id, role_ids=body.roleIds)
     await db.commit()
 
-    user = await user_repo.get_by_id(
-        db, user_id=user.id, tenant_id=tenant_id, with_roles=True
-    )
+    user = await user_repo.get_by_id(db, user_id=user.id, with_roles=True)
     assert user is not None
 
     await write_system_log(
         db,
-        tenant_id=tenant_id,
         user_id=actor_id,
         action="CREATE_USER",
         resource="User",
@@ -116,11 +104,9 @@ async def create_user(
 
 
 async def update_user(
-    db: AsyncSession, tenant_id: str, actor_id: str | None, user_id: str, body: UserUpdate
+    db: AsyncSession, actor_id: str | None, user_id: str, body: UserUpdate
 ) -> dict:
-    user = await user_repo.get_by_id(
-        db, user_id=user_id, tenant_id=tenant_id, with_roles=True
-    )
+    user = await user_repo.get_by_id(db, user_id=user_id, with_roles=True)
     if not user:
         raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
 
@@ -137,24 +123,17 @@ async def update_user(
         await revoke_user_sessions(db, user.id)
 
     if body.roleIds is not None:
-        roles = await role_repo.get_ids_in_tenant(
-            db, tenant_id=tenant_id, role_ids=body.roleIds
-        )
+        roles = await role_repo.get_ids(db, role_ids=body.roleIds)
         if body.roleIds and len(roles) != len(body.roleIds):
             raise HTTPException(status_code=400, detail="Một hoặc nhiều vai trò không hợp lệ")
-        await user_repo.replace_user_roles(
-            db, user, tenant_id=tenant_id, role_ids=body.roleIds
-        )
+        await user_repo.replace_user_roles(db, user, role_ids=body.roleIds)
 
     await db.commit()
-    user = await user_repo.get_by_id(
-        db, user_id=user.id, tenant_id=tenant_id, with_roles=True
-    )
+    user = await user_repo.get_by_id(db, user_id=user.id, with_roles=True)
     assert user is not None
 
     await write_system_log(
         db,
-        tenant_id=tenant_id,
         user_id=actor_id,
         action="UPDATE_USER",
         resource="User",
@@ -164,12 +143,12 @@ async def update_user(
 
 
 async def delete_user(
-    db: AsyncSession, tenant_id: str, actor_id: str, user_id: str
+    db: AsyncSession, actor_id: str, user_id: str
 ) -> dict:
     if actor_id == user_id:
         raise HTTPException(status_code=400, detail="Không thể tự xóa tài khoản của mình")
 
-    user = await user_repo.get_by_id(db, user_id=user_id, tenant_id=tenant_id)
+    user = await user_repo.get_by_id(db, user_id=user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
 
@@ -177,7 +156,6 @@ async def delete_user(
     await db.commit()
     await write_system_log(
         db,
-        tenant_id=tenant_id,
         user_id=actor_id,
         action="DELETE_USER",
         resource="User",
@@ -187,9 +165,9 @@ async def delete_user(
 
 
 async def update_profile(
-    db: AsyncSession, user_id: str, tenant_id: str, body: ProfileUpdate
+    db: AsyncSession, user_id: str, body: ProfileUpdate
 ) -> dict:
-    user = await user_repo.get_by_id(db, user_id=user_id, tenant_id=tenant_id)
+    user = await user_repo.get_by_id(db, user_id=user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
 
@@ -212,13 +190,12 @@ async def update_profile(
             "fullName": user.full_name,
             "avatar": user.avatar,
             "isActive": user.is_active,
-            "tenant_id": user.tenant_id,
         },
     }
 
 
 async def upload_avatar(
-    db: AsyncSession, user_id: str, tenant_id: str, file: UploadFile
+    db: AsyncSession, user_id: str, file: UploadFile
 ) -> dict:
     if not file.content_type or file.content_type not in ALLOWED_MIME:
         raise HTTPException(status_code=400, detail="Định dạng ảnh không hợp lệ")
@@ -238,7 +215,7 @@ async def upload_avatar(
     dest.write_bytes(content)
 
     avatar_url = f"/uploads/avatars/{filename}"
-    user = await user_repo.get_by_id(db, user_id=user_id, tenant_id=tenant_id)
+    user = await user_repo.get_by_id(db, user_id=user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
     user.avatar = avatar_url

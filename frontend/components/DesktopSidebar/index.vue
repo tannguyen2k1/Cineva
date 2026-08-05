@@ -45,14 +45,6 @@
         </el-menu-item>
 
         <el-menu-item
-          v-if="authStore.hasPermission('read:tenants')"
-          index="/systems/tenants"
-        >
-          <el-icon><House /></el-icon>
-          <span>{{ t('nav.tenants') }}</span>
-        </el-menu-item>
-
-        <el-menu-item
           v-if="authStore.hasPermission('read:logs')"
           index="/systems/logs"
         >
@@ -73,7 +65,7 @@
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { Odometer, User, Box, House, Document } from '@element-plus/icons-vue';
+import { Odometer, User, Box, Document } from '@element-plus/icons-vue';
 import styles from './DesktopSidebar.module.scss';
 
 const { t, locale } = useI18n();
@@ -83,7 +75,6 @@ const authStore = useAuthStore();
 const activeMenu = computed(() => {
   if (route.path.startsWith('/systems/roles')) return '/systems/roles';
   if (route.path.startsWith('/systems/users')) return '/systems/users';
-  if (route.path.startsWith('/systems/tenants')) return '/systems/tenants';
   if (route.path.startsWith('/systems/logs')) return '/systems/logs';
   if (route.path.startsWith('/profile')) return '/profile';
   if (route.path.startsWith('/settings')) return '/settings';

@@ -35,14 +35,13 @@ def new_jti() -> str:
     return str(uuid.uuid4())
 
 
-def create_access_token(*, user_id: str, username: str, tenant_id: str) -> str:
+def create_access_token(*, user_id: str, username: str) -> str:
     settings = get_settings()
     now = unix_ts()
     payload = {
         "sub": user_id,
         "userId": user_id,
         "username": username,
-        "tenant_id": tenant_id,
         "type": TOKEN_TYPE_ACCESS,
         "jti": new_jti(),
         "iat": now,
@@ -51,7 +50,7 @@ def create_access_token(*, user_id: str, username: str, tenant_id: str) -> str:
     return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
 
 
-def create_refresh_token(*, user_id: str, tenant_id: str, jti: str) -> tuple[str, datetime]:
+def create_refresh_token(*, user_id: str, jti: str) -> tuple[str, datetime]:
     settings = get_settings()
     now = unix_ts()
     exp = now + settings.refresh_token_ttl_days * 24 * 60 * 60
@@ -59,7 +58,6 @@ def create_refresh_token(*, user_id: str, tenant_id: str, jti: str) -> tuple[str
     payload = {
         "sub": user_id,
         "userId": user_id,
-        "tenant_id": tenant_id,
         "type": TOKEN_TYPE_REFRESH,
         "jti": jti,
         "iat": now,
@@ -69,13 +67,12 @@ def create_refresh_token(*, user_id: str, tenant_id: str, jti: str) -> tuple[str
     return token, expires_at
 
 
-def create_ws_ticket(*, user_id: str, tenant_id: str) -> str:
+def create_ws_ticket(*, user_id: str) -> str:
     settings = get_settings()
     now = unix_ts()
     payload = {
         "sub": user_id,
         "userId": user_id,
-        "tenant_id": tenant_id,
         "type": TOKEN_TYPE_WS,
         "jti": new_jti(),
         "iat": now,

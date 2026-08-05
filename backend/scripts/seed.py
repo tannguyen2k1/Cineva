@@ -1,4 +1,4 @@
-"""Seed default tenant, Admin role, permissions, and admin user."""
+"""Seed Admin role, permissions, and admin user."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from sqlalchemy import select
 from app.core.config import get_settings
 from app.core.security import hash_password
 from app.db.session import AsyncSessionLocal
-from app.models import Role, Tenant, User, UserRole
+from app.models import Role, User, UserRole
 from app.services.permissions_sync import ensure_system_permissions
 
 
@@ -22,22 +22,12 @@ async def main() -> None:
     print("Seeding database...")
 
     async with AsyncSessionLocal() as db:
-        result = await db.execute(select(Tenant).where(Tenant.domain == "default"))
-        tenant = result.scalar_one_or_none()
-        if not tenant:
-            tenant = Tenant(name="default", domain="default", is_active=True)
-            db.add(tenant)
-            await db.flush()
-
         role_result = await db.execute(
-            select(Role).where(
-                Role.tenant_id == tenant.id, Role.name == "Admin", Role.deleted_at.is_(None)
-            )
+            select(Role).where(Role.name == "Admin", Role.deleted_at.is_(None))
         )
         role = role_result.scalar_one_or_none()
         if not role:
             role = Role(
-                tenant_id=tenant.id,
                 name="Admin",
                 description="Quản trị viên hệ thống",
             )
@@ -46,7 +36,6 @@ async def main() -> None:
 
         user_result = await db.execute(
             select(User).where(
-                User.tenant_id == tenant.id,
                 User.username == settings.default_admin_username,
                 User.deleted_at.is_(None),
             )
@@ -55,7 +44,6 @@ async def main() -> None:
         hashed = hash_password(settings.default_admin_password)
         if not user:
             user = User(
-                tenant_id=tenant.id,
                 username=settings.default_admin_username,
                 password=hashed,
                 full_name="Super Admin",
@@ -70,14 +58,13 @@ async def main() -> None:
             select(UserRole).where(UserRole.user_id == user.id, UserRole.role_id == role.id)
         )
         if not link.scalar_one_or_none():
-            db.add(UserRole(user_id=user.id, role_id=role.id, tenant_id=tenant.id))
+            db.add(UserRole(user_id=user.id, role_id=role.id))
 
         await db.commit()
-        await ensure_system_permissions(db, tenant.id)
+        await ensure_system_permissions(db)
 
     print("Seeding completed!")
     print("--- DEFAULT ACCOUNT ---")
-    print("Workspace: default")
     print(f"Username: {settings.default_admin_username}")
     print(f"Password: {settings.default_admin_password}")
 

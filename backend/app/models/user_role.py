@@ -17,9 +17,8 @@ class UserRole(Base):
     __tablename__ = "user_roles"
     __table_args__ = (
         UniqueConstraint("user_id", "role_id", name="uq_user_role"),
-        Index("ix_user_roles_tenant_id", "tenant_id"),
-        Index("ix_user_roles_tenant_user", "tenant_id", "user_id"),
-        Index("ix_user_roles_tenant_role", "tenant_id", "role_id"),
+        Index("ix_user_roles_user_id", "user_id"),
+        Index("ix_user_roles_role_id", "role_id"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
@@ -29,7 +28,6 @@ class UserRole(Base):
     role_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("roles.id", ondelete="CASCADE"), nullable=False
     )
-    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False)
 
     user: Mapped[User] = relationship(back_populates="user_roles")
     role: Mapped[Role] = relationship(back_populates="user_roles")

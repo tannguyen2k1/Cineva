@@ -94,11 +94,6 @@
         <span>{{ t('pages.roles') }}</span>
         <el-icon :class="styles.chevron"><ArrowRight /></el-icon>
       </div>
-      <div v-if="authStore.hasPermission('read:tenants')" :class="styles.listItem" @click="router.push('/systems/tenants')">
-        <el-icon><House /></el-icon>
-        <span>{{ t('pages.tenants') }}</span>
-        <el-icon :class="styles.chevron"><ArrowRight /></el-icon>
-      </div>
       <div v-if="authStore.hasPermission('read:logs')" :class="styles.listItem" @click="router.push('/systems/logs')">
         <el-icon><Document /></el-icon>
         <span>{{ t('pages.logs') }}</span>
@@ -116,7 +111,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { ArrowRight, DataLine, Box, Tickets, User, Star, ChatLineRound, UserFilled, Setting, House, Document, SwitchButton } from '@element-plus/icons-vue';
+import { ArrowRight, DataLine, Box, Tickets, User, Star, ChatLineRound, UserFilled, Setting, Document, SwitchButton } from '@element-plus/icons-vue';
 import styles from './settings.module.scss';
 
 const authStore = useAuthStore();

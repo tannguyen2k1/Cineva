@@ -18,7 +18,7 @@ register_fastapi_utc_json()
 
 app = FastAPI(
     title="Admin Pro API",
-    description="Multi-tenant SaaS REST API. Auth via httpOnly cookies or Authorization: Bearer <token>.",
+    description="REST API. Auth via httpOnly cookies or Authorization: Bearer <token>.",
     version="1.0.0",
     docs_url=None,
     redoc_url=None,

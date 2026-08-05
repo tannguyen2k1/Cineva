@@ -3,7 +3,7 @@ name: nuxt-security
 description: >-
   Authentication, authorization, and security for this monorepo (Nuxt FE + FastAPI BE).
   Covers httpOnly cookie auth, access/refresh JWT with DB-backed refresh rotation,
-  permission checks, tenant isolation, CSRF/XSS notes, and WebSocket tickets.
+  permission checks, CSRF/XSS notes, and WebSocket tickets.
   Use when adding API endpoints, modifying auth, reviewing security, or debugging 401/403.
   Triggers on "auth", "login", "token", "cookie", "permission", "401", "403", "security",
   "CSRF", "XSS", "httpOnly", "refresh token".
@@ -31,8 +31,8 @@ Cookies (set by FastAPI, proxied through Nuxt):
 
 | Kind | Cookie / use | Claims | Persist |
 |------|----------------|--------|---------|
-| Access | `auth_token` | `type=access`, `sub`/`userId`, `username`, `tenant_id`, `jti` | Denylist table on revoke |
-| Refresh | `refresh_token` | `type=refresh`, `userId`, `tenant_id`, `jti` | Yes — `refresh_tokens` table, SHA-256 hash |
+| Access | `auth_token` | `type=access`, `sub`/`userId`, `username`, `jti` | Denylist table on revoke |
+| Refresh | `refresh_token` | `type=refresh`, `userId`, `jti` | Yes — `refresh_tokens` table, SHA-256 hash |
 | WS ticket | query `?token=` | `type=ws-ticket`, 30s | No |
 | CSRF | `csrf_token` + header `X-CSRF-Token` | random | Cookie only |
 
@@ -56,7 +56,8 @@ Cookies (set by FastAPI, proxied through Nuxt):
 
 - Mutating methods (`POST`/`PUT`/`PATCH`/`DELETE`) require header `X-CSRF-Token` == cookie `csrf_token`.
 - Exempt: `/api/auth/login`, `/api/auth/logout`, docs, health, uploads.
-- FE: `frontend/plugins/csrf.client.ts` attaches the header on `$fetch`.
+- FE: `frontend/utils/apiFetch.ts` (`apiFetch`) attaches the header; pages call `useApiFetch()` which wraps it and retries once after a 401 refresh.
+- Never call bare `$fetch` for `/api/**` — Nuxt snapshots `globalThis.$fetch`, so a plugin cannot add the CSRF interceptor to it and mutations will 403.
 - Only enforced when `auth_token` or `refresh_token` cookies are present (Bearer-only clients skip).
 
 ### Rate limit
@@ -80,8 +81,9 @@ Key format: `action:resource` (e.g. `read:users`).
 
 ```python
 current: CurrentUser = Depends(require_permission("read:users"))
-# current.tenant_id — ONLY from JWT, never from client body/header
 ```
+
+Single-org: no `tenant_id` in JWT or queries.
 
 ## Public routes
 
@@ -90,7 +92,7 @@ No auth: `/api/auth/login`, `/logout`, `/refresh`, `/api/docs`, `/api/openapi.js
 ## Frontend
 
 - `$fetch('/api/...')` relative — Nuxt proxies to FastAPI (`NUXT_API_PROXY`).
-- Do **not** send `Authorization` or `x-tenant-id` from the browser for normal UI calls.
+- Do **not** send `Authorization` from the browser for normal UI calls.
 - Indicator cookie `auth_logged_in` for route middleware only.
 
 ## Timezone
@@ -102,7 +104,6 @@ No auth: `/api/auth/login`, `/logout`, `/refresh`, `/api/docs`, `/api/openapi.js
 ## Checklist
 
 - [ ] Protected route uses `require_permission` / `get_current_user`
-- [ ] Queries scoped by `current.tenant_id`
 - [ ] Mutating actions call `write_system_log`
 - [ ] Soft delete uses `deleted_at`, not hard delete
 - [ ] No secrets in API responses / client storage

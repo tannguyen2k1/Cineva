@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 
+import { apiFetch } from '~/utils/apiFetch'
+
 interface User {
   id: string
   username: string
@@ -13,7 +15,6 @@ let refreshPromise: Promise<boolean> | null = null
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null as User | null,
-    tenant_id: null as string | null,
     permissions: [] as string[],
     loggedIn: false
   }),
@@ -36,24 +37,13 @@ export const useAuthStore = defineStore('auth', {
           this.loggedIn = true
         }
       }
-
-      const tenantCookie = useCookie('tenant_id')
-      if (tenantCookie.value) {
-        this.tenant_id = tenantCookie.value as string
-      }
     },
 
-    setAuth(user: User, tenant_id: string, permissions: string[] = []) {
+    setAuth(user: User, permissions: string[] = []) {
       this.user = user
-      this.tenant_id = tenant_id
       this.permissions = permissions
       this.loggedIn = true
 
-      const tenantCookie = useCookie('tenant_id')
-      tenantCookie.value = tenant_id
-
-      // Sync indicator cookie immediately so route middleware sees logged-in state
-      // before the Set-Cookie from the login response is reflected in useCookie.
       const authIndicator = useCookie('auth_logged_in', {
         sameSite: 'lax',
         path: '/',
@@ -73,10 +63,9 @@ export const useAuthStore = defineStore('auth', {
           }
         }
 
-        const { data } = await $fetch<any>('/api/auth/me', { headers })
+        const { data } = await apiFetch<any>('/api/auth/me', { headers })
         if (data) {
           this.user = data.user
-          this.tenant_id = data.tenant_id
           this.permissions = data.permissions
         }
       } catch (err: any) {
@@ -89,7 +78,6 @@ export const useAuthStore = defineStore('auth', {
           await this.logout()
         } else {
           this.user = null
-          this.tenant_id = null
           this.permissions = []
           this.loggedIn = false
         }
@@ -106,10 +94,9 @@ export const useAuthStore = defineStore('auth', {
 
       refreshPromise = (async () => {
         try {
-          const { data } = await $fetch<any>('/api/auth/refresh', { method: 'POST' })
+          const { data } = await apiFetch<any>('/api/auth/refresh', { method: 'POST' })
           if (data) {
             this.user = data.user
-            this.tenant_id = data.tenant_id
             this.permissions = data.permissions
             this.loggedIn = true
             return true
@@ -132,21 +119,16 @@ export const useAuthStore = defineStore('auth', {
 
     async logout() {
       try {
-        await $fetch('/api/auth/logout', { method: 'POST' })
+        await apiFetch('/api/auth/logout', { method: 'POST' })
       } catch {
         // best-effort
       }
 
       this.user = null
-      this.tenant_id = null
       this.permissions = []
       this.loggedIn = false
 
-      // useCookie / navigateTo require Nuxt context — client only
       if (!import.meta.client) return
-
-      const tenantCookie = useCookie('tenant_id')
-      tenantCookie.value = null
 
       const authIndicator = useCookie('auth_logged_in')
       authIndicator.value = null

@@ -40,7 +40,7 @@ const res = await $fetch('/api/users/avatar', { method: 'POST', body: fd })
 ## Rules
 
 - Validate on **server** only (MIME + size + ext).
-- Tenant/user ownership via auth context — do not accept arbitrary user ids for avatar without permission.
+- User ownership via auth context — do not accept arbitrary user ids for avatar without permission.
 - Do not commit uploaded binaries to git; keep `backend/uploads/` gitignored.
 - Prefer relative `/uploads/...` URLs so proxy/CDN can sit in front.
 

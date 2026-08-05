@@ -53,16 +53,6 @@ SYSTEM_MODULES: tuple[SystemModuleDef, ...] = (
         ),
     ),
     SystemModuleDef(
-        key="tenants",
-        label="Tenant",
-        permissions=(
-            ModulePermissionDef("read", "Xem danh sách tenant"),
-            ModulePermissionDef("create", "Tạo tenant"),
-            ModulePermissionDef("update", "Sửa / khóa tenant"),
-            ModulePermissionDef("delete", "Xóa tenant (soft delete)"),
-        ),
-    ),
-    SystemModuleDef(
         key="logs",
         label="Nhật ký",
         permissions=(ModulePermissionDef("read", "Xem nhật ký hệ thống"),),

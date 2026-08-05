@@ -18,7 +18,7 @@ async def list_roles(
     current: CurrentUser = Depends(require_permission("read:roles")),
 ):
     return await roles_service.list_roles(
-        db, current.tenant_id, page=page, page_size=pageSize, search=search
+        db, page=page, page_size=pageSize, search=search
     )
 
 
@@ -28,7 +28,7 @@ async def create_role(
     db: AsyncSession = Depends(get_db),
     current: CurrentUser = Depends(require_permission("create:roles")),
 ):
-    return await roles_service.create_role(db, current.tenant_id, current.id, body)
+    return await roles_service.create_role(db, current.id, body)
 
 
 @router.put("/{role_id}")
@@ -38,7 +38,7 @@ async def update_role(
     db: AsyncSession = Depends(get_db),
     current: CurrentUser = Depends(require_permission("update:roles")),
 ):
-    return await roles_service.update_role(db, current.tenant_id, current.id, role_id, body)
+    return await roles_service.update_role(db, current.id, role_id, body)
 
 
 @router.delete("/{role_id}")
@@ -47,7 +47,7 @@ async def delete_role(
     db: AsyncSession = Depends(get_db),
     current: CurrentUser = Depends(require_permission("delete:roles")),
 ):
-    return await roles_service.delete_role(db, current.tenant_id, current.id, role_id)
+    return await roles_service.delete_role(db, current.id, role_id)
 
 
 @router.get("/{role_id}/permissions")
@@ -56,7 +56,7 @@ async def get_role_permissions(
     db: AsyncSession = Depends(get_db),
     current: CurrentUser = Depends(require_permission("read:roles")),
 ):
-    return await roles_service.get_role_permissions(db, current.tenant_id, role_id)
+    return await roles_service.get_role_permissions(db, role_id)
 
 
 @router.put("/{role_id}/permissions")
@@ -67,5 +67,5 @@ async def update_role_permissions(
     current: CurrentUser = Depends(require_permission("update:roles")),
 ):
     return await roles_service.update_role_permissions(
-        db, current.tenant_id, current.id, role_id, body
+        db, current.id, role_id, body
     )

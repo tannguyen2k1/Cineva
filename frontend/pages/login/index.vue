@@ -27,14 +27,6 @@
           label-position="top"
           @submit.prevent
         >
-          <el-form-item :label="t('login.workspace')" prop="tenant_id">
-            <el-input
-              v-model="form.tenant_id"
-              :placeholder="t('login.workspacePlaceholder')"
-              clearable
-            />
-          </el-form-item>
-
           <el-form-item :label="t('login.username')" prop="username">
             <el-input
               v-model="form.username"
@@ -101,14 +93,12 @@ const isDark = useDark();
 const turnstileTheme = computed<'light' | 'dark'>(() => (isDark.value ? 'dark' : 'light'));
 
 const form = reactive({
-  tenant_id: 'default',
   username: '',
   password: '',
   turnstileToken: ''
 });
 
 const rules = computed(() => ({
-  tenant_id: [{ required: true, message: t('login.requiredWorkspace'), trigger: 'blur' }],
   username: [{ required: true, message: t('login.requiredUsername'), trigger: 'blur' }],
   password: [{ required: true, message: t('login.requiredPassword'), trigger: 'blur' }],
   turnstileToken: [{ required: true, message: t('login.requiredTurnstile'), trigger: 'change' }]
@@ -129,17 +119,16 @@ const handleLogin = async () => {
     if (valid) {
       loading.value = true;
       try {
-        const { data } = await $fetch('/api/auth/login', {
+        const { data } = await apiFetch<any>('/api/auth/login', {
           method: 'POST',
           body: {
-            tenant_id: form.tenant_id,
             username: form.username,
             password: form.password,
             turnstileToken: form.turnstileToken
           }
         });
 
-        authStore.setAuth(data.user, data.tenant_id, data.permissions);
+        authStore.setAuth(data.user, data.permissions);
         const displayName = data.user?.fullName || data.user?.username || form.username;
         ElMessage.success(t('login.welcome', { name: displayName }));
         navigateTo('/');

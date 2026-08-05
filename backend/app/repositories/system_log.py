@@ -18,14 +18,13 @@ async def count_logs(db: AsyncSession, *filters) -> int:
     ).scalar_one()
 
 
-async def count_in_tenant(db: AsyncSession, tenant_id: str) -> int:
-    return await count_logs(db, SystemLog.tenant_id == tenant_id)
+async def count_all(db: AsyncSession) -> int:
+    return await count_logs(db)
 
 
 async def list_logs_page(
     db: AsyncSession,
     *,
-    tenant_id: str,
     page: int,
     page_size: int,
     search: str | None = None,
@@ -34,7 +33,7 @@ async def list_logs_page(
     start_date: str | None = None,
     end_date: str | None = None,
 ) -> tuple[list[SystemLog], int]:
-    filters = [SystemLog.tenant_id == tenant_id]
+    filters = []
     if search:
         like = f"%{search}%"
         filters.append(
@@ -65,10 +64,9 @@ async def list_logs_page(
     return list(result.scalars().all()), total
 
 
-async def list_recent(db: AsyncSession, tenant_id: str, *, limit: int = 20) -> list[SystemLog]:
+async def list_recent(db: AsyncSession, *, limit: int = 20) -> list[SystemLog]:
     result = await db.execute(
         select(SystemLog)
-        .where(SystemLog.tenant_id == tenant_id)
         .order_by(SystemLog.created_at.desc())
         .limit(limit)
     )

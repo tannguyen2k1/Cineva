@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password123
-      POSTGRES_DB: multi_tenant_db
+      POSTGRES_DB: app_db
     ports:
       - "5432:5432"
     volumes:
@@ -20,7 +20,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:password123@db:5432/multi_tenant_db
+      - DATABASE_URL=postgresql+asyncpg://postgres:password123@db:5432/app_db
       - JWT_SECRET=super-secret-key-for-prod
       - DEFAULT_ADMIN_USERNAME=admin
       - DEFAULT_ADMIN_PASSWORD=admin123456

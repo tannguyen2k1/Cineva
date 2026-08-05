@@ -56,6 +56,6 @@ const ws = new WebSocket(`${base}/ws/server-stats?token=${ticket}`)
 ## Checklist
 
 - [ ] Ticket endpoint behind access auth
-- [ ] WS validates JWT type + userId/tenant_id
+- [ ] WS validates JWT type + userId
 - [ ] Client uses `runtimeConfig.public.wsBase`
 - [ ] Clean up timers/tasks on disconnect

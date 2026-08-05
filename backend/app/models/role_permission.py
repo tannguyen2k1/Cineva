@@ -17,8 +17,8 @@ class RolePermission(Base):
     __tablename__ = "role_permissions"
     __table_args__ = (
         UniqueConstraint("role_id", "permission_id", name="uq_role_permission"),
-        Index("ix_role_permissions_tenant_id", "tenant_id"),
-        Index("ix_role_permissions_tenant_role", "tenant_id", "role_id"),
+        Index("ix_role_permissions_role_id", "role_id"),
+        Index("ix_role_permissions_permission_id", "permission_id"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
@@ -28,7 +28,6 @@ class RolePermission(Base):
     permission_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("permissions.id", ondelete="CASCADE"), nullable=False
     )
-    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False)
 
     role: Mapped[Role] = relationship(back_populates="role_permissions")
     permission: Mapped[Permission] = relationship(back_populates="role_permissions")

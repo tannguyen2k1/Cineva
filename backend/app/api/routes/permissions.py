@@ -13,4 +13,4 @@ async def list_permissions(
     db: AsyncSession = Depends(get_db),
     current: CurrentUser = Depends(require_permission("read:roles")),
 ):
-    return await catalog_service.list_permission_catalog(db, current.tenant_id)
+    return await catalog_service.list_permission_catalog(db)

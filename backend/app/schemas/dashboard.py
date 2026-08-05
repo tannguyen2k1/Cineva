@@ -9,7 +9,6 @@ from app.schemas.common import ORMModel
 class DashboardStats(BaseModel):
     users: int
     roles: int
-    tenants: int
     logs: int
 
 

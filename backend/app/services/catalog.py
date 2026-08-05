@@ -8,15 +8,14 @@ from app.core.permissions import ACTION_LABELS, SYSTEM_MODULES, permission_key
 from app.repositories import permission as permission_repo
 from app.repositories import role as role_repo
 from app.repositories import system_log as system_log_repo
-from app.repositories import tenant as tenant_repo
 from app.repositories import user as user_repo
 from app.services.permissions_sync import ensure_system_permissions
 from app.services.server_stats import get_server_stats
 
 
-async def list_permission_catalog(db: AsyncSession, tenant_id: str) -> dict:
-    await ensure_system_permissions(db, tenant_id)
-    permissions = await permission_repo.list_by_tenant(db, tenant_id)
+async def list_permission_catalog(db: AsyncSession) -> dict:
+    await ensure_system_permissions(db)
+    permissions = await permission_repo.list_all(db)
     by_key = {permission_key(p.action, p.resource): p for p in permissions}
 
     data = []
@@ -43,7 +42,6 @@ async def list_permission_catalog(db: AsyncSession, tenant_id: str) -> dict:
 
 async def list_logs(
     db: AsyncSession,
-    tenant_id: str,
     *,
     page: int = 1,
     page_size: int = 10,
@@ -55,7 +53,6 @@ async def list_logs(
 ) -> dict:
     logs, total = await system_log_repo.list_logs_page(
         db,
-        tenant_id=tenant_id,
         page=page,
         page_size=page_size,
         search=search,
@@ -92,14 +89,13 @@ async def list_logs(
     }
 
 
-async def dashboard_stats(db: AsyncSession, tenant_id: str) -> dict:
-    users = await user_repo.count_active_in_tenant(db, tenant_id)
-    roles = await role_repo.count_active_in_tenant(db, tenant_id)
-    tenants = await tenant_repo.count_active(db)
-    logs_count = await system_log_repo.count_in_tenant(db, tenant_id)
+async def dashboard_stats(db: AsyncSession) -> dict:
+    users = await user_repo.count_active(db)
+    roles = await role_repo.count_active(db)
+    logs_count = await system_log_repo.count_all(db)
 
     recent_logs = []
-    for log in await system_log_repo.list_recent(db, tenant_id, limit=20):
+    for log in await system_log_repo.list_recent(db, limit=20):
         action_upper = (log.action or "").upper()
         if "LỖI" in action_upper or "ERROR" in action_upper:
             log_type = "danger"
@@ -131,7 +127,7 @@ async def dashboard_stats(db: AsyncSession, tenant_id: str) -> dict:
             "avatar": u.avatar,
             "createdAt": u.created_at,
         }
-        for u in await user_repo.list_recent(db, tenant_id, limit=4)
+        for u in await user_repo.list_recent(db, limit=4)
     ]
 
     return {
@@ -140,7 +136,6 @@ async def dashboard_stats(db: AsyncSession, tenant_id: str) -> dict:
             "stats": {
                 "users": users,
                 "roles": roles,
-                "tenants": tenants,
                 "logs": logs_count,
             },
             "recentLogs": recent_logs,

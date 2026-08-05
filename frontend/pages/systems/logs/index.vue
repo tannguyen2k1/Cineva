@@ -157,7 +157,7 @@ const apiResponse = ref<any>(null);
 const pending = ref(false);
 const error = ref<any>(null);
 
-const resourceOptions = ['User', 'Role', 'Tenant', 'Auth'];
+const resourceOptions = ['User', 'Role', 'Auth'];
 const actionOptions = [
   'LOGIN',
   'CREATE_USER',
@@ -166,10 +166,7 @@ const actionOptions = [
   'CREATE_ROLE',
   'UPDATE_ROLE',
   'DELETE_ROLE',
-  'UPDATE_ROLE_PERMISSIONS',
-  'CREATE_TENANT',
-  'UPDATE_TENANT',
-  'DELETE_TENANT'
+  'UPDATE_ROLE_PERMISSIONS'
 ];
 
 
@@ -238,7 +235,7 @@ const fetchData = async (isLoadMore = false) => {
     if (dateRange.value?.[0]) params.startDate = localDayStartToIso(dateRange.value[0]);
     if (dateRange.value?.[1]) params.endDate = localDayEndToIso(dateRange.value[1]);
 
-    const res = await $fetch<any>('/api/logs', {
+    const res = await useApiFetch('/api/logs', {
       params,
       credentials: 'include'
     });

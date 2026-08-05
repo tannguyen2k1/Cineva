@@ -13,4 +13,4 @@ async def dashboard_stats(
     db: AsyncSession = Depends(get_db),
     current: CurrentUser = Depends(require_permission("read:dashboard")),
 ):
-    return await catalog_service.dashboard_stats(db, current.tenant_id)
+    return await catalog_service.dashboard_stats(db)

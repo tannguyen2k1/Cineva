@@ -12,18 +12,17 @@ def user_perm_options():
     return user_with_permissions_options()
 
 
-async def ensure_system_permissions(db: AsyncSession, tenant_id: str) -> list[str]:
+async def ensure_system_permissions(db: AsyncSession) -> list[str]:
     ensured_ids: list[str] = []
 
     for p in SYSTEM_PERMISSIONS:
         existing = await permission_repo.find_by_action_resource(
-            db, tenant_id=tenant_id, action=p["action"], resource=p["resource"]
+            db, action=p["action"], resource=p["resource"]
         )
         if not existing:
             existing = await permission_repo.add_permission(
                 db,
                 Permission(
-                    tenant_id=tenant_id,
                     action=p["action"],
                     resource=p["resource"],
                     description=p["description"],
@@ -31,7 +30,7 @@ async def ensure_system_permissions(db: AsyncSession, tenant_id: str) -> list[st
             )
         ensured_ids.append(existing.id)
 
-    admin_role = await permission_repo.find_admin_role(db, tenant_id)
+    admin_role = await permission_repo.find_admin_role(db)
     if admin_role:
         for permission_id in ensured_ids:
             link = await permission_repo.find_role_permission(
@@ -42,7 +41,6 @@ async def ensure_system_permissions(db: AsyncSession, tenant_id: str) -> list[st
                     db,
                     role_id=admin_role.id,
                     permission_id=permission_id,
-                    tenant_id=tenant_id,
                 )
 
     await db.commit()

@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Admin Pro",
-    "tagline": "Workspace console",
+    "tagline": "Admin console",
     "footer": "© {year} Admin Pro"
   },
   "nav": {
@@ -10,7 +10,6 @@
     "dashboard": "Dashboard",
     "users": "Users",
     "roles": "Roles",
-    "tenants": "Tenants",
     "logs": "Logs",
     "settings": "Settings",
     "orders": "Orders",
@@ -23,7 +22,6 @@
     "profile": "Profile",
     "users": "User management",
     "roles": "Role management",
-    "tenants": "Tenant management",
     "logs": "System logs",
     "rolePermissions": "Role permissions"
   },
@@ -55,17 +53,14 @@
   },
   "login": {
     "title": "Sign in",
-    "subtitle": "Enter your workspace details to continue.",
-    "workspace": "Workspace",
-    "workspacePlaceholder": "e.g. default",
+    "subtitle": "Enter your credentials to continue.",
     "username": "Username",
     "usernamePlaceholder": "Enter username",
     "password": "Password",
     "passwordPlaceholder": "Enter password",
     "submit": "Sign in",
     "footer": "Secured by Admin Pro · Cloudflare Turnstile",
-    "brandTagline": "Multi-workspace admin",
-    "requiredWorkspace": "Please enter workspace",
+    "brandTagline": "System administration",
     "requiredUsername": "Please enter username",
     "requiredPassword": "Please enter password",
     "requiredTurnstile": "Please complete security verification",
@@ -121,29 +116,6 @@
     "cannotDeleteInUse": "Cannot delete: {count} users still use role “{name}”",
     "deleteConfirm": "Delete role “{name}”? The record will be hidden (soft delete)."
   },
-  "tenants": {
-    "searchPlaceholder": "Search tenant name, domain...",
-    "add": "Create tenant",
-    "createTitle": "Create tenant",
-    "editTitle": "Edit tenant",
-    "createSubmit": "Create tenant",
-    "name": "Workspace name",
-    "domain": "Domain / Slug",
-    "userCount": "Users",
-    "createdAt": "Created at",
-    "requiredName": "Enter workspace name",
-    "minName": "At least 2 characters",
-    "created": "Tenant created",
-    "createdWithCreds": "Tenant created — sign in: {username} / {password}",
-    "updated": "Tenant updated",
-    "deleted": "Tenant deleted",
-    "unlocked": "Tenant unlocked",
-    "locked": "Tenant locked",
-    "cannotLockSelf": "Cannot lock the signed-in tenant",
-    "cannotDeleteSelf": "Cannot delete the signed-in tenant",
-    "deleteFailed": "Could not delete tenant",
-    "deleteConfirm": "Delete workspace “{name}”?"
-  },
   "logs": {
     "module": "Module",
     "action": "Action",
@@ -162,7 +134,6 @@
     "recentUsers": "New users",
     "users": "Users",
     "roles": "Roles",
-    "tenants": "Tenants",
     "logs": "Logs",
     "vsLastMonth": "vs last month",
     "vsLastWeek": "vs last week",
@@ -177,7 +148,7 @@
   },
   "chat": {
     "title": "Messages",
-    "subtitle": "Quick support in your workspace",
+    "subtitle": "Quick support in the app",
     "open": "Open chat",
     "close": "Close chat",
     "placeholder": "Type a message...",

@@ -3,7 +3,7 @@ name: fastapi-endpoint
 description: >-
   Template for creating FastAPI endpoints in this monorepo backend.
   Covers router → service → SQLAlchemy model → Pydantic schema, auth deps,
-  tenant scoping, soft delete, system log, and Scalar/OpenAPI tags.
+  soft delete, system log, and Scalar/OpenAPI tags.
   Use when creating a new API route, adding CRUD endpoints, or scaffolding
   backend handlers. Triggers on "create API", "new endpoint", "FastAPI",
   "backend route", "CRUD API", "openapi", "api docs".
@@ -49,7 +49,7 @@ async def list_things(
     current: CurrentUser = Depends(require_permission("read:things")),
 ):
     return await things_service.list_things(
-        db, current.tenant_id, page=page, page_size=pageSize, search=search
+        db, page=page, page_size=pageSize, search=search
     )
 
 
@@ -59,13 +59,13 @@ async def create_thing(
     db: AsyncSession = Depends(get_db),
     current: CurrentUser = Depends(require_permission("create:things")),
 ):
-    return await things_service.create_thing(db, current.tenant_id, current.id, body)
+    return await things_service.create_thing(db, current.id, body)
 ```
 
 ## Layer rules
 
 1. Routes call services; services call repositories (no `select()` in routes).
-2. Scope queries with `tenant_id` from `CurrentUser` (never from request body for authz).
+2. This branch is **single-org** — no `tenant_id` scoping.
 3. Soft-deletable models: filter `deleted_at.is_(None)`; delete = set `deleted_at` (+ `is_active=False` when present).
 4. After successful mutate, call `write_system_log(...)` (swallows errors).
 5. Raise `HTTPException(status_code=..., detail="...")` — `app.core.errors` maps to Nuxt shape.
@@ -118,7 +118,7 @@ Do not reintroduce Nitro/`server/api` handlers.
 
 - [ ] Router registered in `app/api/router.py`
 - [ ] `require_permission("action:resource")` on protected routes
-- [ ] Tenant scoped queries + soft-delete filters
+- [ ] Soft-delete filters where applicable
 - [ ] Pydantic schemas for body / documented fields
 - [ ] Datetime columns are timezone-aware UTC; no naive `datetime.now()`
 - [ ] `write_system_log` on create/update/delete

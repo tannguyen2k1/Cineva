@@ -322,7 +322,7 @@ const fetchData = async (isLoadMore = false) => {
     if (searchQuery.value) params.search = searchQuery.value;
     if (statusFilter.value) params.status = statusFilter.value;
 
-    const res = await $fetch<any>('/api/users', {
+    const res = await useApiFetch('/api/users', {
       params,
       credentials: 'include'
     });
@@ -354,7 +354,7 @@ const loadMore = () => {
 const fetchRoles = async () => {
   rolesLoading.value = true;
   try {
-    const res = await $fetch<any>('/api/roles', {
+    const res = await useApiFetch('/api/roles', {
       params: { page: 1, pageSize: 100 },
       credentials: 'include'
     });
@@ -416,14 +416,14 @@ const onSubmit = async () => {
       };
       if (form.password) payload.password = form.password;
 
-      await $fetch(`/api/users/${editingId.value}`, {
+      await useApiFetch(`/api/users/${editingId.value}`, {
         method: 'PUT',
         body: payload,
         credentials: 'include'
       });
       ElMessage.success(t('users.updated'));
     } else {
-      await $fetch('/api/users', {
+      await useApiFetch('/api/users', {
         method: 'POST',
         body: {
           username: form.username.trim(),
@@ -456,7 +456,7 @@ const onToggleActive = async (row: UserRow, next: boolean) => {
   const prev = row.isActive;
   row.isActive = next;
   try {
-    await $fetch(`/api/users/${row.id}`, {
+    await useApiFetch(`/api/users/${row.id}`, {
       method: 'PUT',
       body: { isActive: next },
       credentials: 'include'
@@ -491,7 +491,7 @@ const onDelete = async (row: UserRow) => {
   }
 
   try {
-    await $fetch(`/api/users/${row.id}`, {
+    await useApiFetch(`/api/users/${row.id}`, {
       method: 'DELETE',
       credentials: 'include'
     });

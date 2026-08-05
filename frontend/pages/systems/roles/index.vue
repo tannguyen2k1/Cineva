@@ -202,7 +202,7 @@ const fetchData = async (isLoadMore = false) => {
     };
     if (searchQuery.value) params.search = searchQuery.value;
 
-    const res = await $fetch<any>('/api/roles', {
+    const res = await useApiFetch('/api/roles', {
       params,
       credentials: 'include'
     });
@@ -258,7 +258,7 @@ const onSubmit = async () => {
   saving.value = true;
   try {
     if (isEdit.value) {
-      await $fetch(`/api/roles/${editingId.value}`, {
+      await useApiFetch(`/api/roles/${editingId.value}`, {
         method: 'PUT',
         body: {
           name: form.name.trim(),
@@ -268,7 +268,7 @@ const onSubmit = async () => {
       });
       ElMessage.success(t('roles.updated'));
     } else {
-      await $fetch('/api/roles', {
+      await useApiFetch('/api/roles', {
         method: 'POST',
         body: {
           name: form.name.trim(),
@@ -310,7 +310,7 @@ const onDelete = async (row: RoleRow) => {
   }
 
   try {
-    await $fetch(`/api/roles/${row.id}`, {
+    await useApiFetch(`/api/roles/${row.id}`, {
       method: 'DELETE',
       credentials: 'include'
     });

@@ -15,7 +15,6 @@ async def create_refresh_session(
     db: AsyncSession,
     *,
     user_id: str,
-    tenant_id: str,
     raw_token: str,
     jti: str,
     family_id: str,
@@ -26,7 +25,6 @@ async def create_refresh_session(
         jti=jti,
         family_id=family_id,
         user_id=user_id,
-        tenant_id=tenant_id,
         raw_token=raw_token,
         expires_at=expires_at,
     )

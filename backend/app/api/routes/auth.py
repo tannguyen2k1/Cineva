@@ -9,7 +9,7 @@ from app.services import auth as auth_service
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@router.post("/login", summary="Login with workspace credentials")
+@router.post("/login", summary="Login with credentials")
 async def login(
     body: LoginRequest,
     response: Response,
@@ -47,9 +47,9 @@ async def me(
     db: AsyncSession = Depends(get_db),
     current: CurrentUser = Depends(get_current_user),
 ):
-    return await auth_service.me(db, current.id, current.tenant_id)
+    return await auth_service.me(db, current.id)
 
 
 @router.get("/ws-ticket", summary="Issue short-lived WebSocket ticket")
 async def ws_ticket(current: CurrentUser = Depends(get_current_user)):
-    return auth_service.issue_ws_ticket(current.id, current.tenant_id)
+    return auth_service.issue_ws_ticket(current.id)

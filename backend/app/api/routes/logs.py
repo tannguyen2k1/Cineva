@@ -22,7 +22,6 @@ async def list_logs(
 ):
     return await catalog_service.list_logs(
         db,
-        current.tenant_id,
         page=page,
         page_size=pageSize,
         search=search,

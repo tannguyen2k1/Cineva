@@ -1,7 +1,7 @@
 <template>
   <div :class="styles.dashboardPage">
     <el-row :gutter="16" :class="styles.statCards">
-      <el-col v-for="card in statCards" :key="card.key" :span="6" :xs="12" :sm="12" :md="12" :lg="6" :xl="6">
+      <el-col v-for="card in statCards" :key="card.key" :span="8" :xs="12" :sm="12" :md="8" :lg="8" :xl="8">
         <StatCard
           :title="card.title"
           :value="card.value"
@@ -82,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-import { User, TopRight, Key, House, Right, Document, BottomRight } from '@element-plus/icons-vue';
+import { User, TopRight, Key, Document, BottomRight } from '@element-plus/icons-vue';
 import styles from './dashboard.module.scss';
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import type { Component } from 'vue';
@@ -120,16 +120,6 @@ const statCards = computed(() => {
       trendIcon: TopRight as Component
     },
     {
-      key: 'tenants',
-      title: t('dashboard.tenants'),
-      value: stats?.tenants || 0,
-      icon: House,
-      iconTone: 'Amber' as IconTone,
-      trendText: t('dashboard.noChange'),
-      trendTone: 'Warning' as TrendTone,
-      trendIcon: Right as Component
-    },
-    {
       key: 'logs',
       title: t('dashboard.logs'),
       value: stats?.logs || 0,
@@ -162,7 +152,7 @@ function onWsMessage(event: MessageEvent) {
 async function connectWs() {
   if (!import.meta.client) return;
   try {
-    const { ticket } = await $fetch<{ ticket: string }>('/api/auth/ws-ticket');
+    const { ticket } = await useApiFetch('/api/auth/ws-ticket');
     const config = useRuntimeConfig();
     const base = String(config.public.wsBase || 'ws://127.0.0.1:8000').replace(/\/$/, '');
     const url = `${base}/ws/server-stats?token=${ticket}`;
@@ -188,7 +178,7 @@ function closeWs() {
 const fetchStats = async () => {
   pending.value = true;
   try {
-    const res = await $fetch<any>('/api/dashboard/stats');
+    const res = await useApiFetch('/api/dashboard/stats');
     if (res.success) {
       statsData.value = res.data;
     }

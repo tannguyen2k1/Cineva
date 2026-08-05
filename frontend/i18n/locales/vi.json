@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Admin Pro",
-    "tagline": "Workspace console",
+    "tagline": "Bảng điều khiển",
     "footer": "© {year} Admin Pro"
   },
   "nav": {
@@ -10,7 +10,6 @@
     "dashboard": "Trang chủ",
     "users": "Người dùng",
     "roles": "Vai trò",
-    "tenants": "Tenant",
     "logs": "Nhật ký",
     "settings": "Cài đặt",
     "orders": "Đơn hàng",
@@ -23,7 +22,6 @@
     "profile": "Hồ sơ cá nhân",
     "users": "Quản lý Người dùng",
     "roles": "Quản lý vai trò",
-    "tenants": "Quản lý Tenant",
     "logs": "Nhật ký hệ thống",
     "rolePermissions": "Phân quyền vai trò"
   },
@@ -55,17 +53,14 @@
   },
   "login": {
     "title": "Đăng nhập",
-    "subtitle": "Nhập thông tin workspace để tiếp tục.",
-    "workspace": "Workspace",
-    "workspacePlaceholder": "VD: default",
+    "subtitle": "Nhập thông tin đăng nhập để tiếp tục.",
     "username": "Tên đăng nhập",
     "usernamePlaceholder": "Nhập tên đăng nhập",
     "password": "Mật khẩu",
     "passwordPlaceholder": "Nhập mật khẩu",
     "submit": "Đăng nhập",
     "footer": "Bảo mật bởi Admin Pro · Cloudflare Turnstile",
-    "brandTagline": "Quản trị đa workspace",
-    "requiredWorkspace": "Vui lòng nhập Workspace",
+    "brandTagline": "Quản trị hệ thống",
     "requiredUsername": "Vui lòng nhập tên đăng nhập",
     "requiredPassword": "Vui lòng nhập mật khẩu",
     "requiredTurnstile": "Vui lòng xác minh bảo mật",
@@ -121,29 +116,6 @@
     "cannotDeleteInUse": "Không thể xóa: còn {count} người dùng đang dùng vai trò “{name}”",
     "deleteConfirm": "Xóa vai trò “{name}”? Bản ghi sẽ được ẩn (soft delete)."
   },
-  "tenants": {
-    "searchPlaceholder": "Tìm kiếm tên tenant, domain...",
-    "add": "Tạo Tenant mới",
-    "createTitle": "Tạo tenant mới",
-    "editTitle": "Chỉnh sửa tenant",
-    "createSubmit": "Tạo tenant",
-    "name": "Tên workspace",
-    "domain": "Domain / Slug",
-    "userCount": "Số lượng User",
-    "createdAt": "Ngày tạo",
-    "requiredName": "Nhập tên workspace",
-    "minName": "Ít nhất 2 ký tự",
-    "created": "Đã tạo tenant",
-    "createdWithCreds": "Đã tạo tenant — đăng nhập: {username} / {password}",
-    "updated": "Đã cập nhật tenant",
-    "deleted": "Đã xóa tenant",
-    "unlocked": "Đã mở khóa tenant",
-    "locked": "Đã khóa tenant",
-    "cannotLockSelf": "Không thể khóa tenant đang đăng nhập",
-    "cannotDeleteSelf": "Không thể xóa tenant đang đăng nhập",
-    "deleteFailed": "Không thể xóa tenant",
-    "deleteConfirm": "Xóa workspace “{name}”?"
-  },
   "logs": {
     "module": "Module",
     "action": "Hành động",
@@ -162,7 +134,6 @@
     "recentUsers": "Người dùng mới",
     "users": "Người dùng",
     "roles": "Vai trò",
-    "tenants": "Tenant",
     "logs": "Nhật ký",
     "vsLastMonth": "so với tháng trước",
     "vsLastWeek": "so với tuần trước",
@@ -177,7 +148,7 @@
   },
   "chat": {
     "title": "Tin nhắn",
-    "subtitle": "Hỗ trợ nhanh trong workspace",
+    "subtitle": "Hỗ trợ nhanh trong hệ thống",
     "open": "Mở chat",
     "close": "Đóng chat",
     "placeholder": "Nhập tin nhắn...",

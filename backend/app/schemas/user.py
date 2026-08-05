@@ -47,4 +47,3 @@ class ProfileOut(ORMModel):
     fullName: str | None = None
     avatar: str | None = None
     isActive: bool
-    tenant_id: str

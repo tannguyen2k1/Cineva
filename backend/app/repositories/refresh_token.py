@@ -16,7 +16,6 @@ async def create(
     jti: str,
     family_id: str,
     user_id: str,
-    tenant_id: str,
     raw_token: str,
     expires_at: datetime,
 ) -> RefreshToken:
@@ -24,7 +23,6 @@ async def create(
         id=jti,
         family_id=family_id,
         user_id=user_id,
-        tenant_id=tenant_id,
         token_hash=hash_token(raw_token),
         expires_at=as_utc(expires_at),
     )

@@ -17,14 +17,14 @@ Use snake_case column `deleted_at` (nullable timestamptz):
 deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 ```
 
-Typical soft-delete models: `User`, `Role`, `Tenant` (and any new business entity that should be recoverable).
+Typical soft-delete models: `User`, `Role` (and any new business entity that should be recoverable).
 
 ## List / count / auth
 
 Always filter active rows:
 
 ```python
-.where(Model.tenant_id == tenant_id, Model.deleted_at.is_(None))
+.where(Model.deleted_at.is_(None))
 ```
 
 ## Delete handler
@@ -47,17 +47,16 @@ Check uniqueness among **non-deleted** rows only:
 
 ```python
 select(User).where(
-    User.tenant_id == tenant_id,
     User.username == name,
     User.deleted_at.is_(None),
 )
 ```
 
-Avoid relying on DB `UNIQUE(username)` alone if soft-deleted rows would block reuse.
+Note: `User.username` / `Role.name` are globally unique in DB; soft-deleted rows still occupy the unique constraint — handle rename-on-delete or hard-delete if reuse is required.
 
 ## Checklist
 
 - [ ] `deleted_at` on model + Alembic migration
 - [ ] All reads filter `deleted_at.is_(None)`
 - [ ] Delete sets `deleted_at` (+ `is_active=False` when present)
-- [ ] Uniqueness checks ignore soft-deleted rows
+- [ ] Uniqueness checks ignore soft-deleted rows (and/or rename on soft-delete)

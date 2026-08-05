@@ -14,7 +14,6 @@ from app.core.security import (
     verify_password,
 )
 from app.models import User
-from app.repositories import tenant as tenant_repo
 from app.repositories import user as user_repo
 from app.schemas import AuthDataOut, AuthUserOut, LoginRequest
 from app.services.access_denylist import revoke_access_token
@@ -35,19 +34,17 @@ async def _issue_session(
     response: Response,
     *,
     user: User,
-    tenant_id: str,
     family_id: str | None = None,
 ) -> list[str]:
     permissions = collect_permissions_from_user(user)
-    access = create_access_token(user_id=user.id, username=user.username, tenant_id=tenant_id)
+    access = create_access_token(user_id=user.id, username=user.username)
 
     jti = new_jti()
     fam = family_id or next_refresh_ids()[1]
-    refresh, expires_at = create_refresh_token(user_id=user.id, tenant_id=tenant_id, jti=jti)
+    refresh, expires_at = create_refresh_token(user_id=user.id, jti=jti)
     await create_refresh_session(
         db,
         user_id=user.id,
-        tenant_id=tenant_id,
         raw_token=refresh,
         jti=jti,
         family_id=fam,
@@ -60,8 +57,8 @@ async def _issue_session(
 
 
 async def login(db: AsyncSession, body: LoginRequest, response: Response) -> dict:
-    if not body.username or not body.password or not body.tenant_id:
-        raise HTTPException(status_code=400, detail="Thiếu username, password hoặc tenant_id")
+    if not body.username or not body.password:
+        raise HTTPException(status_code=400, detail="Thiếu username hoặc password")
     if not body.turnstileToken:
         raise HTTPException(status_code=400, detail="Vui lòng xác minh Cloudflare Turnstile")
 
@@ -69,27 +66,20 @@ async def login(db: AsyncSession, body: LoginRequest, response: Response) -> dic
     if not turnstile.get("success"):
         raise HTTPException(status_code=403, detail="Xác minh Turnstile thất bại")
 
-    tenant = await tenant_repo.get_by_name(db, body.tenant_id)
-    if not tenant:
-        raise HTTPException(status_code=404, detail="Không tìm thấy Workspace này")
-    if not tenant.is_active:
-        raise HTTPException(status_code=403, detail="Workspace đã bị khóa")
-
-    await ensure_system_permissions(db, tenant.id)
+    await ensure_system_permissions(db)
 
     user = await user_repo.get_by_username(
-        db, tenant_id=tenant.id, username=body.username, with_permissions=True
+        db, username=body.username, with_permissions=True
     )
     if not user or not verify_password(body.password, user.password):
         raise HTTPException(status_code=401, detail="Sai username hoặc mật khẩu")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Tài khoản đã bị khóa")
 
-    permissions = await _issue_session(db, response, user=user, tenant_id=tenant.id)
+    permissions = await _issue_session(db, response, user=user)
 
     await write_system_log(
         db,
-        tenant_id=tenant.id,
         user_id=user.id,
         action="LOGIN",
         resource="Auth",
@@ -100,7 +90,6 @@ async def login(db: AsyncSession, body: LoginRequest, response: Response) -> dic
         "success": True,
         "data": AuthDataOut(
             user=AuthUserOut(id=user.id, username=user.username, fullName=user.full_name),
-            tenant_id=tenant.id,
             permissions=permissions,
         ).model_dump(),
     }
@@ -126,7 +115,6 @@ async def refresh(
         clear_auth_cookies(response)
         raise HTTPException(status_code=401, detail="Refresh token expired or invalid")
 
-    # Reuse of an already-rotated token → revoke whole family (possible theft)
     if row.revoked_at is not None:
         await revoke_family(db, row.family_id)
         await db.commit()
@@ -139,11 +127,9 @@ async def refresh(
         raise HTTPException(status_code=401, detail="Refresh token expired or invalid")
 
     user_id = payload.get("userId") or payload.get("sub")
-    tenant_id = payload.get("tenant_id")
     user = await user_repo.get_by_id(
         db,
         user_id=user_id,
-        tenant_id=tenant_id,
         with_permissions=True,
         active_only=True,
     )
@@ -153,20 +139,18 @@ async def refresh(
         clear_auth_cookies(response)
         raise HTTPException(status_code=401, detail="User not found or disabled")
 
-    # Rotate: revoke current access + refresh, issue new pair in same family
     await revoke_access_token(db, access_token)
     new_jti_val = new_jti()
     await revoke_token(db, row, replaced_by=new_jti_val)
 
     permissions = collect_permissions_from_user(user)
-    access = create_access_token(user_id=user.id, username=user.username, tenant_id=tenant_id)
+    access = create_access_token(user_id=user.id, username=user.username)
     new_refresh, expires_at = create_refresh_token(
-        user_id=user.id, tenant_id=tenant_id, jti=new_jti_val
+        user_id=user.id, jti=new_jti_val
     )
     await create_refresh_session(
         db,
         user_id=user.id,
-        tenant_id=tenant_id,
         raw_token=new_refresh,
         jti=new_jti_val,
         family_id=row.family_id,
@@ -185,15 +169,14 @@ async def refresh(
                 email=user.email,
                 avatar=user.avatar,
             ),
-            tenant_id=tenant_id,
             permissions=permissions,
         ).model_dump(),
     }
 
 
-async def me(db: AsyncSession, user_id: str, tenant_id: str) -> dict:
+async def me(db: AsyncSession, user_id: str) -> dict:
     user = await user_repo.get_by_id(
-        db, user_id=user_id, tenant_id=tenant_id, with_permissions=True
+        db, user_id=user_id, with_permissions=True
     )
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
@@ -208,7 +191,6 @@ async def me(db: AsyncSession, user_id: str, tenant_id: str) -> dict:
                 email=user.email,
                 avatar=user.avatar,
             ),
-            tenant_id=user.tenant_id,
             permissions=collect_permissions_from_user(user),
         ).model_dump(),
     }
@@ -228,12 +210,11 @@ async def logout(
         if row and row.revoked_at is None:
             await revoke_family(db, row.family_id)
         elif payload and payload.get("type") == TOKEN_TYPE_REFRESH:
-            # Token already rotated/expired — still clear cookies
             pass
     await db.commit()
     clear_auth_cookies(response)
     return {"success": True}
 
 
-def issue_ws_ticket(user_id: str, tenant_id: str) -> dict:
-    return {"ticket": create_ws_ticket(user_id=user_id, tenant_id=tenant_id)}
+def issue_ws_ticket(user_id: str) -> dict:
+    return {"ticket": create_ws_ticket(user_id=user_id)}

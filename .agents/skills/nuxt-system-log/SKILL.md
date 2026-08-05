@@ -17,7 +17,6 @@ description: >-
 ```python
 await write_system_log(
     db,
-    tenant_id=tenant_id,
     user_id=actor_id,          # optional
     action="CREATE_USER",
     resource="User",
@@ -40,16 +39,16 @@ Do **not** log every GET, or failed login spam into this table (use rate-limit /
 ## Naming
 
 - `action`: `VERB_NOUN` upper snake — `CREATE_USER`, `DELETE_ROLE`, `LOGIN`
-- `resource`: PascalCase entity — `User`, `Role`, `Auth`, `Tenant`
+- `resource`: PascalCase entity — `User`, `Role`, `Auth`
 
 ## Model
 
-`SystemLog` — `tenant_id`, optional `user_id`, `action`, `resource`, `details` (text JSON), `created_at`.
+`SystemLog` — optional `user_id`, `action`, `resource`, `details` (text JSON), `created_at`.
 
 List UI: `GET /api/logs` (`read:logs`).
 
 ## Checklist
 
 - [ ] Called after successful mutate (not before commit of business data unless intentional)
-- [ ] Includes `tenant_id` + actor `user_id` when available
+- [ ] Includes actor `user_id` when available
 - [ ] `details` has ids/names useful for audit, no secrets/passwords

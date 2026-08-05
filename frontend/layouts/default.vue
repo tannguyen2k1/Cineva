@@ -102,7 +102,6 @@ const pageTitleKeys: Record<string, string> = {
   '/settings': 'nav.settings',
   '/systems/users': 'pages.users',
   '/systems/roles': 'pages.roles',
-  '/systems/tenants': 'pages.tenants',
   '/systems/logs': 'pages.logs'
 };
 

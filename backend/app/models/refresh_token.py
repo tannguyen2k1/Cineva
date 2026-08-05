@@ -19,7 +19,6 @@ class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
     __table_args__ = (
         Index("ix_refresh_tokens_user_id", "user_id"),
-        Index("ix_refresh_tokens_tenant_id", "tenant_id"),
         Index("ix_refresh_tokens_family_id", "family_id"),
         Index("ix_refresh_tokens_expires_at", "expires_at"),
     )
@@ -28,9 +27,6 @@ class RefreshToken(Base):
     family_id: Mapped[str] = mapped_column(String(36), nullable=False)
     user_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
-    tenant_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
     token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

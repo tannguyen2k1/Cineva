@@ -16,7 +16,6 @@ from app.schemas.role import (
     RolePermissionsUpdate,
     RoleUpdate,
 )
-from app.schemas.tenant import TenantCreate, TenantCreateResult, TenantOut, TenantUpdate
 from app.schemas.user import ProfileOut, ProfileUpdate, UserCreate, UserOut, UserUpdate
 
 __all__ = [
@@ -39,10 +38,6 @@ __all__ = [
     "RolePermissionsUpdate",
     "PermissionItemOut",
     "PermissionGroupOut",
-    "TenantOut",
-    "TenantCreate",
-    "TenantUpdate",
-    "TenantCreateResult",
     "LogOut",
     "DashboardStats",
     "RecentLogOut",

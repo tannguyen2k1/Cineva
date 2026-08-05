@@ -10,7 +10,6 @@ from app.repositories import system_log as system_log_repo
 async def write_system_log(
     db: AsyncSession,
     *,
-    tenant_id: str,
     action: str,
     user_id: str | None = None,
     resource: str | None = None,
@@ -25,7 +24,6 @@ async def write_system_log(
         await system_log_repo.add_log(
             db,
             SystemLog(
-                tenant_id=tenant_id,
                 user_id=user_id,
                 action=action,
                 resource=resource,

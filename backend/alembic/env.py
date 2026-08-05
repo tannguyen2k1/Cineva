@@ -14,7 +14,6 @@ from app.models import (  # noqa: F401 — register models
     Role,
     RolePermission,
     SystemLog,
-    Tenant,
     User,
     UserRole,
 )
