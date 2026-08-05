@@ -52,10 +52,10 @@
                 />
               </el-tooltip>
               <el-tooltip :content="t('common.edit')" placement="top">
-                <el-button type="primary" link :icon="Edit" @click="openEdit(scope.row)" />
+                <el-button type="primary" link :icon="Edit" @click="openEdit(scope.row as RoleRow)" />
               </el-tooltip>
               <el-tooltip :content="t('common.delete')" placement="top">
-                <el-button type="danger" link :icon="Delete" @click="onDelete(scope.row)" />
+                <el-button type="danger" link :icon="Delete" @click="onDelete(scope.row as RoleRow)" />
               </el-tooltip>
             </template>
           </el-table-column>
