@@ -1,13 +1,12 @@
 from fastapi import FastAPI, Request
-from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from scalar_fastapi import get_scalar_api_reference
-from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.router import api_router
 from app.core.config import get_settings
+from app.core.errors import register_exception_handlers
 from app.services.server_stats import ensure_upload_dirs
 from app.websocket.server_stats import router as ws_router
 
@@ -30,24 +29,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-@app.exception_handler(StarletteHTTPException)
-async def http_exception_handler(_request: Request, exc: StarletteHTTPException):
-    detail = exc.detail
-    message = detail if isinstance(detail, str) else str(detail)
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"statusCode": exc.status_code, "statusMessage": message, "message": message},
-    )
-
-
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(_request: Request, exc: RequestValidationError):
-    message = "Dữ liệu không hợp lệ"
-    return JSONResponse(
-        status_code=422,
-        content={"statusCode": 422, "statusMessage": message, "message": message, "errors": exc.errors()},
-    )
+register_exception_handlers(app)
 
 upload_root = ensure_upload_dirs(settings.upload_dir)
 app.mount("/uploads", StaticFiles(directory=str(upload_root)), name="uploads")

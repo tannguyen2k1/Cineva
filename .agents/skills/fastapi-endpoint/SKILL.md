@@ -68,8 +68,31 @@ async def create_thing(
 2. Scope queries with `tenant_id` from `CurrentUser` (never from request body for authz).
 3. Soft-deletable models: filter `deleted_at.is_(None)`; delete = set `deleted_at` (+ `is_active=False` when present).
 4. After successful mutate, call `write_system_log(...)` (swallows errors).
-5. Raise `HTTPException(status_code=..., detail="...")` — main app maps to `statusMessage`.
+5. Raise `HTTPException(status_code=..., detail="...")` — `app.core.errors` maps to Nuxt shape.
 6. Response shape: `{ "success": True, "data": ..., "total"?, "page"?, "pageSize"? }`.
+7. Do **not** leak raw SQL / stack traces to the client; unexpected errors → generic 500 `statusMessage`.
+
+## Error handling (Nuxt-compatible)
+
+All API errors must look like:
+
+```json
+{ "statusCode": 400, "statusMessage": "…", "message": "…" }
+```
+
+Handlers live in `backend/app/core/errors.py` (registered from `main.py`):
+
+| Exception | Status | Notes |
+|-----------|--------|--------|
+| `HTTPException` | as raised | Business / auth errors from services |
+| `RequestValidationError` | 422 | `"Dữ liệu không hợp lệ"` + `errors` |
+| `IntegrityError` | 409 | Default conflict message |
+| `SQLAlchemyError` | 500 | Generic DB message (logged) |
+| `Exception` | 500 | Generic system message (logged) |
+
+Frontend reads `err.data?.statusMessage`. Prefer raising `HTTPException` in services for known cases; rely on global handlers for the rest (no need for try/catch on every route like Nitro — same outcome).
+
+`get_db` rolls back the session on any exception.
 
 ## Permissions catalog
 
