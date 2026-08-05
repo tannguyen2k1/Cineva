@@ -11,7 +11,7 @@ backend/    FastAPI + SQLAlchemy 2 + Alembic + Scalar docs
 
 - **UI**: Element Plus, CSS Modules, `@element-plus/icons-vue`
 - **State**: Pinia (`frontend/stores/`)
-- **API**: FastAPI under `backend/app/` — layers: `api/routes` → `services` → `models` / `schemas`
+- **API**: FastAPI under `backend/app/` — layers: `api/routes` → `services` → `repositories` → `models` / `schemas`
 - **DB**: PostgreSQL via SQLAlchemy 2 (async) + Alembic migrations
 - **Multi-tenancy**: RBAC with `tenant_id` from JWT only (never from client headers)
 
@@ -30,10 +30,11 @@ backend/    FastAPI + SQLAlchemy 2 + Alembic + Scalar docs
 |-------|------|------|
 | Routes | `app/api/routes/` | HTTP only — validate, call service, return JSON |
 | Deps | `app/api/deps.py` | `get_current_user`, `require_permission` |
-| Services | `app/services/` | Business logic, Turnstile, system log, transactions |
-| Models | `app/models/` | SQLAlchemy ORM |
-| Schemas | `app/schemas/` | Pydantic request/response |
-| Core | `app/core/` | Settings, JWT, permission catalog |
+| Services | `app/services/` | Business logic, orchestration, system log |
+| Repositories | `app/repositories/` | SQLAlchemy queries only (one file per aggregate) |
+| Models | `app/models/<name>.py` | One SQLAlchemy model per file |
+| Schemas | `app/schemas/<name>.py` | Pydantic I/O split by domain |
+| Core | `app/core/` | Settings, JWT, permissions, error handlers |
 | Docs | Scalar at `/api/docs`, OpenAPI at `/api/openapi.json` |
 
 New endpoints: follow `skills/fastapi-endpoint`.
