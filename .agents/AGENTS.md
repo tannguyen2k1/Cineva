@@ -37,6 +37,19 @@ backend/    FastAPI + SQLAlchemy 2 + Alembic + Scalar docs
 | Core | `app/core/` | Settings, JWT, permissions, error handlers |
 | Docs | Scalar at `/api/docs`, OpenAPI at `/api/openapi.json` |
 
+### Layer boundaries
+
+- **Routes** handle HTTP/dependencies only; never query the database or commit.
+- **Services** own business rules, `HTTPException`, orchestration, audit logging, and
+  transaction boundaries (`commit`). Do not use SQLAlchemy `select`/`update`/`delete`
+  or `db.execute` directly; call repositories.
+- **Repositories** own persistence only: SQLAlchemy queries/writes, eager-loading,
+  pagination, and technical filters such as `deleted_at IS NULL`.
+- Repository methods may use domain-intent names such as `revoke_family` or
+  `set_tokens_invalid_before`, but must not enforce permissions, raise HTTP errors,
+  write system logs, or commit. Use `flush` when generated values are needed.
+- A service coordinates multiple repositories when one use case spans aggregates.
+
 New endpoints: follow `skills/fastapi-endpoint`.
 
 ## 4. Auth & security (CRITICAL)

@@ -64,13 +64,22 @@ async def create_thing(
 
 ## Layer rules
 
-1. Routes call services; services call repositories (no `select()` in routes).
-2. This branch is **single-org** — no `tenant_id` scoping.
-3. Soft-deletable models: filter `deleted_at.is_(None)`; delete = set `deleted_at` (+ `is_active=False` when present).
-4. After successful mutate, call `write_system_log(...)` (swallows errors).
-5. Raise `HTTPException(status_code=..., detail="...")` — `app.core.errors` maps to Nuxt shape.
-6. Response shape: `{ "success": True, "data": ..., "total"?, "page"?, "pageSize"? }`.
-7. Do **not** leak raw SQL / stack traces to the client; unexpected errors → generic 500 `statusMessage`.
+1. Routes call services and handle HTTP/dependencies only. No queries or commits.
+2. Services own business rules, `HTTPException`, orchestration, system logs, and
+   transaction boundaries (`commit`). Never use SQLAlchemy `select`/`update`/`delete`
+   or `db.execute` directly; call repositories.
+3. Repositories own SQLAlchemy persistence, eager-loading, pagination, and technical
+   filters such as `deleted_at.is_(None)`. Domain-intent method names are fine, but
+   repositories must not raise HTTP errors, write logs, or commit (`flush` is allowed).
+4. This branch is **single-org** — no `tenant_id` scoping.
+5. Soft-deletable models: filter `deleted_at.is_(None)`; delete = set `deleted_at`
+   (+ `is_active=False` when present).
+6. After successful mutate, call `write_system_log(...)` (swallows errors).
+7. Raise `HTTPException(status_code=..., detail="...")` in services —
+   `app.core.errors` maps to Nuxt shape.
+8. Response shape: `{ "success": True, "data": ..., "total"?, "page"?, "pageSize"? }`.
+9. Do **not** leak raw SQL / stack traces to the client; unexpected errors → generic
+   500 `statusMessage`.
 
 ## Error handling (Nuxt-compatible)
 

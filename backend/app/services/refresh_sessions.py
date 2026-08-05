@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import new_jti
 from app.core.timeutil import as_utc, utcnow
-from app.models import RefreshToken, User
+from app.models import RefreshToken
 from app.repositories import refresh_token as refresh_token_repo
+from app.repositories import user as user_repo
 
 
 async def create_refresh_session(
@@ -63,9 +63,7 @@ async def revoke_user_sessions(db: AsyncSession, user_id: str) -> None:
     (not only after TTL / jti denylist of the current cookie).
     """
     now = utcnow()
-    await db.execute(
-        update(User).where(User.id == user_id).values(tokens_invalid_before=now)
-    )
+    await user_repo.set_tokens_invalid_before(db, user_id, now)
     await refresh_token_repo.revoke_user_sessions(db, user_id)
 
 

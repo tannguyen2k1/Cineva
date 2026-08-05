@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from sqlalchemy import func, or_, select
+from datetime import datetime
+
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -144,3 +146,13 @@ async def replace_user_roles(
 async def soft_delete(db: AsyncSession, user: User) -> None:
     user.deleted_at = utcnow()
     user.is_active = False
+
+
+async def set_tokens_invalid_before(
+    db: AsyncSession, user_id: str, invalid_before: datetime
+) -> None:
+    await db.execute(
+        update(User)
+        .where(User.id == user_id)
+        .values(tokens_invalid_before=invalid_before)
+    )
