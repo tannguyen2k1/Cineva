@@ -1,6 +1,6 @@
 # Admin Pro — Nuxt frontend + FastAPI backend
 
-Monorepo tách FE/BE:
+Monorepo tách FE/BE (nhánh **non_tenant**: single-org, không multi-tenant):
 
 ```
 frontend/   Nuxt 4 UI (Element Plus, i18n, Pinia)
@@ -19,25 +19,47 @@ docker compose up -d db
 
 ```bash
 cd backend
-python -m venv .venv
-# Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-copy .env.example .env   # chỉnh JWT_SECRET / DB nếu cần
+python3 -m venv .venv
+
+# Activate venv
+# macOS / Linux:
+source .venv/bin/activate
+# Windows (PowerShell):
+# .venv\Scripts\Activate.ps1
+# Windows (cmd):
+# .venv\Scripts\activate.bat
+
+pip install -e ".[dev]"
+
+# Copy env
+# macOS / Linux:
+cp .env.example .env
+# Windows:
+# copy .env.example .env
+
+# Edit .env if needed (JWT_SECRET / DB), then:
 alembic upgrade head
 python scripts/seed.py
 uvicorn app.main:app --reload --port 8000
 ```
 
+Dependencies live in `backend/pyproject.toml` (no `requirements.txt`).
+
 - API docs (Scalar): http://localhost:8000/api/docs  
 - OpenAPI JSON: http://localhost:8000/api/openapi.json  
 
-Default admin (seed): workspace `default` / `admin` / `admin123456`
+Default admin (seed): `admin` / `admin123456`
 
 ### 3. Frontend
 
 ```bash
 cd frontend
-copy .env.example .env   # Turnstile / API proxy nếu cần
+
+# macOS / Linux:
+cp .env.example .env
+# Windows:
+# copy .env.example .env
+
 npm install
 npm run dev
 ```
@@ -64,7 +86,7 @@ Browser → Nuxt (:3000) ──proxy /api──→ FastAPI (:8000) → Postgres
                       └──proxy /ws──→ FastAPI WebSocket
 ```
 
-Backend layers: `api/routes` → `services` → SQLAlchemy `models` (+ Pydantic `schemas`).  
+Backend layers: `api/routes` → `services` → `repositories` → SQLAlchemy `models` (+ Pydantic `schemas`).  
 Auth: httpOnly cookies `auth_token` / `refresh_token` + `auth_logged_in` (giống contract cũ).
 
 ## Env
