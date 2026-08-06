@@ -1,14 +1,17 @@
-"""Nuxt-compatible API errors: { statusCode, statusMessage, message }."""
+﻿"""Nuxt-compatible API errors: { statusCode, statusMessage, message }."""
 
 from __future__ import annotations
 
 import logging
+import traceback
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from app.core.config import get_settings
 
 logger = logging.getLogger("app.errors")
 
@@ -45,6 +48,19 @@ def _detail_message(detail: object) -> str:
     return str(detail) if detail is not None else "Request failed"
 
 
+def _debug_payload(exc: BaseException) -> dict:
+    """Extra fields for non-production 5xx responses."""
+    return {
+        "debug": {
+            "type": type(exc).__name__,
+            "detail": str(exc),
+            "traceback": "".join(
+                traceback.format_exception(type(exc), exc, exc.__traceback__)
+            ),
+        }
+    }
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(_request: Request, exc: StarletteHTTPException):
@@ -66,9 +82,15 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(SQLAlchemyError)
     async def sqlalchemy_exception_handler(_request: Request, exc: SQLAlchemyError):
         logger.exception("SQLAlchemyError: %s", exc)
-        return json_error(500, "Lỗi cơ sở dữ liệu. Vui lòng thử lại sau.")
+        public = "Lỗi cơ sở dữ liệu. Vui lòng thử lại sau."
+        if get_settings().is_prod:
+            return json_error(500, public)
+        return json_error(500, public, **_debug_payload(exc))
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(_request: Request, exc: Exception):
         logger.exception("Unhandled error: %s", exc)
-        return json_error(500, "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.")
+        public = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau."
+        if get_settings().is_prod:
+            return json_error(500, public)
+        return json_error(500, public, **_debug_payload(exc))

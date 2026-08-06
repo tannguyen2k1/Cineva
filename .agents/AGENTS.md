@@ -65,7 +65,7 @@ New endpoints: follow `skills/fastapi-endpoint`.
 - Public: `/api/auth/login|logout|refresh`, `/api/docs`, `/api/openapi.json`, `/health`
 - Soft delete: `deleted_at` on User / Role — never hard-delete in normal CRUD
 - System log: `write_system_log` after successful mutating actions (non-fatal)
-- Errors: FastAPI returns `{ statusCode, statusMessage, message }` for UI compatibility
+- Errors: FastAPI returns `{ statusCode, statusMessage, message }` for UI compatibility. On 500, non-production (`ENVIRONMENT` ≠ `production`) also includes `debug: { type, detail, traceback }`; production stays generic.
 
 ## 5. DateTime / timezone (CRITICAL)
 
