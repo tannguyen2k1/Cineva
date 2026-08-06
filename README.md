@@ -87,7 +87,7 @@ Browser → Nuxt (:3000) ──proxy /api──→ FastAPI (:8000) → Postgres
 ```
 
 Backend layers: `api/routes` → `services` → `repositories` → SQLAlchemy `models` (+ Pydantic `schemas`).  
-Auth: httpOnly cookies `auth_token` / `refresh_token` + `auth_logged_in` (giống contract cũ).
+Auth: browser = HttpOnly cookies (`auth_token` / `refresh_token`); API/Scalar = OAuth2 `POST /api/auth/token` → Bearer.
 
 ## Env
 

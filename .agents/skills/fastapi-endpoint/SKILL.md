@@ -110,8 +110,9 @@ If a new module needs permissions, add to `SYSTEM_MODULES` in `app/core/permissi
 ## OpenAPI / Scalar
 
 - Tags on `APIRouter(..., tags=["Things"])` group docs in `/api/docs`.
-- Public auth routes: no `require_permission`; do not require Bearer.
-- Docs UI: Scalar at `/api/docs` (`scalar-fastapi`). Spec: `/api/openapi.json`.
+- Public auth routes: `/login`, `/logout`, `/refresh`, `/token` — no Bearer required.
+- Docs UI: Scalar at `/api/docs`. Prefer **OAuth2Password** Authorize (`POST /api/auth/token`); optional paste via BearerAuth.
+- Browser cookie login is separate — do not document copying tokens from `/login`.
 
 ## Auth reminder
 

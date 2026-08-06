@@ -1,21 +1,47 @@
-from fastapi import APIRouter, Cookie, Depends, Response
+from fastapi import APIRouter, Cookie, Depends, Form, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user
 from app.db.session import get_db
-from app.schemas import LoginRequest
+from app.schemas import LoginRequest, OAuth2TokenOut
 from app.services import auth as auth_service
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@router.post("/login", summary="Login with credentials")
+@router.post("/login", summary="Browser login (HttpOnly cookies + Turnstile)")
 async def login(
     body: LoginRequest,
     response: Response,
     db: AsyncSession = Depends(get_db),
 ):
     return await auth_service.login(db, body, response)
+
+
+@router.post(
+    "/token",
+    summary="OAuth2 token (password / refresh_token) for API clients & Scalar",
+    response_model=OAuth2TokenOut,
+)
+async def token(
+    db: AsyncSession = Depends(get_db),
+    grant_type: str = Form(
+        default="password",
+        description="password | refresh_token",
+    ),
+    username: str | None = Form(default=None),
+    password: str | None = Form(default=None),
+    refresh_token: str | None = Form(default=None),
+    scope: str = Form(default=""),
+):
+    _ = scope  # accepted for OAuth2 clients; unused (no scopes yet)
+    return await auth_service.oauth2_token(
+        db,
+        grant_type=grant_type,
+        username=username,
+        password=password,
+        refresh_token=refresh_token,
+    )
 
 
 @router.post("/logout", summary="Revoke access jti + refresh session and clear cookies")
@@ -30,7 +56,7 @@ async def logout(
     )
 
 
-@router.post("/refresh", summary="Rotate refresh token and issue new access token")
+@router.post("/refresh", summary="Browser refresh — rotate HttpOnly cookies")
 async def refresh(
     response: Response,
     db: AsyncSession = Depends(get_db),

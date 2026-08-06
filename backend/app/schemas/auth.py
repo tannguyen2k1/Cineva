@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.schemas.common import ORMModel
 
@@ -18,7 +18,16 @@ class AuthUserOut(ORMModel):
 
 
 class AuthDataOut(BaseModel):
+    """Web session payload — tokens live in HttpOnly cookies only."""
+
     user: AuthUserOut
     permissions: list[str]
-    # Present on login/refresh for API clients & Scalar Authorize (FE uses cookies)
-    accessToken: str | None = None
+
+
+class OAuth2TokenOut(BaseModel):
+    """RFC 6749 token response for API clients / Scalar Authorize."""
+
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int = Field(description="Access token lifetime in seconds")
+    refresh_token: str

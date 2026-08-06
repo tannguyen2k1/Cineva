@@ -21,15 +21,19 @@ PUBLIC_OPENAPI_PATHS = {
     "/api/auth/login",
     "/api/auth/logout",
     "/api/auth/refresh",
+    "/api/auth/token",
 }
 
 app = FastAPI(
     title="Admin Pro API",
     description=(
         "Single-organization REST API.\n\n"
-        "**Scalar / API clients:** `POST /api/auth/login` → copy `data.accessToken` → "
-        "Authorize (HTTP Bearer). Cookie session is for the Nuxt UI; Bearer skips CSRF.\n\n"
-        "Turnstile test keys accept token `XXXX.DUMMY.TOKEN.XXXX`."
+        "**Browser (Nuxt):** `POST /api/auth/login` → HttpOnly cookies + CSRF. "
+        "No access token in JSON.\n\n"
+        "**API / Scalar:** Authorize with **OAuth2Password** "
+        "(`POST /api/auth/token`, grant `password`) → Bearer `access_token`. "
+        "Refresh with `grant_type=refresh_token`. Bearer skips CSRF.\n\n"
+        "Turnstile test keys accept token `XXXX.DUMMY.TOKEN.XXXX` (web login only)."
     ),
     version="1.0.0",
     docs_url=None,
@@ -69,17 +73,31 @@ def custom_openapi():
     )
     components = schema.setdefault("components", {})
     components["securitySchemes"] = {
+        "OAuth2Password": {
+            "type": "oauth2",
+            "description": (
+                "Username + password → `access_token` via `POST /api/auth/token`. "
+                "Use in Scalar Authorize (no Turnstile). Does not set cookies."
+            ),
+            "flows": {
+                "password": {
+                    "tokenUrl": "/api/auth/token",
+                    "scopes": {},
+                }
+            },
+        },
         "BearerAuth": {
             "type": "http",
             "scheme": "bearer",
             "bearerFormat": "JWT",
             "description": (
-                "Paste `data.accessToken` from `POST /api/auth/login` "
-                "(or `/api/auth/refresh`). Used by Scalar Authorize."
+                "Paste `access_token` from `POST /api/auth/token` "
+                "(or OAuth2Password Authorize)."
             ),
-        }
+        },
     }
-    schema["security"] = [{"BearerAuth": []}]
+    # Either scheme satisfies security (OR)
+    schema["security"] = [{"OAuth2Password": []}, {"BearerAuth": []}]
 
     for path, methods in schema.get("paths", {}).items():
         if path not in PUBLIC_OPENAPI_PATHS:
@@ -108,7 +126,7 @@ async def scalar_docs():
         title=app.title,
         persist_auth=True,
         authentication={
-            "preferredSecurityScheme": "BearerAuth",
+            "preferredSecurityScheme": "OAuth2Password",
         },
     )
 

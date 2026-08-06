@@ -55,15 +55,15 @@ New endpoints: follow `skills/fastapi-endpoint`.
 
 ## 4. Auth & security (CRITICAL)
 
-- Cookies: `auth_token` (15m httpOnly), `refresh_token` (7d, path `/api/auth`), `auth_logged_in` (readable)
-- JWT HS256 (`JWT_SECRET`); access claims: `type=access`, `sub`/`userId`, `jti`
-- Refresh tokens are **persisted** (table `refresh_tokens`, SHA-256 hash): rotation on every `/api/auth/refresh`, family revoke on reuse, revoke on logout / password change
-- Access JWT `jti` denylist (`revoked_access_tokens`) on logout / refresh rotation
-- CSRF double-submit: cookie `csrf_token` + header `X-CSRF-Token` on cookie-authenticated mutating requests; requests with `Authorization: Bearer` skip CSRF
-- Scalar (`/api/docs`): login/refresh returns `data.accessToken`; Authorize with HTTP Bearer (`persist_auth` enabled)
-- Rate limit (per IP, in-memory): login 5/min, refresh 30/min, ws-ticket 20/min, other `/api/*` 120/min — env `RATE_LIMIT_*`
+- **Browser:** `POST /api/auth/login` (+ Turnstile) → HttpOnly cookies only (`auth_token` 15m, `refresh_token` 7d path `/api/auth`, `auth_logged_in`). **No** access token in JSON. Refresh: `POST /api/auth/refresh` (cookie).
+- **API / Scalar:** OAuth2 password at `POST /api/auth/token` (`application/x-www-form-urlencoded`, `grant_type=password|refresh_token`) → `{ access_token, token_type, expires_in, refresh_token }`. No cookies. Scalar Authorize uses **OAuth2Password** (`persist_auth`).
+- JWT HS256 (`JWT_SECRET`); access claims: `type=access`, `sub`/`userId`, `jti`. `extract_token`: Bearer header wins, else cookie.
+- Refresh tokens are **persisted** (table `refresh_tokens`, SHA-256 hash): rotation on cookie refresh / OAuth2 `refresh_token` grant; family revoke on reuse; revoke on logout / password change
+- Access JWT `jti` denylist (`revoked_access_tokens`) on logout / cookie refresh rotation
+- CSRF double-submit: cookie `csrf_token` + header `X-CSRF-Token` on cookie-authenticated mutating requests; Bearer / `/api/auth/token` skip CSRF
+- Rate limit (per IP, in-memory): login **and** `/api/auth/token` 5/min, refresh 30/min, ws-ticket 20/min, other `/api/*` 120/min — env `RATE_LIMIT_*`
 - Protected routes: `Depends(require_permission("action:resource"))` — rejects non-access token types
-- Public: `/api/auth/login|logout|refresh`, `/api/docs`, `/api/openapi.json`, `/health`
+- Public: `/api/auth/login|logout|refresh|token`, `/api/docs`, `/api/openapi.json`, `/health`
 - Soft delete: `deleted_at` on User / Role — never hard-delete in normal CRUD
 - System log: `write_system_log` after successful mutating actions (non-fatal)
 - Errors: FastAPI returns `{ statusCode, statusMessage, message }` for UI compatibility. On 500, non-production (`ENVIRONMENT` ≠ `production`) also includes `debug: { type, detail, traceback }`; production stays generic.

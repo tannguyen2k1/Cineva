@@ -19,6 +19,7 @@ UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 CSRF_EXEMPT_PREFIXES = (
     "/api/auth/login",
     "/api/auth/logout",
+    "/api/auth/token",  # OAuth2 clients / Scalar — no cookie session
     "/api/docs",
     "/api/openapi.json",
     "/health",

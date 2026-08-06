@@ -4,6 +4,7 @@ from fastapi import HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.cookies import clear_auth_cookies, set_auth_cookies
+from app.core.config import get_settings
 from app.core.security import (
     TOKEN_TYPE_REFRESH,
     create_access_token,
@@ -15,7 +16,7 @@ from app.core.security import (
 )
 from app.models import User
 from app.repositories import user as user_repo
-from app.schemas import AuthDataOut, AuthUserOut, LoginRequest
+from app.schemas import AuthDataOut, AuthUserOut, LoginRequest, OAuth2TokenOut
 from app.services.access_denylist import revoke_access_token
 from app.services.permissions_sync import collect_permissions_from_user, ensure_system_permissions
 from app.services.refresh_sessions import (
@@ -29,13 +30,39 @@ from app.services.system_log import write_system_log
 from app.services.turnstile import verify_login_turnstile
 
 
-async def _issue_session(
+def _token_response(*, access: str, refresh: str) -> OAuth2TokenOut:
+    settings = get_settings()
+    return OAuth2TokenOut(
+        access_token=access,
+        token_type="bearer",
+        expires_in=settings.access_token_ttl_minutes * 60,
+        refresh_token=refresh,
+    )
+
+
+def _auth_data(user: User, permissions: list[str]) -> dict:
+    return {
+        "success": True,
+        "data": AuthDataOut(
+            user=AuthUserOut(
+                id=user.id,
+                username=user.username,
+                fullName=user.full_name,
+                email=user.email,
+                avatar=user.avatar,
+            ),
+            permissions=permissions,
+        ).model_dump(),
+    }
+
+
+async def _create_token_pair(
     db: AsyncSession,
-    response: Response,
     *,
     user: User,
     family_id: str | None = None,
-) -> tuple[list[str], str]:
+) -> tuple[list[str], str, str]:
+    """Issue access + refresh JWTs and persist the refresh row. No cookies."""
     permissions = collect_permissions_from_user(user)
     access = create_access_token(user_id=user.id, username=user.username)
 
@@ -51,14 +78,41 @@ async def _issue_session(
         expires_at=expires_at,
     )
     await db.commit()
+    return permissions, access, refresh
 
+
+async def _issue_cookie_session(
+    db: AsyncSession,
+    response: Response,
+    *,
+    user: User,
+    family_id: str | None = None,
+) -> list[str]:
+    permissions, access, refresh = await _create_token_pair(
+        db, user=user, family_id=family_id
+    )
     set_auth_cookies(response, access_token=access, refresh_token=refresh)
-    return permissions, access
+    return permissions
+
+
+async def _authenticate_password(db: AsyncSession, username: str, password: str) -> User:
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Thiếu username hoặc mật khẩu")
+
+    await ensure_system_permissions(db)
+
+    user = await user_repo.get_by_username(
+        db, username=username, with_permissions=True
+    )
+    if not user or not verify_password(password, user.password):
+        raise HTTPException(status_code=401, detail="Sai username hoặc mật khẩu")
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Tài khoản đã bị khóa")
+    return user
 
 
 async def login(db: AsyncSession, body: LoginRequest, response: Response) -> dict:
-    if not body.username or not body.password:
-        raise HTTPException(status_code=400, detail="Thiếu username hoặc password")
+    """Browser login: HttpOnly cookies only (no access token in JSON)."""
     if not body.turnstileToken:
         raise HTTPException(status_code=400, detail="Vui lòng xác minh Cloudflare Turnstile")
 
@@ -66,34 +120,104 @@ async def login(db: AsyncSession, body: LoginRequest, response: Response) -> dic
     if not turnstile.get("success"):
         raise HTTPException(status_code=403, detail="Xác minh Turnstile thất bại")
 
-    await ensure_system_permissions(db)
-
-    user = await user_repo.get_by_username(
-        db, username=body.username, with_permissions=True
-    )
-    if not user or not verify_password(body.password, user.password):
-        raise HTTPException(status_code=401, detail="Sai username hoặc mật khẩu")
-    if not user.is_active:
-        raise HTTPException(status_code=403, detail="Tài khoản đã bị khóa")
-
-    permissions, access = await _issue_session(db, response, user=user)
+    user = await _authenticate_password(db, body.username, body.password)
+    permissions = await _issue_cookie_session(db, response, user=user)
 
     await write_system_log(
         db,
         user_id=user.id,
         action="LOGIN",
         resource="Auth",
-        details={"username": user.username},
+        details={"username": user.username, "channel": "cookie"},
     )
 
-    return {
-        "success": True,
-        "data": AuthDataOut(
-            user=AuthUserOut(id=user.id, username=user.username, fullName=user.full_name),
-            permissions=permissions,
-            accessToken=access,
-        ).model_dump(),
-    }
+    return _auth_data(user, permissions)
+
+
+async def oauth2_token(
+    db: AsyncSession,
+    *,
+    grant_type: str,
+    username: str | None = None,
+    password: str | None = None,
+    refresh_token: str | None = None,
+) -> OAuth2TokenOut:
+    """
+    OAuth2 token endpoint for API clients / Scalar.
+    Returns Bearer tokens in the body — does not set cookies.
+    """
+    grant = (grant_type or "password").strip().lower()
+
+    if grant == "password":
+        user = await _authenticate_password(db, username or "", password or "")
+        _permissions, access, refresh = await _create_token_pair(db, user=user)
+
+        await write_system_log(
+            db,
+            user_id=user.id,
+            action="OAUTH2_TOKEN",
+            resource="Auth",
+            details={"username": user.username, "grant": "password"},
+        )
+        return _token_response(access=access, refresh=refresh)
+
+    if grant == "refresh_token":
+        return await _oauth2_refresh(db, refresh_token)
+
+    raise HTTPException(
+        status_code=400,
+        detail="unsupported_grant_type: use password or refresh_token",
+    )
+
+
+async def _oauth2_refresh(db: AsyncSession, refresh_token: str | None) -> OAuth2TokenOut:
+    if not refresh_token:
+        raise HTTPException(status_code=400, detail="missing refresh_token")
+
+    payload = safe_decode_token(refresh_token)
+    if not payload or payload.get("type") != TOKEN_TYPE_REFRESH:
+        raise HTTPException(status_code=401, detail="invalid_grant: refresh token expired or invalid")
+
+    row = await get_active_refresh_by_raw(db, refresh_token)
+    if row is None:
+        raise HTTPException(status_code=401, detail="invalid_grant: refresh token expired or invalid")
+
+    if row.revoked_at is not None:
+        await revoke_family(db, row.family_id)
+        await db.commit()
+        raise HTTPException(status_code=401, detail="invalid_grant: refresh token reuse detected")
+
+    jti = payload.get("jti")
+    if not jti or jti != row.id:
+        raise HTTPException(status_code=401, detail="invalid_grant: refresh token expired or invalid")
+
+    user_id = payload.get("userId") or payload.get("sub")
+    user = await user_repo.get_by_id(
+        db,
+        user_id=user_id,
+        with_permissions=True,
+        active_only=True,
+    )
+    if not user:
+        await revoke_family(db, row.family_id)
+        await db.commit()
+        raise HTTPException(status_code=401, detail="invalid_grant: user not found or disabled")
+
+    new_jti_val = new_jti()
+    await revoke_token(db, row, replaced_by=new_jti_val)
+
+    access = create_access_token(user_id=user.id, username=user.username)
+    new_refresh, expires_at = create_refresh_token(user_id=user.id, jti=new_jti_val)
+    await create_refresh_session(
+        db,
+        user_id=user.id,
+        raw_token=new_refresh,
+        jti=new_jti_val,
+        family_id=row.family_id,
+        expires_at=expires_at,
+    )
+    await db.commit()
+    return _token_response(access=access, refresh=new_refresh)
 
 
 async def refresh(
@@ -103,6 +227,7 @@ async def refresh(
     *,
     access_token: str | None = None,
 ) -> dict:
+    """Browser refresh: rotate cookies only (no access token in JSON)."""
     if not refresh_token:
         raise HTTPException(status_code=401, detail="No refresh token")
 
@@ -146,9 +271,7 @@ async def refresh(
 
     permissions = collect_permissions_from_user(user)
     access = create_access_token(user_id=user.id, username=user.username)
-    new_refresh, expires_at = create_refresh_token(
-        user_id=user.id, jti=new_jti_val
-    )
+    new_refresh, expires_at = create_refresh_token(user_id=user.id, jti=new_jti_val)
     await create_refresh_session(
         db,
         user_id=user.id,
@@ -160,42 +283,15 @@ async def refresh(
     await db.commit()
     set_auth_cookies(response, access_token=access, refresh_token=new_refresh)
 
-    return {
-        "success": True,
-        "data": AuthDataOut(
-            user=AuthUserOut(
-                id=user.id,
-                username=user.username,
-                fullName=user.full_name,
-                email=user.email,
-                avatar=user.avatar,
-            ),
-            permissions=permissions,
-            accessToken=access,
-        ).model_dump(),
-    }
+    return _auth_data(user, permissions)
 
 
 async def me(db: AsyncSession, user_id: str) -> dict:
-    user = await user_repo.get_by_id(
-        db, user_id=user_id, with_permissions=True
-    )
+    user = await user_repo.get_by_id(db, user_id=user_id, with_permissions=True)
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
 
-    return {
-        "success": True,
-        "data": AuthDataOut(
-            user=AuthUserOut(
-                id=user.id,
-                username=user.username,
-                fullName=user.full_name,
-                email=user.email,
-                avatar=user.avatar,
-            ),
-            permissions=collect_permissions_from_user(user),
-        ).model_dump(),
-    }
+    return _auth_data(user, collect_permissions_from_user(user))
 
 
 async def logout(

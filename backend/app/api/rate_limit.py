@@ -37,6 +37,9 @@ def _match_rule(path: str, method: str) -> tuple[str, int, int] | None:
 
     if path == "/api/auth/login" and method == "POST":
         return ("login", settings.rate_limit_login, 60)
+    if path == "/api/auth/token" and method == "POST":
+        # Same budget as login — OAuth2 password is also credential brute-force surface
+        return ("login", settings.rate_limit_login, 60)
     if path == "/api/auth/refresh" and method == "POST":
         return ("refresh", settings.rate_limit_refresh, 60)
     if path == "/api/auth/ws-ticket" and method == "GET":

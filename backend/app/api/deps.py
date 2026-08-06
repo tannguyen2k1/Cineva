@@ -46,10 +46,11 @@ def extract_token(
     auth_token: str | None = Cookie(default=None),
     authorization: str | None = Header(default=None),
 ) -> str | None:
-    if auth_token:
-        return auth_token
+    # Bearer wins when present (Scalar / API clients); else HttpOnly cookie (Nuxt).
     if authorization and authorization.startswith("Bearer "):
         return authorization[7:] or None
+    if auth_token:
+        return auth_token
     return None
 
 
