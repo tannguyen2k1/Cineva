@@ -96,4 +96,4 @@ Auth: browser = HttpOnly cookies (`auth_token` / `refresh_token`); API/Scalar = 
 | `backend/.env` | `DATABASE_URL`, `JWT_SECRET`, `TURNSTILE_SECRET_KEY`, admin defaults |
 | `frontend/.env` | `NUXT_PUBLIC_TURNSTILE_SITE_KEY`, `NUXT_API_PROXY`, `NUXT_PUBLIC_WS_BASE` |
 
-**Note:** Schema SQLAlchemy dùng snake_case (`users`, `full_name`, …). Nếu volume Postgres cũ từ Prisma (PascalCase), reset volume: `docker compose down -v`.
+**Note:** Schema SQLAlchemy dùng snake_case (`users`, `full_name`, …). Nếu volume Postgres schema lệch (đổi nhánh / DB cũ), reset: `docker compose down -v`.

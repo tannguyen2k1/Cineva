@@ -151,5 +151,3 @@ Local backend: `DATABASE_URL=...@localhost:5432/app_db`.
 | Vue component | `nuxt-component` |
 | i18n | `nuxt-i18n` |
 | Mobile UI | `nuxt-mobile-patterns` |
-
-**Legacy (do not use):** `nuxt-api-endpoint`, `nuxt-tenant-isolation`, `prisma-cli`, `prisma-client-api`, `prisma-upgrade-v7`.
