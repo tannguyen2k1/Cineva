@@ -22,7 +22,7 @@ backend/    FastAPI + SQLAlchemy 2 + Alembic + Scalar docs
 - **i18n**: `frontend/i18n/locales/` — see `skills/nuxt-i18n`
 - **Mobile**: see `skills/nuxt-mobile-patterns`
 - **API calls**: relative `useApiFetch('/api/...')` (CSRF header + 401 refresh, from `utils/apiFetch.ts`) — Nuxt proxies `/api` and `/uploads` to FastAPI (`NUXT_API_PROXY`). Never bare `$fetch` for `/api/**`. Do **not** send `Authorization` (cookies).
-- **Numbers**: `useNumberFormat()` — see §5b and `.cursor/rules/number-format.mdc`
+- **Numbers**: `useNumberFormat()` — see §5b
 - **Styling**: ALWAYS CSS Modules (`.module.scss`). NEVER `<style scoped>`.
 
 ## 3. Backend structure (`backend/`)
@@ -116,10 +116,10 @@ formatNumber(1234.567)  // keeps 3 decimals (no hard-coded 2)
 ```
 
 Fraction digits follow the input by default; pass `Intl.NumberFormatOptions` when a fixed scale is needed.  
-Forbidden: `toLocaleString` / `toFixed` / hard-coded separators in pages.
+Forbidden: `toLocaleString` / `toFixed` / hard-coded separators in pages; do not format numbers in the API for UI.
 
-Helpers: `frontend/composables/useNumberFormat.ts`, `frontend/utils/number.ts`.  
-Cursor rule: `.cursor/rules/number-format.mdc`.
+Helpers: `frontend/composables/useNumberFormat.ts`, `frontend/utils/number.ts`.
+Locale follows i18n (`vi` → `vi-VN`, `en` → `en-US`). Null/NaN → `''`.
 
 ## 6. Permissions
 
