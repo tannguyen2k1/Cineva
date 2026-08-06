@@ -1,0 +1,28 @@
+---
+description: Format UI numbers with useNumberFormat().formatNumber only
+globs: frontend/**/*.{vue,ts}
+alwaysApply: false
+---
+
+# Number display
+
+API/DB keep raw numbers. UI formats with `formatNumber` only.
+
+```ts
+const { formatNumber } = useNumberFormat()
+
+formatNumber(1234567)        // vi: 1.234.567 · en: 1,234,567
+formatNumber(1234.5)         // keeps 1 decimal
+formatNumber(1234.567)       // keeps 3 decimals
+formatNumber(1234.5, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+```
+
+Helpers: `frontend/composables/useNumberFormat.ts`, `frontend/utils/number.ts`.
+
+## Forbidden
+
+- `toLocaleString` / `toFixed` / hard-coded `,` `.` separators in pages
+- Formatting numbers in the API for UI
+
+Locale follows i18n: `vi` → `vi-VN`, `en` → `en-US`. Null/NaN → `''`.  
+Default fraction digits follow the input (trailing zeros dropped by JS are fine).
