@@ -17,19 +17,11 @@ docker compose up -d db
 
 ### 2. Backend
 
+Cần [uv](https://docs.astral.sh/uv/) đã cài sẵn.
+
 ```bash
 cd backend
-python3 -m venv .venv
-
-# Activate venv
-# macOS / Linux:
-source .venv/bin/activate
-# Windows (PowerShell):
-# .venv\Scripts\Activate.ps1
-# Windows (cmd):
-# .venv\Scripts\activate.bat
-
-pip install -e ".[dev]"
+uv sync --extra dev
 
 # Copy env
 # macOS / Linux:
@@ -38,12 +30,13 @@ cp .env.example .env
 # copy .env.example .env
 
 # Edit .env if needed (JWT_SECRET / DB), then:
-alembic upgrade head
-python scripts/seed.py
-uvicorn app.main:app --reload --port 8000
+uv run alembic upgrade head
+uv run python scripts/seed.py
+uv run uvicorn app.main:app --reload --port 8000
 ```
 
-Dependencies live in `backend/pyproject.toml` (no `requirements.txt`).
+Dependencies: `backend/pyproject.toml` + lockfile `backend/uv.lock` (không dùng `requirements.txt`).  
+Thêm / gỡ package: `uv add <pkg>` / `uv remove <pkg>`.
 
 - API docs (Scalar): http://localhost:8000/api/docs  
 - OpenAPI JSON: http://localhost:8000/api/openapi.json  
