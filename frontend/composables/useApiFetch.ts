@@ -11,11 +11,13 @@ export async function useApiFetch(url: string, opts?: any): Promise<any> {
     const status = err?.response?.status || err?.statusCode
     if (status === 401 && import.meta.client) {
       const authStore = useAuthStore()
-      const refreshed = await authStore.tryRefresh()
-      if (refreshed) {
+      const result = await authStore.tryRefresh()
+      if (result === 'ok') {
         return await apiFetch(url, opts)
       }
-      authStore.logout()
+      if (result === 'unauthorized') {
+        await authStore.logout()
+      }
     }
     throw err
   }

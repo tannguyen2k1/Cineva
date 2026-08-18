@@ -14,11 +14,12 @@ from app.core.errors import error_body
 UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
 # Login: no CSRF cookie yet (Turnstile covers bots).
-# Logout: must work even if csrf_token missing (pre-CSRF sessions / cleared cookie);
-# SameSite=Lax already blocks classic cross-site logout CSRF for cookie auth.
+# Logout / refresh: must work even if csrf_token missing (pre-CSRF sessions / cleared cookie);
+# refresh is gated by HttpOnly refresh_token + server-side rotation anyway.
 CSRF_EXEMPT_PREFIXES = (
     "/api/auth/login",
     "/api/auth/logout",
+    "/api/auth/refresh",
     "/api/auth/token",  # OAuth2 clients / Scalar — no cookie session
     "/api/docs",
     "/api/openapi.json",

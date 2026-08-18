@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +30,8 @@ from app.services.refresh_sessions import (
 )
 from app.services.system_log import write_system_log
 from app.services.turnstile import verify_login_turnstile
+
+logger = logging.getLogger("app.auth")
 
 
 def _token_response(*, access: str, refresh: str) -> OAuth2TokenOut:
@@ -229,19 +233,41 @@ async def refresh(
 ) -> dict:
     """Browser refresh: rotate cookies only (no access token in JSON)."""
     if not refresh_token:
+        logger.warning("refresh denied: no refresh_token cookie")
         raise HTTPException(status_code=401, detail="No refresh token")
 
+    logger.info(
+        "refresh attempt: token length=%d, first8=%s",
+        len(refresh_token),
+        refresh_token[:8] if refresh_token else "N/A",
+    )
     payload = safe_decode_token(refresh_token)
-    if not payload or payload.get("type") != TOKEN_TYPE_REFRESH:
+    if not payload:
+        from jose import JWTError as _JE
+        from jose import jwt as _jwt
+
+        from app.core.config import get_settings as _gs
+        try:
+            _jwt.decode(refresh_token, _gs().jwt_secret, algorithms=["HS256"])
+        except _JE as decode_err:
+            logger.warning("refresh denied: decode failed — %s", decode_err)
+        except Exception as decode_err:  # noqa: BLE001
+            logger.warning("refresh denied: unexpected decode error — %s", decode_err)
+        clear_auth_cookies(response)
+        raise HTTPException(status_code=401, detail="Refresh token expired or invalid")
+    if payload.get("type") != TOKEN_TYPE_REFRESH:
+        logger.warning("refresh denied: wrong type=%s", payload.get("type"))
         clear_auth_cookies(response)
         raise HTTPException(status_code=401, detail="Refresh token expired or invalid")
 
     row = await get_active_refresh_by_raw(db, refresh_token)
     if row is None:
+        logger.warning("refresh denied: token not in db or expired")
         clear_auth_cookies(response)
         raise HTTPException(status_code=401, detail="Refresh token expired or invalid")
 
     if row.revoked_at is not None:
+        logger.warning("refresh denied: reuse detected family=%s", row.family_id)
         await revoke_family(db, row.family_id)
         await db.commit()
         clear_auth_cookies(response)

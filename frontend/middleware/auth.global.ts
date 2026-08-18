@@ -1,14 +1,16 @@
 import { defineNuxtRouteMiddleware, navigateTo, useCookie } from '#imports'
 
+import { requestHasCookie } from '~/utils/authCookies'
+
 export default defineNuxtRouteMiddleware((to) => {
   const authStore = useAuthStore()
   const authIndicator = useCookie('auth_logged_in')
 
   let isLoggedIn = authIndicator.value === '1' || (import.meta.client && authStore.loggedIn)
 
-  // SSR fallback: httpOnly cookie readable server-side
+  // SSR: read raw Cookie header — useCookie('auth_token') would re-emit and mangle the HttpOnly JWT
   if (!isLoggedIn && import.meta.server) {
-    isLoggedIn = !!useCookie('auth_token').value
+    isLoggedIn = requestHasCookie('auth_token')
   }
 
   if (!isLoggedIn && to.path !== '/login') {

@@ -14,6 +14,7 @@ function readCsrfToken(): string | null {
 }
 
 export const apiFetch = $fetch.create({
+  credentials: 'include',
   onRequest({ options }) {
     const method = String(options.method || 'GET').toUpperCase()
     if (!CSRF_METHODS.has(method)) return

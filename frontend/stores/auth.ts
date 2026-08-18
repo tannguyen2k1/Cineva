@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 
+import { cookieForwardHeaders, requestHasCookie } from '~/utils/authCookies'
 import { apiFetch } from '~/utils/apiFetch'
 
 interface User {
@@ -10,7 +11,15 @@ interface User {
   avatar?: string | null
 }
 
-let refreshPromise: Promise<boolean> | null = null
+export type RefreshResult = 'ok' | 'unauthorized' | 'unavailable'
+
+let refreshPromise: Promise<RefreshResult> | null = null
+
+const REFRESH_LOCK = 'nafsc-auth-refresh'
+
+function errorStatus(err: any): number {
+  return Number(err?.response?.status || err?.statusCode || 0)
+}
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -31,11 +40,8 @@ export const useAuthStore = defineStore('auth', {
         this.loggedIn = true
       }
 
-      if (!this.loggedIn && import.meta.server) {
-        const authCookie = useCookie('auth_token')
-        if (authCookie.value) {
-          this.loggedIn = true
-        }
+      if (!this.loggedIn && import.meta.server && requestHasCookie('auth_token')) {
+        this.loggedIn = true
       }
     },
 
@@ -52,29 +58,26 @@ export const useAuthStore = defineStore('auth', {
       authIndicator.value = '1'
     },
 
-    async fetchUser() {
+    async fetchUser(isRetry = false) {
       if (!this.loggedIn) return
       try {
-        const headers: Record<string, string> = {}
-        if (import.meta.server) {
-          const cookieHeaders = useRequestHeaders(['cookie'])
-          if (cookieHeaders.cookie) {
-            headers.cookie = cookieHeaders.cookie
-          }
-        }
-
-        const { data } = await apiFetch<any>('/api/auth/me', { headers })
+        const { data } = await apiFetch<any>('/api/auth/me', { headers: cookieForwardHeaders() })
         if (data) {
           this.user = data.user
           this.permissions = data.permissions
         }
       } catch (err: any) {
-        const status = err?.response?.status || err?.statusCode
-        if (status === 401) {
-          const refreshed = await this.tryRefresh()
-          if (refreshed) return
+        const status = errorStatus(err)
+        if (status === 401 && !isRetry) {
+          const result = await this.tryRefresh()
+          if (result === 'ok') {
+            await this.fetchUser(true)
+            return
+          }
+          if (result === 'unavailable') return
         }
-        if (import.meta.client) {
+        if (status >= 500 || status === 0) return
+        if (import.meta.client && status === 401) {
           await this.logout()
         } else {
           this.user = null
@@ -85,36 +88,46 @@ export const useAuthStore = defineStore('auth', {
     },
 
     /**
-     * Try to refresh the access token using the refresh_token cookie.
-     * De-dupes concurrent calls so only one refresh request fires.
-     * Returns true if refresh succeeded.
+     * Rotate the access cookie via refresh_token.
+     * De-dupes concurrent calls (same tab + cross-tab via navigator.locks).
      */
-    async tryRefresh(): Promise<boolean> {
+    async tryRefresh(): Promise<RefreshResult> {
+      const runRefresh = async (): Promise<RefreshResult> => {
+        try {
+          const res = await apiFetch<any>('/api/auth/refresh', {
+            method: 'POST',
+            headers: cookieForwardHeaders()
+          })
+          const data = res?.data ?? res
+          if (data?.user) {
+            this.user = data.user
+            this.permissions = data.permissions ?? []
+            this.loggedIn = true
+            return 'ok'
+          }
+          return 'unauthorized'
+        } catch (err: any) {
+          const status = errorStatus(err)
+          if (status === 401) return 'unauthorized'
+          return 'unavailable'
+        }
+      }
+
+      if (import.meta.client && typeof navigator !== 'undefined' && navigator.locks?.request) {
+        return navigator.locks.request(REFRESH_LOCK, runRefresh)
+      }
+
       if (refreshPromise) return refreshPromise
 
-      refreshPromise = (async () => {
-        try {
-          const { data } = await apiFetch<any>('/api/auth/refresh', { method: 'POST' })
-          if (data) {
-            this.user = data.user
-            this.permissions = data.permissions
-            this.loggedIn = true
-            return true
-          }
-          return false
-        } catch {
-          return false
-        }
-      })()
-
-      const result = await refreshPromise
-      refreshPromise = null
-      return result
+      refreshPromise = runRefresh().finally(() => {
+        refreshPromise = null
+      })
+      return refreshPromise
     },
 
     async refreshToken() {
-      const ok = await this.tryRefresh()
-      if (!ok) this.logout()
+      const result = await this.tryRefresh()
+      if (result === 'unauthorized') await this.logout()
     },
 
     async logout() {
