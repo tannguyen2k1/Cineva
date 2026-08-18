@@ -1,5 +1,6 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import asyncio
+
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.core.security import TOKEN_TYPE_ACCESS, TOKEN_TYPE_WS, safe_decode_token
 from app.services.server_stats import get_server_stats
@@ -27,5 +28,3 @@ async def server_stats_ws(websocket: WebSocket):
             await asyncio.sleep(2)
     except WebSocketDisconnect:
         return
-    except Exception:
-        await websocket.close()
