@@ -10,7 +10,7 @@ frontend/.nuxt/
 frontend/.output/
 backend/.venv/
 backend/uploads/
-backend/admin_pro_api.egg-info/
+backend/cineva_api.egg-info/
 backend/**/__pycache__/
 backend/**/*.pyc
 .codegraph/

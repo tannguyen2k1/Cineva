@@ -1,8 +1,8 @@
 {
   "app": {
-    "name": "Admin Pro",
-    "tagline": "Bảng điều khiển",
-    "footer": "© {year} Admin Pro"
+    "name": "Cineva",
+    "tagline": "Xem phim trực tuyến",
+    "footer": "© {year} Cineva"
   },
   "nav": {
     "overview": "Tổng quan",
@@ -59,7 +59,7 @@
     "password": "Mật khẩu",
     "passwordPlaceholder": "Nhập mật khẩu",
     "submit": "Đăng nhập",
-    "footer": "Bảo mật bởi Admin Pro · Cloudflare Turnstile",
+    "footer": "Bảo mật bởi Cineva · Cloudflare Turnstile",
     "brandTagline": "Quản trị hệ thống",
     "requiredUsername": "Vui lòng nhập tên đăng nhập",
     "requiredPassword": "Vui lòng nhập mật khẩu",
@@ -145,6 +145,46 @@
   "lang": {
     "vi": "Tiếng Việt",
     "en": "English"
+  },
+  "cineva": {
+    "movies": "Phim",
+    "moviesSingle": "Phim Lẻ",
+    "moviesSeries": "Phim Bộ",
+    "genres": "Thể loại",
+    "countries": "Quốc gia",
+    "topicsInterest": "Bạn đang quan tâm gì?",
+    "viewTopic": "Xem chủ đề ›",
+    "featured": "Nổi bật",
+    "newest": "Mới cập nhật",
+    "viewAll": "Xem tất cả",
+    "watchNow": "Xem ngay",
+    "details": "Chi tiết",
+    "watching": "Đang xem",
+    "episodes": "Danh sách tập",
+    "synopsis": "Nội dung",
+    "director": "Đạo diễn",
+    "casts": "Diễn viên",
+    "comments": "Bình luận",
+    "commentPlaceholder": "Viết bình luận...",
+    "postComment": "Gửi bình luận",
+    "toComment": "để bình luận",
+    "noComments": "Chưa có bình luận",
+    "noDescription": "Chưa có mô tả",
+    "noEmbed": "Không có nguồn phát",
+    "notFound": "Không tìm thấy phim",
+    "emptyFilms": "Chưa có phim",
+    "emptyWatchlist": "Tủ phim trống",
+    "watchlist": "Tủ phim",
+    "addWatchlist": "Thêm tủ phim",
+    "removeWatchlist": "Xóa khỏi tủ",
+    "addedWatchlist": "Đã thêm vào tủ phim",
+    "removedWatchlist": "Đã xóa khỏi tủ phim",
+    "searchPlaceholder": "Tìm kiếm phim, diễn viên...",
+    "searchResults": "Kết quả tìm kiếm",
+    "admin": "Admin",
+    "member": "Thành viên",
+    "footerBlurb": "Kho phim đa dạng, cập nhật liên tục. Xem online chất lượng cao trên Cineva.",
+    "seoHome": "Xem phim online chất lượng cao trên Cineva"
   },
   "chat": {
     "title": "Tin nhắn",

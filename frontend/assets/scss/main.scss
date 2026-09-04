@@ -189,3 +189,33 @@ h6 {
 .el-message-fade-leave-to.el-message.is-right {
   transform: translateX(120%) !important;
 }
+
+/* Dark select popper for public watch/player UI */
+.cineva-dark-select.el-popper,
+.cineva-dark-select {
+  background: #16161d !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45) !important;
+}
+
+.cineva-dark-select .el-popper__arrow::before {
+  background: #16161d !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.cineva-dark-select .el-select-dropdown__item {
+  color: #e4e4e7 !important;
+  background: transparent !important;
+}
+
+.cineva-dark-select .el-select-dropdown__item.is-hovering,
+.cineva-dark-select .el-select-dropdown__item:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #ffd66b !important;
+}
+
+.cineva-dark-select .el-select-dropdown__item.is-selected {
+  color: #ffd66b !important;
+  font-weight: 700;
+  background: rgba(255, 214, 107, 0.12) !important;
+}

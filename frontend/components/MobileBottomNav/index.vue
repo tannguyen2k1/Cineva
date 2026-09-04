@@ -1,6 +1,6 @@
 <template>
   <nav :class="styles.bottomNav">
-    <NuxtLink to="/" :class="[styles.navItem, isActive('/') && styles.active]">
+    <NuxtLink to="/dashboard" :class="[styles.navItem, isActive('/dashboard') && styles.active]">
       <el-icon :class="styles.icon"><Menu /></el-icon>
       <span :class="styles.label">{{ t('nav.dashboard') }}</span>
     </NuxtLink>

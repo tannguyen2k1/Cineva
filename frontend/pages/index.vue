@@ -1,202 +1,208 @@
 <template>
-  <div :class="styles.dashboardPage">
-    <el-row :gutter="16" :class="styles.statCards">
-      <el-col v-for="card in statCards" :key="card.key" :span="8" :xs="12" :sm="12" :md="8" :lg="8" :xl="8">
-        <StatCard
-          :title="card.title"
-          :value="card.value"
-          :loading="pending"
-          :icon="card.icon"
-          :icon-tone="card.iconTone"
-          :trend-text="card.trendText"
-          :trend-tone="card.trendTone"
-          :trend-icon="card.trendIcon"
-        />
-      </el-col>
-    </el-row>
-
-    <div :class="styles.mainGrid">
-      <el-card :class="[styles.premiumCard, styles.fillCard]" shadow="never">
-        <template #header>
-          <div :class="styles.cardHeader">
-            <span>{{ t('dashboard.recentActivity') }}</span>
+  <div :class="styles.page">
+    <section v-if="active" :class="styles.hero">
+      <Transition name="hero-fade" mode="out-in">
+        <div :key="active.slug" :class="styles.heroStage">
+          <img
+            :src="active.posterUrl || active.thumbUrl || ''"
+            :alt="active.name"
+            :class="styles.heroBg"
+          />
+          <div :class="styles.heroShade" />
+          <div :class="styles.heroInner">
+            <h1 :class="styles.heroTitle">{{ active.name }}</h1>
+            <p :class="styles.heroMeta">
+              <span v-if="active.avgRating" :class="styles.imdb">IMDb {{ active.avgRating }}</span>
+              <span v-if="active.year">{{ active.year }}</span>
+              <span v-if="active.quality">{{ active.quality }}</span>
+              <span v-if="active.language">{{ active.language }}</span>
+              <span v-if="active.currentEpisode">{{ active.currentEpisode }}</span>
+              <span v-if="active.totalEpisodes">{{ active.totalEpisodes }}</span>
+            </p>
+            <p v-if="active.genres?.length" :class="styles.heroGenres">
+              <span v-for="g in active.genres.slice(0, 3)" :key="g.slug">{{ g.name }}</span>
+            </p>
+            <p v-if="active.description" :class="styles.heroDesc">
+              {{ truncate(active.description, 220) }}
+            </p>
+            <div :class="styles.heroActions">
+              <NuxtLink :to="`/xem/${active.slug}`" :class="styles.playBtn">
+                {{ t('cineva.watchNow') }}
+              </NuxtLink>
+              <NuxtLink :to="`/phim/${active.slug}`" :class="styles.iconBtn" :title="t('cineva.details')">
+                i
+              </NuxtLink>
+            </div>
           </div>
-        </template>
-        <el-skeleton v-if="pending" animated :rows="4" />
-        <div v-else-if="statsData?.recentLogs?.length" :class="styles.timelineScroll">
-          <el-timeline>
-            <el-timeline-item
-              v-for="log in statsData.recentLogs"
-              :key="log.id"
-              :timestamp="formatDateTime(log.createdAt)"
-              placement="top"
-              :type="log.type"
-            >
-              <el-card shadow="hover">
-                <h4>{{ log.action }}</h4>
-                <p>{{ log.details }}</p>
-              </el-card>
-            </el-timeline-item>
-          </el-timeline>
         </div>
-        <el-empty v-else :description="t('dashboard.noActivity')" :image-size="72" />
-      </el-card>
+      </Transition>
 
-      <div :class="styles.sideCol">
-        <ServerStatusCard
-          :loading="pending"
-          :connected="wsConnected"
-          :server="statsData?.server"
-        />
-
-        <el-card :class="[styles.premiumCard, styles.membersCard]" shadow="never">
-          <template #header>
-            <div :class="styles.cardHeader">
-              <span>{{ t('dashboard.recentUsers') }}</span>
-            </div>
-          </template>
-          <el-skeleton v-if="pending" animated :rows="3" />
-          <div v-else-if="statsData?.recentUsers?.length">
-            <div
-              v-for="(u, index) in statsData.recentUsers"
-              :key="u.id"
-              :class="[styles.memberRow, Number(index) > 0 ? styles.mt3 : '']"
-            >
-              <UserProfile
-                :username="u.username"
-                :full-name="u.fullName"
-                :avatar="u.avatar"
-                size="default"
-                :gap="12"
-              />
-              <span :class="styles.memberDate">
-                {{ formatDate(u.createdAt) }}
-              </span>
-            </div>
-          </div>
-          <el-empty v-else :description="t('dashboard.noActivity')" :image-size="60" />
-        </el-card>
+      <div :class="styles.thumbStrip" role="tablist" :aria-label="t('cineva.featured')">
+        <button
+          v-for="(slide, idx) in slides"
+          :key="slide.slug"
+          type="button"
+          role="tab"
+          :aria-selected="idx === slideIndex"
+          :class="[styles.thumb, idx === slideIndex ? styles.thumbActive : '']"
+          @click="selectSlide(idx)"
+        >
+          <img :src="slide.thumbUrl || slide.posterUrl || ''" :alt="slide.name" />
+        </button>
       </div>
+    </section>
+
+    <div :class="styles.body">
+      <section v-if="topics.length" :class="styles.topics">
+        <h2>{{ t('cineva.topicsInterest') }}</h2>
+        <div :class="styles.topicRail">
+          <NuxtLink
+            v-for="topic in topics"
+            :key="topic.slug"
+            :to="topic.href"
+            :class="[styles.topicCard, styles[`tone_${topic.tone}`] || styles.tone_slate]"
+          >
+            <strong>{{ topic.name }}</strong>
+            <span>{{ t('cineva.viewTopic') }}</span>
+          </NuxtLink>
+        </div>
+      </section>
+
+      <section v-if="featured.length" :class="styles.row">
+        <div :class="styles.rowHead">
+          <h2>{{ t('cineva.featured') }}</h2>
+        </div>
+        <div :class="styles.rail">
+          <FilmCard v-for="item in featured" :key="item.id" :film="item.film" />
+        </div>
+      </section>
+
+      <section :class="styles.row">
+        <div :class="styles.rowHead">
+          <h2>{{ t('cineva.newest') }}</h2>
+          <NuxtLink to="/phim">{{ t('cineva.viewAll') }}</NuxtLink>
+        </div>
+        <el-skeleton v-if="pending" animated :rows="3" />
+        <div v-else-if="newest.length" :class="styles.rail">
+          <FilmCard v-for="film in newest" :key="film.id" :film="film" />
+        </div>
+        <el-empty v-else :description="t('cineva.emptyFilms')" />
+      </section>
+
+      <section v-for="section in sections" :key="section.key" :class="styles.row">
+        <div :class="styles.rowHead">
+          <h2>{{ section.title }}</h2>
+          <NuxtLink v-if="section.href" :to="section.href">{{ t('cineva.viewAll') }}</NuxtLink>
+        </div>
+        <div :class="styles.rail">
+          <FilmCard v-for="film in section.items" :key="film.id" :film="film" />
+        </div>
+      </section>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { User, TopRight, Key, Document, BottomRight } from '@element-plus/icons-vue';
-import styles from './dashboard.module.scss';
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import type { Component } from 'vue';
-import { useDateTime } from '~/composables/useDateTime';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import type { FilmCardData } from '~/components/FilmCard/index.vue'
+import styles from './home.module.scss'
 
-const { t } = useI18n();
-const { formatDate, formatDateTime } = useDateTime();
-const statsData = ref<any>(null);
-const pending = ref(false);
+definePageMeta({ layout: 'public' })
 
-type IconTone = 'Blue' | 'Green' | 'Amber' | 'Red';
-type TrendTone = 'Success' | 'Warning' | 'Danger';
+type HomeSlide = FilmCardData & {
+  avgRating?: number
+  totalEpisodes?: string | number | null
+  description?: string | null
+  genres?: { slug: string; name: string }[]
+}
 
-const statCards = computed(() => {
-  const stats = statsData.value?.stats;
-  return [
-    {
-      key: 'users',
-      title: t('dashboard.users'),
-      value: stats?.users || 0,
-      icon: User,
-      iconTone: 'Blue' as IconTone,
-      trendText: `+12% ${t('dashboard.vsLastMonth')}`,
-      trendTone: 'Success' as TrendTone,
-      trendIcon: TopRight as Component
-    },
-    {
-      key: 'roles',
-      title: t('dashboard.roles'),
-      value: stats?.roles || 0,
-      icon: Key,
-      iconTone: 'Green' as IconTone,
-      trendText: `+8% ${t('dashboard.vsLastMonth')}`,
-      trendTone: 'Success' as TrendTone,
-      trendIcon: TopRight as Component
-    },
-    {
-      key: 'logs',
-      title: t('dashboard.logs'),
-      value: stats?.logs || 0,
-      icon: Document,
-      iconTone: 'Red' as IconTone,
-      trendText: `-2% ${t('dashboard.vsLastWeek')}`,
-      trendTone: 'Danger' as TrendTone,
-      trendIcon: BottomRight as Component
-    }
-  ];
-});
+type HomeTopic = {
+  slug: string
+  name: string
+  href: string
+  tone: string
+}
 
-let ws: WebSocket | null = null;
-const wsConnected = ref(false);
+type HomeSection = {
+  key: string
+  title: string
+  href?: string
+  total?: number
+  items: FilmCardData[]
+}
 
-function onWsMessage(event: MessageEvent) {
-  try {
-    const payload = JSON.parse(typeof event.data === 'string' ? event.data : '');
-    if (payload?.type !== 'server-stats' || !payload.data) return;
-    if (!statsData.value) {
-      statsData.value = { server: payload.data };
-      return;
-    }
-    statsData.value.server = payload.data;
-  } catch (err) {
-    console.error('WS server-stats parse error:', err);
+type HomeResponse = {
+  success: boolean
+  data: {
+    banners: unknown[]
+    featured: { id: string | number; film: HomeSlide }[]
+    slides: HomeSlide[]
+    newest: FilmCardData[]
+    topics: HomeTopic[]
+    sections: HomeSection[]
   }
 }
 
-async function connectWs() {
-  if (!import.meta.client) return;
-  try {
-    const { ticket } = await useApiFetch('/api/auth/ws-ticket');
-    const config = useRuntimeConfig();
-    const base = String(config.public.wsBase || 'ws://127.0.0.1:8000').replace(/\/$/, '');
-    const url = `${base}/ws/server-stats?token=${ticket}`;
+const { t } = useI18n()
 
-    ws = new WebSocket(url);
-    ws.onopen = () => { wsConnected.value = true; };
-    ws.onmessage = onWsMessage;
-    ws.onclose = () => { wsConnected.value = false; };
-    ws.onerror = () => { wsConnected.value = false; };
-  } catch {
-    console.error('Failed to get WS ticket');
-  }
+const { data, pending } = await useAsyncData('public-home-v2', () =>
+  $fetch<HomeResponse>('/api/public/home')
+)
+
+const newest = computed(() => data.value?.data?.newest || [])
+const featured = computed(() => data.value?.data?.featured || [])
+const topics = computed(() => data.value?.data?.topics || [])
+const sections = computed(() =>
+  (data.value?.data?.sections || []).filter((s) => (s.items?.length || 0) >= 6)
+)
+const slides = computed(() => {
+  const fromApi = data.value?.data?.slides || []
+  if (fromApi.length) return fromApi
+  const fromFeatured = featured.value.map((f) => f.film).filter(Boolean)
+  if (fromFeatured.length) return fromFeatured
+  return newest.value.slice(0, 8) as HomeSlide[]
+})
+
+const slideIndex = ref(0)
+const active = computed(() => slides.value[slideIndex.value] || slides.value[0] || null)
+
+let timer: ReturnType<typeof setInterval> | null = null
+
+function selectSlide(idx: number) {
+  slideIndex.value = idx
+  restartTimer()
 }
 
-function closeWs() {
-  if (ws) {
-    ws.close();
-    ws = null;
-    wsConnected.value = false;
-  }
+function nextSlide() {
+  if (slides.value.length < 2) return
+  slideIndex.value = (slideIndex.value + 1) % slides.value.length
 }
 
-const fetchStats = async () => {
-  pending.value = true;
-  try {
-    const res = await useApiFetch('/api/dashboard/stats');
-    if (res.success) {
-      statsData.value = res.data;
-    }
-  } catch (err) {
-    console.error('Lỗi khi lấy dữ liệu dashboard:', err);
-  } finally {
-    pending.value = false;
-  }
-};
+function restartTimer() {
+  if (timer) clearInterval(timer)
+  timer = setInterval(nextSlide, 6500)
+}
 
-onMounted(async () => {
-  await fetchStats();
-  connectWs();
-});
+function truncate(text: string, max: number) {
+  const clean = text.replace(/<[^>]+>/g, '').trim()
+  if (clean.length <= max) return clean
+  return `${clean.slice(0, max).trim()}…`
+}
 
-usePageRefresh(() => fetchStats());
+watch(slides, (list) => {
+  if (slideIndex.value >= list.length) slideIndex.value = 0
+})
+
+onMounted(() => {
+  if (slides.value.length > 1) restartTimer()
+})
 
 onBeforeUnmount(() => {
-  closeWs();
-});
+  if (timer) clearInterval(timer)
+})
+
+useSeoMeta({
+  title: () => `${t('app.name')} — ${t('app.tagline')}`,
+  description: () => t('cineva.seoHome')
+})
 </script>

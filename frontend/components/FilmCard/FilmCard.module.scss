@@ -1,0 +1,90 @@
+.card {
+  display: block;
+  width: 100%;
+  text-decoration: none;
+  color: #fff;
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: translateY(-3px);
+
+    .poster {
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.45);
+    }
+
+    .title {
+      color: #ffd66b;
+    }
+  }
+}
+
+.posterWrap {
+  position: relative;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border-radius: 0.65rem;
+  background: #1c1c24;
+}
+
+.poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: box-shadow 0.2s ease;
+}
+
+.badge {
+  position: absolute;
+  top: 0.45rem;
+  left: 0.45rem;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.72);
+  color: #ffd66b;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.3rem;
+}
+
+.ep {
+  position: absolute;
+  left: 0.45rem;
+  right: 0.45rem;
+  bottom: 0.45rem;
+  z-index: 1;
+  width: fit-content;
+  max-width: calc(100% - 0.9rem);
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.3rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  margin-top: 0.55rem;
+}
+
+.title {
+  margin: 0;
+  color: #f4f4f5;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color 0.2s ease;
+}
+
+.sub {
+  margin: 0.2rem 0 0;
+  color: #a1a1aa;
+  font-size: 0.75rem;
+}

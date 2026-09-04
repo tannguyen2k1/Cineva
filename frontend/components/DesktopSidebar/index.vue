@@ -20,7 +20,7 @@
 
         <el-menu-item
           v-if="authStore.hasPermission('read:dashboard')"
-          index="/"
+          index="/dashboard"
         >
           <el-icon><Odometer /></el-icon>
           <span>{{ t('nav.dashboard') }}</span>
@@ -78,6 +78,7 @@ const activeMenu = computed(() => {
   if (route.path.startsWith('/systems/logs')) return '/systems/logs';
   if (route.path.startsWith('/profile')) return '/profile';
   if (route.path.startsWith('/settings')) return '/settings';
+  if (route.path.startsWith('/dashboard')) return '/dashboard';
   return route.path;
 });
 </script>

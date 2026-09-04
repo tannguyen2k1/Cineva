@@ -342,3 +342,51 @@ async def logout(
 
 def issue_ws_ticket(user_id: str) -> dict:
     return {"ticket": create_ws_ticket(user_id=user_id)}
+
+
+async def register(db: AsyncSession, body, response: Response) -> dict:
+    """Public member registration — assigns Member role, issues cookie session."""
+    from app.core.security import hash_password
+    from app.repositories import role as role_repo
+    from app.schemas.film import RegisterRequest
+
+    if not isinstance(body, RegisterRequest):
+        body = RegisterRequest.model_validate(body)
+
+    username = body.username.strip()
+    if await user_repo.find_active_username(db, username=username):
+        raise HTTPException(status_code=409, detail="Username đã tồn tại")
+
+    member = await role_repo.find_by_name(db, name="Member")
+    if not member:
+        from app.models import Role
+
+        member = await role_repo.add_role(
+            db, Role(name="Member", description="Thành viên xem phim")
+        )
+
+    user = await user_repo.add_user(
+        db,
+        User(
+            username=username,
+            password=hash_password(body.password),
+            email=body.email,
+            full_name=body.full_name,
+            is_active=True,
+        ),
+    )
+    await user_repo.add_user_roles(db, user_id=user.id, role_ids=[member.id])
+    await db.commit()
+
+    user = await user_repo.get_by_id(db, user_id=user.id, with_permissions=True)
+    assert user is not None
+    permissions = await _issue_cookie_session(db, response, user=user)
+
+    await write_system_log(
+        db,
+        user_id=user.id,
+        action="REGISTER",
+        resource="Auth",
+        details={"username": user.username},
+    )
+    return _auth_data(user, permissions)

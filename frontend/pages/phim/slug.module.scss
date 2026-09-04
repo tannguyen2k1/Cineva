@@ -1,0 +1,195 @@
+.page {
+  width: min(1280px, 100%);
+  margin: 0 auto;
+  padding: 1.25rem 1.25rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  color: #fff;
+}
+
+.top {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 1.5rem;
+}
+
+.poster {
+  width: 100%;
+  border-radius: 0.85rem;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  background: #1a1f2a;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+}
+
+.info {
+  h1 {
+    margin: 0;
+    color: #fff !important;
+    font-size: clamp(1.5rem, 3vw, 2.2rem);
+    line-height: 1.15;
+  }
+}
+
+.original {
+  margin: 0.4rem 0 0;
+  color: #a1a1aa;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.9rem 0;
+
+  span {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    padding: 0.2rem 0.65rem;
+    font-size: 0.8rem;
+    color: #e4e4e7;
+  }
+}
+
+.rating {
+  margin: 0 0 1rem;
+  color: #ffd66b;
+  font-weight: 600;
+
+  small {
+    color: #a1a1aa;
+    font-weight: 400;
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.65rem 1.15rem;
+  border-radius: 999px;
+  background: #ffd66b;
+  color: #111 !important;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+
+  a {
+    color: #ffd66b !important;
+    text-decoration: none;
+    font-size: 0.85rem;
+  }
+}
+
+.block {
+  h2 {
+    margin: 0 0 0.85rem;
+    color: #fff !important;
+    font-size: 1.2rem;
+  }
+}
+
+.desc {
+  color: #d4d4d8;
+  line-height: 1.65;
+
+  :deep(p) {
+    margin: 0 0 0.75rem;
+  }
+}
+
+.server {
+  margin-bottom: 1rem;
+
+  h3 {
+    margin: 0 0 0.6rem;
+    font-size: 0.95rem;
+    color: #ffd66b !important;
+  }
+}
+
+.epGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.epBtn {
+  min-width: 2.5rem;
+  text-align: center;
+  padding: 0.35rem 0.55rem;
+  border-radius: 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f4f4f5 !important;
+  text-decoration: none;
+  font-size: 0.85rem;
+
+  &:hover {
+    border-color: #ffd66b;
+    color: #ffd66b !important;
+  }
+}
+
+.commentForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.loginHint {
+  color: #a1a1aa;
+
+  a {
+    color: #ffd66b !important;
+  }
+}
+
+.commentList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.commentItem {
+  padding: 0.85rem 1rem;
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+
+  strong {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: #fff;
+  }
+
+  p {
+    margin: 0;
+    color: #d4d4d8;
+    white-space: pre-wrap;
+  }
+}
+
+@media (max-width: 720px) {
+  .top {
+    grid-template-columns: 1fr;
+  }
+
+  .poster {
+    max-width: 220px;
+    margin: 0 auto;
+  }
+}

@@ -1,1 +1,1 @@
-"""Admin Pro FastAPI backend."""
+"""Cineva FastAPI backend."""

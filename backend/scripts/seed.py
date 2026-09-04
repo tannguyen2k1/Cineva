@@ -63,8 +63,15 @@ async def main() -> None:
         await db.commit()
         await ensure_system_permissions(db)
 
+        member_result = await db.execute(
+            select(Role).where(Role.name == "Member", Role.deleted_at.is_(None))
+        )
+        if not member_result.scalar_one_or_none():
+            db.add(Role(name="Member", description="Thành viên xem phim"))
+            await db.commit()
+
     print("Seeding completed!")
-    print("--- DEFAULT ACCOUNT ---")
+    print("--- CINEVA DEFAULT ACCOUNT ---")
     print(f"Username: {settings.default_admin_username}")
     print(f"Password: {settings.default_admin_password}")
 

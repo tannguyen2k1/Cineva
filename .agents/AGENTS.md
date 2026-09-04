@@ -1,4 +1,4 @@
-# Admin Pro — Project Rules (Nuxt frontend + FastAPI backend)
+# Cineva — Project Rules (Nuxt frontend + FastAPI backend)
 
 ## 1. Architecture Overview
 
@@ -134,7 +134,7 @@ Sync with `ensure_system_permissions` on login / seed. Admin role always gets fu
 ## 8. Docker
 
 `docker-compose.yml`: `db` (Postgres **5432**), `api` (8000), `web` (3000).  
-Local backend: `DATABASE_URL=...@localhost:5432/app_db`.
+Local backend: `DATABASE_URL=...@localhost:5432/cineva`.
 
 ## 9. Skills map
 

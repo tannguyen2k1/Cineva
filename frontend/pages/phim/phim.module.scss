@@ -1,0 +1,117 @@
+.page {
+  width: min(1280px, 100%);
+  margin: 0 auto;
+  padding: 1.25rem 1.25rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  color: #fff;
+
+  h1 {
+    margin: 0;
+    color: #fff !important;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  :global(.el-empty__description p) {
+    color: #a1a1aa !important;
+  }
+
+  :global(.el-skeleton) {
+    --el-skeleton-color: rgba(255, 255, 255, 0.08);
+    --el-skeleton-to-color: rgba(255, 255, 255, 0.14);
+  }
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.search {
+  width: min(280px, 100%);
+
+  :global(.el-input__wrapper) {
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06) !important;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) inset !important;
+  }
+
+  :global(.el-input__wrapper:hover),
+  :global(.el-input__wrapper.is-focus) {
+    box-shadow: 0 0 0 1px rgba(255, 214, 107, 0.45) inset !important;
+  }
+
+  :global(.el-input__inner) {
+    color: #fff !important;
+
+    &::placeholder {
+      color: #71717a;
+    }
+  }
+
+  :global(.el-input__clear) {
+    color: #a1a1aa;
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem 0.85rem;
+}
+
+.pager {
+  display: flex;
+  justify-content: center;
+  padding: 1rem 0;
+
+  :global(.el-pagination) {
+    --el-pagination-bg-color: transparent;
+    --el-pagination-text-color: #a1a1aa;
+    --el-pagination-button-color: #e4e4e7;
+    --el-pagination-button-bg-color: rgba(255, 255, 255, 0.06);
+    --el-pagination-button-disabled-bg-color: rgba(255, 255, 255, 0.03);
+    --el-pagination-button-disabled-color: #52525b;
+    --el-pagination-hover-color: #ffd66b;
+    --el-color-primary: #ffd66b;
+  }
+
+  :global(.el-pager li),
+  :global(.el-pagination button) {
+    min-width: 2rem;
+    height: 2rem;
+    margin: 0 0.2rem;
+    border-radius: 0.4rem;
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: #e4e4e7 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-weight: 600;
+  }
+
+  :global(.el-pager li:hover),
+  :global(.el-pagination button:hover) {
+    color: #ffd66b !important;
+    border-color: rgba(255, 214, 107, 0.35);
+  }
+
+  :global(.el-pager li.is-active) {
+    background: rgba(255, 214, 107, 0.18) !important;
+    color: #ffd66b !important;
+    border-color: rgba(255, 214, 107, 0.55);
+  }
+
+  :global(.el-pagination button:disabled) {
+    opacity: 0.4;
+  }
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+}

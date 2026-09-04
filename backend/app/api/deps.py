@@ -61,6 +61,22 @@ async def get_current_user(
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
+    return await _resolve_user(db, token)
+
+
+async def get_optional_user(
+    db: AsyncSession = Depends(get_db),
+    token: str | None = Depends(extract_token),
+) -> CurrentUser | None:
+    if not token:
+        return None
+    try:
+        return await _resolve_user(db, token)
+    except HTTPException:
+        return None
+
+
+async def _resolve_user(db: AsyncSession, token: str) -> CurrentUser:
     payload = safe_decode_token(token)
     if not payload:
         raise HTTPException(

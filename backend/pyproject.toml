@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "admin-pro-api"
+name = "cineva-api"
 version = "1.0.0"
-description = "Single-organization REST API (FastAPI)"
+description = "Cineva — movie streaming API (FastAPI)"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.115.0",
@@ -24,6 +24,7 @@ dependencies = [
   "psutil>=6.1.0",
   "scalar-fastapi>=1.2.0",
   "email-validator>=2.2.0",
+  "python-slugify>=8.0.4",
 ]
 
 [project.optional-dependencies]

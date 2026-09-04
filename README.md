@@ -1,6 +1,6 @@
-# Admin Pro — Nuxt frontend + FastAPI backend
+# Cineva — Nuxt frontend + FastAPI backend
 
-Monorepo tách FE/BE (nhánh **non_tenant**: single-org, không multi-tenant):
+Monorepo xem phim (single-org, không multi-tenant):
 
 ```
 frontend/   Nuxt 4 UI (Element Plus, i18n, Pinia)

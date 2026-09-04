@@ -57,6 +57,51 @@ SYSTEM_MODULES: tuple[SystemModuleDef, ...] = (
         label="Nhật ký",
         permissions=(ModulePermissionDef("read", "Xem nhật ký hệ thống"),),
     ),
+    SystemModuleDef(
+        key="films",
+        label="Phim",
+        permissions=(
+            ModulePermissionDef("read", "Xem danh sách phim (admin)"),
+            ModulePermissionDef("update", "Ẩn / hiện phim"),
+        ),
+    ),
+    SystemModuleDef(
+        key="banners",
+        label="Banner",
+        permissions=(
+            ModulePermissionDef("read", "Xem banner"),
+            ModulePermissionDef("create", "Tạo banner"),
+            ModulePermissionDef("update", "Sửa banner"),
+            ModulePermissionDef("delete", "Xóa banner"),
+        ),
+    ),
+    SystemModuleDef(
+        key="featured",
+        label="Phim nổi bật",
+        permissions=(
+            ModulePermissionDef("read", "Xem phim nổi bật"),
+            ModulePermissionDef("create", "Thêm phim nổi bật"),
+            ModulePermissionDef("update", "Sửa thứ tự / section"),
+            ModulePermissionDef("delete", "Gỡ phim nổi bật"),
+        ),
+    ),
+    SystemModuleDef(
+        key="sync",
+        label="Đồng bộ phim",
+        permissions=(
+            ModulePermissionDef("read", "Xem lịch sử đồng bộ"),
+            ModulePermissionDef("create", "Chạy đồng bộ"),
+        ),
+    ),
+    SystemModuleDef(
+        key="comments",
+        label="Bình luận",
+        permissions=(
+            ModulePermissionDef("read", "Xem bình luận (admin)"),
+            ModulePermissionDef("update", "Ẩn / hiện bình luận"),
+            ModulePermissionDef("delete", "Xóa bình luận"),
+        ),
+    ),
 )
 
 SYSTEM_PERMISSIONS = [

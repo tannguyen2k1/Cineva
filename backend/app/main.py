@@ -25,7 +25,7 @@ PUBLIC_OPENAPI_PATHS = {
 }
 
 app = FastAPI(
-    title="Admin Pro API",
+    title="Cineva API",
     description=(
         "Single-organization REST API.\n\n"
         "**Browser (Nuxt):** `POST /api/auth/login` → HttpOnly cookies + CSRF. "

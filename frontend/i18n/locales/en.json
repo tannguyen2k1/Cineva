@@ -1,8 +1,8 @@
 {
   "app": {
-    "name": "Admin Pro",
-    "tagline": "Admin console",
-    "footer": "© {year} Admin Pro"
+    "name": "Cineva",
+    "tagline": "Watch movies online",
+    "footer": "© {year} Cineva"
   },
   "nav": {
     "overview": "Overview",
@@ -59,7 +59,7 @@
     "password": "Password",
     "passwordPlaceholder": "Enter password",
     "submit": "Sign in",
-    "footer": "Secured by Admin Pro · Cloudflare Turnstile",
+    "footer": "Secured by Cineva · Cloudflare Turnstile",
     "brandTagline": "System administration",
     "requiredUsername": "Please enter username",
     "requiredPassword": "Please enter password",
@@ -145,6 +145,46 @@
   "lang": {
     "vi": "Tiếng Việt",
     "en": "English"
+  },
+  "cineva": {
+    "movies": "Movies",
+    "moviesSingle": "Movies",
+    "moviesSeries": "Series",
+    "genres": "Genres",
+    "countries": "Countries",
+    "topicsInterest": "What are you interested in?",
+    "viewTopic": "View topic ›",
+    "featured": "Featured",
+    "newest": "Newly updated",
+    "viewAll": "View all",
+    "watchNow": "Watch now",
+    "details": "Details",
+    "watching": "Watching",
+    "episodes": "Episodes",
+    "synopsis": "Synopsis",
+    "director": "Director",
+    "casts": "Cast",
+    "comments": "Comments",
+    "commentPlaceholder": "Write a comment...",
+    "postComment": "Post comment",
+    "toComment": "to comment",
+    "noComments": "No comments yet",
+    "noDescription": "No description",
+    "noEmbed": "No playback source",
+    "notFound": "Film not found",
+    "emptyFilms": "No films yet",
+    "emptyWatchlist": "Watchlist is empty",
+    "watchlist": "Watchlist",
+    "addWatchlist": "Add to watchlist",
+    "removeWatchlist": "Remove from watchlist",
+    "addedWatchlist": "Added to watchlist",
+    "removedWatchlist": "Removed from watchlist",
+    "searchPlaceholder": "Search movies, actors...",
+    "searchResults": "Search results",
+    "admin": "Admin",
+    "member": "Member",
+    "footerBlurb": "A growing catalog, updated often. Stream in HD on Cineva.",
+    "seoHome": "Watch HD movies online on Cineva"
   },
   "chat": {
     "title": "Messages",

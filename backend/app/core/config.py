@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    database_url: str = "postgresql+asyncpg://postgres:password123@localhost:5432/app_db"
+    database_url: str = "postgresql+asyncpg://postgres:password123@localhost:5432/cineva"
     jwt_secret: str = "change-me"
     default_admin_username: str = "admin"
     default_admin_password: str = "admin123456"
@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     rate_limit_refresh: int = 30
     rate_limit_ws_ticket: int = 20
     rate_limit_api: int = 120
+
+    nguonc_base_url: str = "https://phim.nguonc.com"
+    nguonc_timeout_seconds: float = 20.0
+    film_detail_cache_ttl_seconds: int = 600
+    sync_max_pages_per_run: int = 5
 
     @property
     def is_prod(self) -> bool:

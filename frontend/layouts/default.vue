@@ -97,7 +97,7 @@ const ptrTexts = computed(() => ({
 const { status, label, maxPull } = usePullToRefresh(mainContentRef, ptrTexts, pageRefreshApi);
 
 const pageTitleKeys: Record<string, string> = {
-  '/': 'pages.dashboard',
+  '/dashboard': 'pages.dashboard',
   '/profile': 'pages.profile',
   '/settings': 'nav.settings',
   '/systems/users': 'pages.users',
