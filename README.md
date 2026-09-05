@@ -1,6 +1,6 @@
 # Cineva
 
-Nền tảng xem phim (monorepo): giao diện công khai + quản trị nội dung, một tổ chức (không multi-tenant).
+Nền tảng xem phim (monorepo): giao diện công khai + quản trị nội dung.
 
 ```
 frontend/   Nuxt 4 · Vue 3 · Element Plus · Pinia · i18n
