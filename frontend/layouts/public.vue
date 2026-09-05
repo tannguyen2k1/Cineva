@@ -228,11 +228,12 @@ watch(
   () => route.fullPath,
   async (path) => {
     openMenu.value = null
+    if (!import.meta.client) return
+
     await nextTick()
     if (rootEl.value) rootEl.value.scrollTop = 0
     window.scrollTo(0, 0)
 
-    if (!import.meta.client) return
     try {
       await useApiFetch('/api/public/traffic/hit', {
         method: 'POST',

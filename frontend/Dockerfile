@@ -6,6 +6,12 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
+
+# Proxy target is baked into Nitro at build time (not runtime .env).
+# Docker network service name + container port:
+ARG NUXT_API_PROXY=http://api:8000
+ENV NUXT_API_PROXY=$NUXT_API_PROXY
+
 RUN npm run build
 
 # Production stage

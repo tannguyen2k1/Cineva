@@ -87,14 +87,44 @@ WebSocket nối thẳng FastAPI (`NUXT_PUBLIC_WS_BASE`, mặc định `ws://127.
 ## Docker (full stack)
 
 ```bash
-docker compose up --build
+cp .env.example .env
+# Chỉnh JWT_SECRET, mật khẩu, CORS_ORIGINS, NUXT_PUBLIC_WS_BASE nếu deploy ra ngoài localhost
+
+docker compose up --build -d
 ```
 
-| Service | URL |
-|---------|-----|
+| Service | URL (mặc định) |
+|---------|----------------|
 | Web | http://localhost:3000 |
 | API | http://localhost:8000 |
 | Docs | http://localhost:8000/api/docs |
+
+Admin seed: giá trị `DEFAULT_ADMIN_*` trong `.env` (mặc định `admin` / `admin123456`).
+
+`docker-compose.yml` đọc `.env` ở thư mục gốc (`env_file`, `${VAR:-default}`, volume `cineva_*`).  
+Tên image lấy từ `API_DOCKER_IMAGE` / `WEB_DOCKER_IMAGE` trong `.env`.
+
+**Build + push registry (máy dev):**
+
+```bash
+docker login
+docker compose build
+docker push "$API_DOCKER_IMAGE"
+docker push "$WEB_DOCKER_IMAGE"
+```
+
+**Trên VPS (kéo image, không build):** copy `docker-compose.yml` + `.env`, rồi:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+```bash
+docker compose logs -f
+docker compose down          # giữ volume
+docker compose down -v       # xóa DB + uploads
+```
 
 ## Kiến trúc
 
@@ -115,10 +145,9 @@ Backend theo lớp: `api/routes` → `services` → `repositories` → `models` 
 
 | File | Mục đích |
 |------|----------|
-| `backend/.env` | `DATABASE_URL`, `JWT_SECRET`, `TURNSTILE_SECRET_KEY`, admin mặc định, rate limit, `ENVIRONMENT` |
-| `frontend/.env` | `NUXT_PUBLIC_TURNSTILE_SITE_KEY`, `NUXT_API_PROXY`, `NUXT_PUBLIC_WS_BASE` |
-
-Chi tiết mẫu: `backend/.env.example`, `frontend/.env.example`.
+| `.env` (root) | Docker Compose + inject vào `api` / `web` / `db` — copy từ `.env.example` |
+| `backend/.env` | Chạy API local (không Docker) |
+| `frontend/.env` | Chạy Nuxt local (không Docker) |
 
 ## Cấu trúc thư mục (tóm tắt)
 

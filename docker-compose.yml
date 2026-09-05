@@ -1,54 +1,64 @@
+version: "3.8"
+
 services:
   db:
     image: postgres:15-alpine
-    container_name: cineva_postgres
+    container_name: cineva_db
+    restart: always
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password123
-      POSTGRES_DB: cineva
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cineva_password}
+      POSTGRES_DB: ${POSTGRES_DB:-cineva}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
-    restart: unless-stopped
+      - cineva_db_data:/var/lib/postgresql/data
 
   api:
+    image: ${API_DOCKER_IMAGE:-cineva-api:latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: cineva_api
-    ports:
-      - "8000:8000"
+    restart: always
+    env_file:
+      - .env
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:password123@db:5432/cineva
-      - JWT_SECRET=super-secret-key-for-prod
-      - DEFAULT_ADMIN_USERNAME=admin
-      - DEFAULT_ADMIN_PASSWORD=admin123456
-      - TURNSTILE_SECRET_KEY=${NUXT_TURNSTILE_SECRET_KEY:-1x0000000000000000000000000000000AA}
-      - ENVIRONMENT=production
-      - CORS_ORIGINS=http://localhost:3000
-      - UPLOAD_DIR=uploads
-    volumes:
-      - api_uploads:/app/uploads
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-cineva_password}@db:5432/${POSTGRES_DB:-cineva}
+      JWT_SECRET: ${JWT_SECRET:-change-me}
+      DEFAULT_ADMIN_USERNAME: ${DEFAULT_ADMIN_USERNAME:-admin}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-admin123456}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-1x0000000000000000000000000000000AA}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      UPLOAD_DIR: ${UPLOAD_DIR:-uploads}
+    ports:
+      - "${API_PORT:-8000}:8000"
     depends_on:
       - db
-    restart: unless-stopped
+    volumes:
+      - cineva_uploads:/app/uploads
 
   web:
+    image: ${WEB_DOCKER_IMAGE:-cineva-web:latest}
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: cineva_web
-    ports:
-      - "3000:3000"
+    restart: always
+    env_file:
+      - .env
     environment:
-      - NUXT_API_PROXY=http://api:8000
-      - NUXT_PUBLIC_WS_BASE=ws://localhost:8000
-      - NUXT_PUBLIC_TURNSTILE_SITE_KEY=${NUXT_PUBLIC_TURNSTILE_SITE_KEY:-}
+      NUXT_API_PROXY: ${NUXT_API_PROXY:-http://api:8000}
+      NUXT_PUBLIC_WS_BASE: ${NUXT_PUBLIC_WS_BASE:-ws://localhost:8000}
+      NUXT_PUBLIC_TURNSTILE_SITE_KEY: ${NUXT_PUBLIC_TURNSTILE_SITE_KEY:-1x00000000000000000000AA}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
     depends_on:
       - api
-    restart: unless-stopped
 
 volumes:
-  pgdata:
-  api_uploads:
+  cineva_db_data:
+  cineva_uploads:
