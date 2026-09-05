@@ -110,6 +110,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { FilmCardData } from '~/components/FilmCard/index.vue'
+import { useSiteUrl } from '~/composables/useSiteUrl'
 import styles from './home.module.scss'
 
 definePageMeta({ layout: 'public' })
@@ -151,6 +152,7 @@ type HomeResponse = {
 }
 
 const { t } = useI18n()
+const { absoluteUrl } = useSiteUrl()
 
 const { data, pending } = await useAsyncData('public-home-v2', () =>
   $fetch<HomeResponse>('/api/public/home')
@@ -216,6 +218,17 @@ onBeforeUnmount(() => {
 
 useSeoMeta({
   title: () => `${t('app.name')} — ${t('app.tagline')}`,
-  description: () => t('cineva.seoHome')
+  description: () => t('cineva.seoHome'),
+  ogTitle: () => `${t('app.name')} — ${t('app.tagline')}`,
+  ogDescription: () => t('cineva.seoHome'),
+  ogType: 'website',
+  ogUrl: () => absoluteUrl('/'),
+  ogImage: () => absoluteUrl('/brand/cineva-logo.png'),
+  twitterCard: 'summary_large_image',
+  robots: 'index, follow'
+})
+
+useHead({
+  link: [{ rel: 'canonical', href: () => absoluteUrl('/') }]
 })
 </script>

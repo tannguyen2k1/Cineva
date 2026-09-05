@@ -230,8 +230,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useSiteUrl } from '~/composables/useSiteUrl'
+import { seoPlainText } from '~/utils/seo'
 import styles from './slug.module.scss'
 
 definePageMeta({ layout: 'public' })
@@ -248,6 +250,7 @@ type FilmDetail = {
   quality?: string | null
   language?: string | null
   currentEpisode?: string | null
+  totalEpisodes?: string | number | null
   avgRating?: number
   ratingCount?: number
   userScore?: number | null
@@ -274,6 +277,7 @@ type CommentsResponse = { success: boolean; data: CommentItem[] }
 
 const { t } = useI18n()
 const { formatDateTime } = useDateTime()
+const { absoluteUrl } = useSiteUrl()
 const route = useRoute()
 const authStore = useAuthStore()
 const slug = computed(() => String(route.params.slug || ''))
@@ -415,6 +419,58 @@ async function submitComment() {
 
 useSeoMeta({
   title: () => (film.value ? `${film.value.name} — ${t('app.name')}` : t('app.name')),
-  description: () => film.value?.originalName || t('app.tagline')
+  description: () =>
+    seoPlainText(film.value?.description) ||
+    film.value?.originalName ||
+    t('cineva.seoHome'),
+  ogTitle: () => (film.value ? `${film.value.name} — ${t('app.name')}` : t('app.name')),
+  ogDescription: () =>
+    seoPlainText(film.value?.description) ||
+    film.value?.originalName ||
+    t('cineva.seoHome'),
+  ogType: 'video.movie',
+  ogUrl: () => absoluteUrl(`/phim/${slug.value}`),
+  ogImage: () =>
+    film.value?.posterUrl || film.value?.thumbUrl || absoluteUrl('/brand/cineva-logo.png'),
+  twitterCard: 'summary_large_image',
+  robots: 'index, follow'
 })
+
+const filmJsonLd = computed(() => {
+  const f = film.value
+  if (!f) return null
+  const canonical = absoluteUrl(`/phim/${slug.value}`)
+  return {
+    '@context': 'https://schema.org',
+    '@type': f.totalEpisodes && Number(f.totalEpisodes) > 1 ? 'TVSeries' : 'Movie',
+    name: f.name,
+    alternateName: f.originalName || undefined,
+    description: seoPlainText(f.description, 300) || undefined,
+    image: f.posterUrl || f.thumbUrl || undefined,
+    dateCreated: f.year || undefined,
+    genre: (f.genres || []).map((g) => g.name),
+    aggregateRating:
+      f.ratingCount && f.avgRating
+        ? {
+            '@type': 'AggregateRating',
+            ratingValue: f.avgRating,
+            ratingCount: f.ratingCount,
+            bestRating: 10
+          }
+        : undefined,
+    url: canonical
+  }
+})
+
+useHead(() => ({
+  link: [{ rel: 'canonical', href: absoluteUrl(`/phim/${slug.value}`) }],
+  script: filmJsonLd.value
+    ? [
+        {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify(filmJsonLd.value)
+        }
+      ]
+    : []
+}))
 </script>

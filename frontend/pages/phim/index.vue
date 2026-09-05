@@ -129,6 +129,7 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
 import type { FilmCardData } from '~/components/FilmCard/index.vue'
+import { useSiteUrl } from '~/composables/useSiteUrl'
 import { formatNumber } from '~/utils/number'
 import styles from './phim.module.scss'
 
@@ -162,6 +163,7 @@ type FilterState = {
 
 const { t } = useI18n()
 const route = useRoute()
+const { absoluteUrl } = useSiteUrl()
 const router = useRouter()
 
 const pageSize = 24
@@ -295,6 +297,20 @@ function onPage(p: number) {
 }
 
 useSeoMeta({
-  title: () => `${pageTitle.value} — ${t('app.name')}`
+  title: () => `${pageTitle.value} — ${t('app.name')}`,
+  description: () => t('cineva.seoCatalog'),
+  ogTitle: () => `${pageTitle.value} — ${t('app.name')}`,
+  ogDescription: () => t('cineva.seoCatalog'),
+  ogUrl: () => absoluteUrl(route.fullPath.split('?')[0] || '/phim'),
+  robots: 'index, follow'
+})
+
+useHead({
+  link: [
+    {
+      rel: 'canonical',
+      href: () => absoluteUrl(route.path || '/phim')
+    }
+  ]
 })
 </script>

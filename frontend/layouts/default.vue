@@ -124,4 +124,8 @@ const handleCommand = async (command: string) => {
     await router.push('/profile');
   }
 };
+
+useSeoMeta({
+  robots: 'noindex, nofollow'
+});
 </script>

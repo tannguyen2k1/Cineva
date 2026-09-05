@@ -140,6 +140,7 @@ useSeoMeta({
   title: () =>
     film.value
       ? `${t('cineva.watching')}: ${film.value.name} — ${t('app.name')}`
-      : t('app.name')
+      : t('app.name'),
+  robots: 'noindex, follow'
 })
 </script>

@@ -151,6 +151,7 @@ const handleLogin = async () => {
 }
 
 useSeoMeta({
-  title: () => `${t('login.title')} — ${t('app.name')}`
+  title: () => `${t('login.title')} — ${t('app.name')}`,
+  robots: 'noindex, nofollow'
 })
 </script>

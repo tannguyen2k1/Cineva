@@ -60,11 +60,15 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    /** Used by server routes (sitemap) to reach FastAPI directly */
+    apiProxy,
     public: {
       /** Empty = same-origin /api via Nuxt proxy to FastAPI */
       apiBase: process.env.NUXT_PUBLIC_API_BASE || '',
       /** FastAPI WebSocket base, e.g. ws://127.0.0.1:8000 */
-      wsBase: process.env.NUXT_PUBLIC_WS_BASE || wsBaseDefault
+      wsBase: process.env.NUXT_PUBLIC_WS_BASE || wsBaseDefault,
+      /** Canonical site origin for SEO (no trailing slash), e.g. https://cineva.example.com */
+      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000'
     }
   },
 

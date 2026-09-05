@@ -223,6 +223,7 @@ const handleRegister = async () => {
 }
 
 useSeoMeta({
-  title: () => `${t('register.title')} — ${t('app.name')}`
+  title: () => `${t('register.title')} — ${t('app.name')}`,
+  robots: 'noindex, nofollow'
 })
 </script>

@@ -24,6 +24,7 @@ const { data, pending } = await useAsyncData('my-watchlist', () =>
 const films = computed(() => data.value?.data || [])
 
 useSeoMeta({
-  title: () => `${t('cineva.watchlist')} — ${t('app.name')}`
+  title: () => `${t('cineva.watchlist')} — ${t('app.name')}`,
+  robots: 'noindex, nofollow'
 })
 </script>

@@ -163,6 +163,20 @@ async def list_films(
     }
 
 
+async def sitemap_entries(db: AsyncSession) -> dict:
+    rows = await film_repo.list_sitemap_films(db, limit=5000)
+    return {
+        "success": True,
+        "data": [
+            {
+                "slug": slug,
+                "updatedAt": updated_at.isoformat() if updated_at else None,
+            }
+            for slug, updated_at in rows
+        ],
+    }
+
+
 async def taxonomies(db: AsyncSession) -> dict:
     from app.services.film_sync import seed_catalog_taxonomies
 

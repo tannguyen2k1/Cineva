@@ -46,6 +46,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NUXT_API_PROXY: ${NUXT_API_PROXY:-http://api:8000}
     container_name: cineva_web
     restart: always
     env_file:
@@ -54,6 +56,7 @@ services:
       NUXT_API_PROXY: ${NUXT_API_PROXY:-http://api:8000}
       NUXT_PUBLIC_WS_BASE: ${NUXT_PUBLIC_WS_BASE:-ws://localhost:8000}
       NUXT_PUBLIC_TURNSTILE_SITE_KEY: ${NUXT_PUBLIC_TURNSTILE_SITE_KEY:-1x00000000000000000000AA}
+      NUXT_PUBLIC_SITE_URL: ${NUXT_PUBLIC_SITE_URL:-http://localhost:3000}
     ports:
       - "${WEB_PORT:-3000}:3000"
     depends_on:

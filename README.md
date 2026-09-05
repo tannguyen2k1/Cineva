@@ -126,6 +126,24 @@ docker compose down          # giữ volume
 docker compose down -v       # xóa DB + uploads
 ```
 
+## SEO / Google Search Console
+
+Trên server `.env` (web):
+
+```env
+NUXT_PUBLIC_SITE_URL=https://your-domain.com
+```
+
+Sau khi deploy, kiểm tra:
+
+- `https://your-domain.com/robots.txt`
+- `https://your-domain.com/sitemap.xml`
+
+Trong [Google Search Console](https://search.google.com/search-console): thêm property domain → **Sitemaps** → gửi `sitemap.xml`.
+
+Trang index: `/`, `/phim`, `/phim/{slug}`.  
+`noindex`: admin, login/register, `/xem/*`, tủ phim / đã xem.
+
 ## Kiến trúc
 
 ```

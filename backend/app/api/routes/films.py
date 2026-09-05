@@ -71,6 +71,11 @@ async def public_list_films(
     )
 
 
+@public_router.get("/sitemap")
+async def public_sitemap(db: AsyncSession = Depends(get_db)):
+    return await films_service.sitemap_entries(db)
+
+
 @public_router.get("/films/{slug}")
 async def public_film_detail(
     slug: str,

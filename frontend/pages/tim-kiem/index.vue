@@ -38,6 +38,7 @@ const { data, pending } = await useAsyncData(
 const films = computed(() => data.value?.data || [])
 
 useSeoMeta({
-  title: () => `${t('cineva.searchResults')} — ${t('app.name')}`
+  title: () => `${t('cineva.searchResults')} — ${t('app.name')}`,
+  robots: 'index, follow'
 })
 </script>

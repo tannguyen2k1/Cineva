@@ -320,6 +320,18 @@ async def count_hidden_films(db: AsyncSession) -> int:
     ).scalar_one()
 
 
+async def list_sitemap_films(
+    db: AsyncSession, *, limit: int = 5000
+) -> list[tuple[str, datetime]]:
+    result = await db.execute(
+        select(Film.source_slug, Film.updated_at)
+        .where(Film.is_hidden.is_(False))
+        .order_by(Film.updated_at.desc())
+        .limit(limit)
+    )
+    return [(slug, updated_at) for slug, updated_at in result.all()]
+
+
 async def latest_source_modified(db: AsyncSession) -> datetime | None:
     return (
         await db.execute(select(func.max(Film.source_modified_at)))

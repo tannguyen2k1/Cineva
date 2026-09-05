@@ -95,6 +95,7 @@ function episodeLabel(item: ContinueItem) {
 }
 
 useSeoMeta({
-  title: () => `${t('cineva.watched')} — ${t('app.name')}`
+  title: () => `${t('cineva.watched')} — ${t('app.name')}`,
+  robots: 'noindex, nofollow'
 })
 </script>
