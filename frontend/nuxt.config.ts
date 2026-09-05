@@ -16,6 +16,8 @@ export default defineNuxtConfig({
         { name: 'color-scheme', content: 'light dark' }
       ],
       link: [
+        { rel: 'icon', type: 'image/svg+xml', href: '/brand/cineva-mark.svg' },
+        { rel: 'apple-touch-icon', href: '/brand/cineva-logo.png' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: 'anonymous' },
         { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap' }
@@ -44,22 +46,17 @@ export default defineNuxtConfig({
 
   i18n: {
     locales: [
-      { code: 'vi', language: 'vi-VN', name: 'Tiếng Việt', file: 'vi.json' },
-      { code: 'en', language: 'en-US', name: 'English', file: 'en.json' }
+      { code: 'vi', language: 'vi-VN', name: 'Tiếng Việt', file: 'vi.json' }
     ],
     langDir: 'locales',
     defaultLocale: 'vi',
     strategy: 'no_prefix',
-    detectBrowserLanguage: {
-      useCookie: true,
-      cookieKey: 'i18n_redirected',
-      redirectOn: 'root',
-      fallbackLocale: 'vi'
-    }
+    detectBrowserLanguage: false
   },
 
   turnstile: {
-    siteKey: process.env.NUXT_PUBLIC_TURNSTILE_SITE_KEY || ''
+    // Cloudflare always-pass test key when env missing (local/dev)
+    siteKey: process.env.NUXT_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'
   },
 
   runtimeConfig: {

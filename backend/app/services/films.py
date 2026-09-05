@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any
 
@@ -21,6 +22,8 @@ from app.services.film_mapper import (
 from app.services.nguonc_client import get_nguonc_client
 from app.services.system_log import write_system_log
 
+logger = logging.getLogger(__name__)
+
 _detail_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 
 
@@ -34,17 +37,121 @@ async def list_films(
     country: str | None = None,
     year: str | None = None,
     film_type: str | None = None,
+    sort: str = "newest",
     include_hidden: bool = False,
 ) -> dict:
+    keyword = (q or "").strip() or None
+    sort_key = sort if sort in {"newest", "name", "year"} else "newest"
+    # Catalog sync is partial — keyword search hits nguonc live, then upserts.
+    if (
+        keyword
+        and not include_hidden
+        and not genre
+        and not country
+        and not year
+        and not film_type
+    ):
+        try:
+            from app.services.film_sync import upsert_list_item
+
+            listing = await get_nguonc_client().search(keyword, page=page)
+            if listing.items:
+                films = [await upsert_list_item(db, item) for item in listing.items]
+                await db.commit()
+                return {
+                    "success": True,
+                    "data": [
+                        serialize_film_card(f, include_hidden=include_hidden)
+                        for f in films[:page_size]
+                    ],
+                    "total": listing.total_items or len(films),
+                    "page": page,
+                    "pageSize": page_size,
+                }
+        except Exception:
+            logger.exception("Nguonc search failed for %r", keyword)
+            await db.rollback()
+
+    # Single taxonomy browse: pull a page from nguonc so filters aren't empty.
+    if (
+        not include_hidden
+        and not keyword
+        and not year
+        and sum(bool(x) for x in (genre, country, film_type)) == 1
+    ):
+        try:
+            from app.services.film_sync import (
+                CATALOG_COUNTRIES,
+                CATALOG_GENRES,
+                CATALOG_LISTS,
+                upsert_list_item,
+            )
+
+            client = get_nguonc_client()
+            listing = None
+            tag_genre = None
+            tag_country = None
+            tag_type = None
+            if genre:
+                listing = await client.fetch_by_genre(genre, page=page)
+                name = next((n for s, n in CATALOG_GENRES if s == genre), genre)
+                tag_genre = (genre, name)
+            elif country:
+                listing = await client.fetch_by_country(country, page=page)
+                name = next((n for s, n in CATALOG_COUNTRIES if s == country), country)
+                tag_country = (country, name)
+            elif film_type:
+                listing = await client.fetch_by_list(film_type, page=page)
+                name = next((n for s, n in CATALOG_LISTS if s == film_type), film_type)
+                tag_type = (film_type, name)
+
+            if listing and listing.items:
+                films = []
+                for item in listing.items:
+                    film = await upsert_list_item(db, item)
+                    if tag_genre:
+                        await film_repo.ensure_film_genre(
+                            db, film=film, slug=tag_genre[0], name=tag_genre[1]
+                        )
+                    if tag_country:
+                        await film_repo.ensure_film_country(
+                            db, film=film, slug=tag_country[0], name=tag_country[1]
+                        )
+                    if tag_type:
+                        await film_repo.ensure_film_type(
+                            db, film=film, slug=tag_type[0], name=tag_type[1]
+                        )
+                    films.append(film)
+                await db.commit()
+                return {
+                    "success": True,
+                    "data": [
+                        serialize_film_card(f, include_hidden=include_hidden)
+                        for f in films[:page_size]
+                    ],
+                    "total": listing.total_items or len(films),
+                    "page": page,
+                    "pageSize": page_size,
+                }
+        except Exception:
+            logger.exception(
+                "Nguonc taxonomy browse failed genre=%r country=%r type=%r",
+                genre,
+                country,
+                film_type,
+            )
+            await db.rollback()
+
     films, total = await film_repo.list_films_page(
         db,
         page=page,
         page_size=page_size,
-        q=q,
+        q=keyword,
         genre=genre,
         country=country,
         year=year,
         film_type=film_type,
+        sort=sort_key,
         include_hidden=include_hidden,
     )
     return {
@@ -57,6 +164,11 @@ async def list_films(
 
 
 async def taxonomies(db: AsyncSession) -> dict:
+    from app.services.film_sync import seed_catalog_taxonomies
+
+    await seed_catalog_taxonomies(db)
+    await db.commit()
+
     genres = await film_repo.list_genres(db)
     countries = await film_repo.list_countries(db)
     types = await film_repo.list_film_types(db)

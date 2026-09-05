@@ -199,7 +199,7 @@ usePageRefresh(() => fetchData())
 
 ## i18n keys to add
 
-Add to both `i18n/locales/vi.json` and `en.json`:
+Add to `i18n/locales/vi.json`:
 
 ```json
 "{resource}": {
@@ -230,6 +230,6 @@ Add to both `i18n/locales/vi.json` and `en.json`:
 - [ ] Status toggle via `el-switch` calling PUT API
 - [ ] All user-facing strings use `t()` from `useI18n()`
 - [ ] Datetime columns use `useDateTime()` (`formatDate` / `formatDateTime`)
-- [ ] i18n keys added to both `vi.json` and `en.json`
+- [ ] i18n keys added to `vi.json`
 - [ ] `usePageRefresh(() => fetchData())` for pull-to-refresh support
 - [ ] Corresponding API endpoints exist (GET list, POST create, PUT update, DELETE)

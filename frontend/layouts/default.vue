@@ -9,8 +9,6 @@
         </div>
 
         <div :class="styles.headerRight">
-          <LocaleSwitcher />
-
           <div :class="styles.desktopOnly">
             <ThemeSwitcher />
             <el-dropdown trigger="click" @command="handleCommand">

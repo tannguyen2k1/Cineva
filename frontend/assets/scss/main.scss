@@ -190,26 +190,39 @@ h6 {
   transform: translateX(120%) !important;
 }
 
-/* Dark select popper for public watch/player UI */
+/* Dark popper for public select + member dropdown */
 .cineva-dark-select.el-popper,
 .cineva-dark-select {
-  background: #16161d !important;
+  --el-bg-color-overlay: #17171f;
+  --el-dropdown-menuItem-hover-fill: rgba(255, 214, 107, 0.12);
+  --el-dropdown-menuItem-hover-color: #ffd66b;
+  --el-border-color-light: rgba(255, 255, 255, 0.1);
+  background: #17171f !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45) !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5) !important;
+  overflow: hidden;
+  padding: 0.35rem !important;
 }
 
 .cineva-dark-select .el-popper__arrow::before {
-  background: #16161d !important;
+  background: #17171f !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
-.cineva-dark-select .el-select-dropdown__item {
+.cineva-dark-select .el-select-dropdown__item,
+.cineva-dark-select .el-dropdown-menu__item {
   color: #e4e4e7 !important;
   background: transparent !important;
+  border-radius: 0.45rem !important;
+  margin: 0.1rem 0;
+  font-weight: 500;
 }
 
 .cineva-dark-select .el-select-dropdown__item.is-hovering,
-.cineva-dark-select .el-select-dropdown__item:hover {
+.cineva-dark-select .el-select-dropdown__item:hover,
+.cineva-dark-select .el-dropdown-menu__item:not(.is-disabled):hover,
+.cineva-dark-select .el-dropdown-menu__item:focus {
   background: rgba(255, 255, 255, 0.06) !important;
   color: #ffd66b !important;
 }
@@ -218,4 +231,21 @@ h6 {
   color: #ffd66b !important;
   font-weight: 700;
   background: rgba(255, 214, 107, 0.12) !important;
+}
+
+.cineva-dark-select .el-dropdown-menu {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.cineva-dark-select .el-dropdown-menu__item--divided {
+  border-top-color: rgba(255, 255, 255, 0.1) !important;
+  margin-top: 0.35rem;
+}
+
+.cineva-dark-select .el-dropdown-menu__item--divided::before {
+  background: transparent !important;
+  height: 0 !important;
 }

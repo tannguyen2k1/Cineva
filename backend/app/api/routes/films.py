@@ -38,6 +38,7 @@ async def public_list_films(
     country: str | None = None,
     year: str | None = None,
     type: str | None = None,
+    sort: str = Query("newest", pattern="^(newest|name|year)$"),
     db: AsyncSession = Depends(get_db),
 ):
     return await films_service.list_films(
@@ -49,6 +50,7 @@ async def public_list_films(
         country=country,
         year=year,
         film_type=type,
+        sort=sort,
     )
 
 

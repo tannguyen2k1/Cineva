@@ -1,0 +1,156 @@
+.root {
+  position: relative;
+  width: 100%;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  &:focus-within {
+    border-color: rgba(255, 214, 107, 0.5);
+  }
+}
+
+.icon {
+  color: var(--cine-muted);
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--cine-text);
+  font: inherit;
+  font-size: 0.88rem;
+
+  &::placeholder {
+    color: #71717a;
+  }
+
+  // Hide browser native clear (conflicts with our clear button)
+  &::-webkit-search-cancel-button,
+  &::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+    display: none;
+  }
+}
+
+.clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: #71717a;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+
+  &:hover {
+    color: #ffd66b;
+  }
+}
+
+.panel {
+  position: absolute;
+  z-index: 80;
+  top: calc(100% + 0.45rem);
+  left: 0;
+  right: 0;
+  min-width: min(360px, 92vw);
+  max-height: min(420px, 70vh);
+  overflow: auto;
+  border-radius: 0.85rem;
+  background: #141416;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  text-decoration: none;
+  color: inherit;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+
+  &:hover,
+  &.active {
+    background: rgba(255, 214, 107, 0.08);
+  }
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.thumb {
+  width: 40px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 0.35rem;
+  background: #27272a;
+  flex-shrink: 0;
+}
+
+.meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.title {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #f4f4f5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sub {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: #a1a1aa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status {
+  padding: 0.85rem 1rem;
+  font-size: 0.85rem;
+  color: #a1a1aa;
+}
+
+.footer {
+  display: block;
+  padding: 0.7rem 0.85rem;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #ffd66b;
+  text-decoration: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+
+  &:hover {
+    background: rgba(255, 214, 107, 0.06);
+  }
+}
+
+@media (max-width: 900px) {
+  .panel {
+    min-width: 100%;
+  }
+}

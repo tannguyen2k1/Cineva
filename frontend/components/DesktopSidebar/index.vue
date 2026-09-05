@@ -10,7 +10,7 @@
 
     <nav :class="styles.nav">
       <el-menu
-        :key="`${activeMenu}-${locale}`"
+        :key="activeMenu"
         :default-active="activeMenu"
         :class="styles.menu"
         style="--el-menu-bg-color: transparent; --el-menu-text-color: var(--text-sidebar); --el-menu-active-color: var(--text-sidebar-active);"
@@ -68,7 +68,7 @@ import { useI18n } from 'vue-i18n';
 import { Odometer, User, Box, Document } from '@element-plus/icons-vue';
 import styles from './DesktopSidebar.module.scss';
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const route = useRoute();
 const authStore = useAuthStore();
 

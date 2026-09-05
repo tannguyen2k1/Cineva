@@ -250,8 +250,10 @@ class NguoncClient:
         data = await self._get(f"/api/films/nam-phat-hanh/{year}", {"page": page})
         return self._map_list_page(data)
 
-    async def search(self, keyword: str) -> NguoncListPage:
-        data = await self._get("/api/films/search", {"keyword": keyword})
+    async def search(self, keyword: str, page: int = 1) -> NguoncListPage:
+        data = await self._get(
+            "/api/films/search", {"keyword": keyword, "page": page}
+        )
         return self._map_list_page(data)
 
     async def fetch_detail(self, slug: str) -> NguoncFilmDetail:

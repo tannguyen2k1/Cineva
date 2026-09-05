@@ -137,6 +137,8 @@ async def list_comments(
                 "id": c.id,
                 "body": c.body,
                 "username": c.user.username if c.user else "user",
+                "fullName": c.user.full_name if c.user else None,
+                "avatar": c.user.avatar if c.user else None,
                 "createdAt": c.created_at,
             }
             for c in rows

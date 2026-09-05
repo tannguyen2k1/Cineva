@@ -128,7 +128,7 @@ Sync with `ensure_system_permissions` on login / seed. Admin role always gets fu
 
 ## 7. Internationalization
 
-- `@nuxtjs/i18n` in frontend. Default `vi`. Keep `vi.json` / `en.json` in sync.
+- `@nuxtjs/i18n` in frontend. Locale **vi only** (no EN / no language switcher). Copy in `vi.json`.
 - Never hardcode UI copy — use `t()`.
 
 ## 8. Docker

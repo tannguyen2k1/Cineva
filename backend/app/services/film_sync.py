@@ -25,17 +25,30 @@ CATALOG_LISTS: list[tuple[str, str]] = [
     ("tv-shows", "TV Shows"),
 ]
 
+# Full genre set matching phim.nguonc.com mega-menu (slugs verified).
 CATALOG_GENRES: list[tuple[str, str]] = [
     ("hanh-dong", "Hành Động"),
-    ("tinh-cam", "Tình Cảm"),
+    ("phieu-luu", "Phiêu Lưu"),
+    ("hoat-hinh", "Hoạt Hình"),
+    ("phim-hai", "Hài"),
+    ("hinh-su", "Hình Sự"),
+    ("tai-lieu", "Tài Liệu"),
+    ("chinh-kich", "Chính Kịch"),
+    ("gia-dinh", "Gia Đình"),
+    ("gia-tuong", "Giả Tưởng"),
+    ("lich-su", "Lịch Sử"),
     ("kinh-di", "Kinh Dị"),
-    ("co-trang", "Cổ Trang"),
-    ("khoa-hoc-vien-tuong", "Viễn Tưởng"),
+    ("phim-nhac", "Nhạc"),
+    ("bi-an", "Bí Ẩn"),
+    ("lang-man", "Lãng Mạn"),
+    ("khoa-hoc-vien-tuong", "Khoa Học Viễn Tưởng"),
+    ("gay-can", "Gây Cấn"),
     ("chien-tranh", "Chiến Tranh"),
     ("tam-ly", "Tâm Lý"),
-    ("phieu-luu", "Phiêu Lưu"),
-    ("hinh-su", "Hình Sự"),
-    ("chinh-kich", "Chính Kịch"),
+    ("tinh-cam", "Tình Cảm"),
+    ("co-trang", "Cổ Trang"),
+    ("mien-tay", "Miền Tây"),
+    ("phim-18", "Phim 18+"),
 ]
 
 CATALOG_COUNTRIES: list[tuple[str, str]] = [
@@ -61,6 +74,17 @@ async def upsert_list_item(db: AsyncSession, item) -> Film:
         film.synced_at = now
         await db.flush()
     return film
+
+
+async def seed_catalog_taxonomies(db: AsyncSession) -> None:
+    """Ensure mega-menu / filter options exist even before films are synced."""
+    for slug, name in CATALOG_GENRES:
+        await film_repo.get_or_create_genre(db, slug=slug, name=name)
+    for slug, name in CATALOG_COUNTRIES:
+        await film_repo.get_or_create_country(db, slug=slug, name=name)
+    for slug, name in CATALOG_LISTS:
+        await film_repo.get_or_create_film_type(db, slug=slug, name=name)
+    await db.flush()
 
 
 async def _sync_listing_pages(
@@ -186,6 +210,9 @@ async def run_catalog_sync(
 
     upserted = 0
     try:
+        await seed_catalog_taxonomies(db)
+        await db.commit()
+
         upserted += await _sync_listing_pages(
             db,
             fetch=client.fetch_newest,

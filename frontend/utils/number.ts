@@ -1,6 +1,6 @@
 /**
  * Display numbers via Intl — never ad-hoc separators / toFixed in pages.
- * Locale comes from i18n (`vi` → vi-VN, `en` → en-US).
+ * Locale is Vietnamese (`vi` → `vi-VN`).
  */
 
 export type NumberInput = number | string | null | undefined

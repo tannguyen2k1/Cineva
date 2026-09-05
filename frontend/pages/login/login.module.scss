@@ -1,7 +1,7 @@
-@keyframes fadeSlideIn {
+@keyframes fadeUp {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(14px);
   }
   to {
     opacity: 1;
@@ -9,153 +9,179 @@
   }
 }
 
-@keyframes meshDrift {
+@keyframes glowDrift {
   0%,
   100% {
     transform: translate(0, 0) scale(1);
   }
   50% {
-    transform: translate(3%, -2%) scale(1.04);
+    transform: translate(4%, -3%) scale(1.05);
   }
 }
 
 .page {
-  display: grid;
-  grid-template-columns: 1.05fr 1fr;
-  min-height: 100vh;
-  width: 100%;
-  overflow: hidden;
-  background: var(--bg-body);
-}
-
-/* --- BRAND PANEL --- */
-.brand {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: 56px 64px;
-  color: #f8fafc;
+  min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
-  background: linear-gradient(155deg, #0b1220 0%, #0f172a 42%, #132337 100%);
-  animation: fadeSlideIn 0.7s ease-out both;
+  background: #0b0b0f;
+  color: #fff;
+  font-family: 'Outfit', system-ui, sans-serif;
 }
 
-.brandMesh {
+.bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bgGlow {
   position: absolute;
   inset: -20%;
   background:
-    radial-gradient(ellipse 50% 40% at 20% 30%, rgba(59, 130, 246, 0.35), transparent 55%),
-    radial-gradient(ellipse 45% 35% at 80% 70%, rgba(14, 165, 233, 0.2), transparent 50%),
-    radial-gradient(ellipse 30% 25% at 60% 20%, rgba(59, 130, 246, 0.12), transparent 45%);
-  animation: meshDrift 14s ease-in-out infinite;
-  pointer-events: none;
+    radial-gradient(ellipse 45% 40% at 15% 20%, rgba(255, 214, 107, 0.16), transparent 55%),
+    radial-gradient(ellipse 40% 35% at 85% 75%, rgba(240, 180, 41, 0.1), transparent 50%),
+    radial-gradient(ellipse 50% 30% at 50% 100%, rgba(255, 255, 255, 0.04), transparent 55%);
+  animation: glowDrift 16s ease-in-out infinite;
 }
 
-.brandGrid {
+.bgGrain {
   position: absolute;
   inset: 0;
+  opacity: 0.35;
   background-image:
-    linear-gradient(rgba(148, 163, 184, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.07) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent 75%);
-  pointer-events: none;
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 20%, transparent 75%);
 }
 
-.brandContent {
+.top {
   position: relative;
   z-index: 1;
-  max-width: 440px;
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1rem;
 }
 
-.brandName {
-  margin: 0 0 16px;
-  font-family: 'Outfit', sans-serif;
-  font-size: clamp(2.75rem, 5vw, 3.75rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-  color: #ffffff;
+.brandLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  text-decoration: none;
+  color: #fff;
+
+  span {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+  }
+
+  strong {
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  small {
+    color: #a1a1aa;
+    font-size: 0.7rem;
+  }
 }
 
-.brandTagline {
-  margin: 0;
-  font-family: 'Inter', sans-serif;
-  font-size: 1.125rem;
-  font-weight: 400;
-  line-height: 1.55;
-  color: rgba(226, 232, 240, 0.78);
-  max-width: 28ch;
+.logo {
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 0.5rem;
+  display: block;
 }
 
-/* --- FORM PANEL --- */
-.formPanel {
+.main {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 48px 40px;
-  background: var(--bg-card);
-  animation: fadeSlideIn 0.7s ease-out 0.12s both;
+  padding: 1rem 1.25rem 2.5rem;
+  min-height: calc(100vh - 5rem);
+  min-height: calc(100dvh - 5rem);
 }
 
-.formInner {
-  width: 100%;
-  max-width: 380px;
+.card {
+  width: min(420px, 100%);
+  padding: 1.75rem 1.5rem 1.5rem;
+  border-radius: 1.1rem;
+  background: rgba(22, 22, 30, 0.88);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 24px 60px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(16px);
+  animation: fadeUp 0.55s ease both;
 }
 
-.formHeader {
-  margin-bottom: 36px;
-}
+.cardHead {
+  margin-bottom: 1.5rem;
 
-.formHeaderTop {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-}
+  h1 {
+    margin: 0 0 0.4rem;
+    font-size: 1.65rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #fff !important;
+  }
 
-.formTitle {
-  margin: 0;
-  font-family: 'Outfit', sans-serif;
-  font-size: 1.75rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  letter-spacing: -0.02em;
-}
-
-.formSubtitle {
-  margin: 0;
-  font-size: 0.9375rem;
-  color: var(--text-secondary);
-  line-height: 1.5;
+  p {
+    margin: 0;
+    color: #a1a1aa;
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
 }
 
 .form {
   :global(.el-form-item) {
-    margin-bottom: 22px;
+    margin-bottom: 1.1rem;
   }
 
   :global(.el-form-item__label) {
+    color: #e4e4e7 !important;
     font-weight: 500;
-    color: var(--text-primary);
-    padding-bottom: 6px;
+    padding-bottom: 0.35rem;
   }
 
   :global(.el-input__wrapper) {
-    min-height: 44px;
-    padding: 4px 14px;
+    min-height: 2.75rem;
+    border-radius: 0.65rem !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) inset !important;
+  }
+
+  :global(.el-input__wrapper:hover),
+  :global(.el-input__wrapper.is-focus) {
+    box-shadow: 0 0 0 1px rgba(255, 214, 107, 0.45) inset !important;
+  }
+
+  :global(.el-input__inner) {
+    color: #fff !important;
+
+    &::placeholder {
+      color: #71717a;
+    }
+  }
+
+  :global(.el-input__suffix),
+  :global(.el-input__clear),
+  :global(.el-input__password) {
+    color: #a1a1aa;
   }
 }
 
-.submitItem {
-  margin-top: 8px;
-  margin-bottom: 0 !important;
-}
-
 .turnstileItem {
-  margin-bottom: 8px !important;
+  margin-bottom: 0.5rem !important;
 
   :global(.el-form-item__content) {
     display: flex;
@@ -164,7 +190,7 @@
   }
 
   :global(.el-form-item__error) {
-    padding-top: 8px;
+    padding-top: 0.5rem;
     text-align: center;
     width: 100%;
   }
@@ -176,22 +202,27 @@
   width: 100%;
 }
 
+.submitItem {
+  margin-top: 0.35rem;
+  margin-bottom: 0 !important;
+}
+
 .submitBtn {
   width: 100%;
-  height: 48px !important;
-  font-family: 'Outfit', sans-serif;
-  font-size: 15px !important;
-  font-weight: 600 !important;
-  border-radius: var(--radius-md) !important;
-  letter-spacing: 0.02em;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease !important;
-  box-shadow: var(--shadow-glow);
+  height: 2.85rem !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #ffd66b !important;
+  color: #111 !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 0.98rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.01em;
+  transition: transform 0.15s ease, filter 0.15s ease !important;
 
   &:hover:not(:disabled) {
+    filter: brightness(1.05);
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.45);
   }
 
   &:active:not(:disabled) {
@@ -199,56 +230,36 @@
   }
 }
 
-.formFooter {
-  margin-top: 28px;
+.meta {
+  margin: 1.15rem 0 0.65rem;
   text-align: center;
-  font-size: 12px;
-  color: var(--text-secondary);
+  font-size: 0.75rem;
+  color: #71717a;
 }
 
-/* --- RESPONSIVE --- */
-@media (max-width: 900px) {
-  .page {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
-  }
+.backHome {
+  display: block;
+  text-align: center;
+  color: #ffd66b !important;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
 
-  .brand {
-    min-height: 220px;
-    padding: 40px 32px 36px;
-    justify-content: flex-end;
-  }
-
-  .brandName {
-    font-size: 2.25rem;
-    margin-bottom: 10px;
-  }
-
-  .brandTagline {
-    font-size: 1rem;
-  }
-
-  .formPanel {
-    padding: 40px 28px 48px;
-    align-items: flex-start;
+  &:hover {
+    text-decoration: underline;
   }
 }
 
-@media (max-width: 480px) {
-  .brand {
-    min-height: 180px;
-    padding: 32px 24px 28px;
+@media (max-width: 520px) {
+  .brandLink small {
+    display: none;
   }
 
-  .brandName {
-    font-size: 1.875rem;
+  .card {
+    padding: 1.4rem 1.15rem 1.25rem;
   }
 
-  .formPanel {
-    padding: 32px 20px 40px;
-  }
-
-  .formTitle {
-    font-size: 1.5rem;
+  .cardHead h1 {
+    font-size: 1.4rem;
   }
 }

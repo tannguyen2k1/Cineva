@@ -20,7 +20,7 @@ description: >-
 4. Schema + repository    → backend/app/schemas/<name>.py, app/repositories/<name>.py
 5. Service + API routes   → backend/app/services/, app/api/routes/ (+ router.py)
 6. CRUD page              → frontend/pages/ (see nuxt-crud-page)
-7. i18n                   → frontend/i18n/locales/vi.json + en.json
+7. i18n                   → frontend/i18n/locales/vi.json
 8. Sidebar                → frontend layout / nav
 ```
 

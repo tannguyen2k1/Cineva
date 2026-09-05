@@ -1,22 +1,25 @@
 <template>
   <div :class="styles.page">
-    <section :class="styles.brand" :aria-label="t('app.name')">
-      <div :class="styles.brandMesh" aria-hidden="true" />
-      <div :class="styles.brandGrid" aria-hidden="true" />
-      <div :class="styles.brandContent">
-        <h1 :class="styles.brandName">{{ t('app.name') }}</h1>
-        <p :class="styles.brandTagline">{{ t('login.brandTagline') }}</p>
-      </div>
-    </section>
+    <div :class="styles.bg" aria-hidden="true">
+      <div :class="styles.bgGlow" />
+      <div :class="styles.bgGrain" />
+    </div>
 
-    <section :class="styles.formPanel">
-      <div :class="styles.formInner">
-        <header :class="styles.formHeader">
-          <div :class="styles.formHeaderTop">
-            <h2 :class="styles.formTitle">{{ t('login.title') }}</h2>
-            <LocaleSwitcher />
-          </div>
-          <p :class="styles.formSubtitle">{{ t('login.subtitle') }}</p>
+    <header :class="styles.top">
+      <NuxtLink to="/" :class="styles.brandLink" :title="t('app.name')">
+        <img src="/brand/cineva-mark.svg" alt="" width="36" height="36" :class="styles.logo" />
+        <span>
+          <strong>{{ t('app.name') }}</strong>
+          <small>{{ t('app.tagline') }}</small>
+        </span>
+      </NuxtLink>
+    </header>
+
+    <main :class="styles.main">
+      <section :class="styles.card">
+        <header :class="styles.cardHead">
+          <h1>{{ t('login.title') }}</h1>
+          <p>{{ t('login.subtitle') }}</p>
         </header>
 
         <el-form
@@ -32,6 +35,7 @@
               v-model="form.username"
               :placeholder="t('login.usernamePlaceholder')"
               clearable
+              autocomplete="username"
             />
           </el-form-item>
 
@@ -41,6 +45,7 @@
               type="password"
               :placeholder="t('login.passwordPlaceholder')"
               show-password
+              autocomplete="current-password"
               @keyup.enter="handleLogin"
             />
           </el-form-item>
@@ -48,17 +53,15 @@
           <el-form-item prop="turnstileToken" :class="styles.turnstileItem">
             <div :class="styles.turnstileWrap">
               <NuxtTurnstile
-                :key="turnstileTheme"
                 ref="turnstileRef"
                 v-model="form.turnstileToken"
-                :options="{ theme: turnstileTheme, size: 'normal' }"
+                :options="{ theme: 'dark', size: 'normal' }"
               />
             </div>
           </el-form-item>
 
           <el-form-item :class="styles.submitItem">
             <el-button
-              type="primary"
               :loading="loading"
               :class="styles.submitBtn"
               @click="handleLogin"
@@ -68,77 +71,77 @@
           </el-form-item>
         </el-form>
 
-        <p :class="styles.formFooter">{{ t('login.footer') }}</p>
-      </div>
-    </section>
+        <p :class="styles.meta">{{ t('login.footer') }}</p>
+        <NuxtLink to="/" :class="styles.backHome">← {{ t('login.backHome') }}</NuxtLink>
+      </section>
+    </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue';
-import { ElMessage } from 'element-plus';
-import { useDark } from '@vueuse/core';
-import styles from './login.module.scss';
+import { ref, reactive, computed } from 'vue'
+import { ElMessage } from 'element-plus'
+import styles from './login.module.scss'
 
 definePageMeta({
   layout: false
-});
+})
 
-const { t } = useI18n();
-const authStore = useAuthStore();
-const formRef = ref();
-const turnstileRef = ref<{ reset?: () => void } | null>(null);
-const loading = ref(false);
-const isDark = useDark();
-const turnstileTheme = computed<'light' | 'dark'>(() => (isDark.value ? 'dark' : 'light'));
+const { t } = useI18n()
+const authStore = useAuthStore()
+const formRef = ref()
+const turnstileRef = ref<{ reset?: () => void } | null>(null)
+const loading = ref(false)
 
 const form = reactive({
   username: '',
   password: '',
   turnstileToken: ''
-});
+})
 
 const rules = computed(() => ({
   username: [{ required: true, message: t('login.requiredUsername'), trigger: 'blur' }],
   password: [{ required: true, message: t('login.requiredPassword'), trigger: 'blur' }],
   turnstileToken: [{ required: true, message: t('login.requiredTurnstile'), trigger: 'change' }]
-}));
+}))
 
 const resetTurnstile = () => {
-  form.turnstileToken = '';
-  turnstileRef.value?.reset?.();
-};
-
-watch(turnstileTheme, () => {
-  form.turnstileToken = '';
-});
+  form.turnstileToken = ''
+  turnstileRef.value?.reset?.()
+}
 
 const handleLogin = async () => {
-  if (!formRef.value) return;
+  if (!formRef.value) return
   await formRef.value.validate(async (valid: boolean) => {
-    if (valid) {
-      loading.value = true;
-      try {
-        const { data } = await apiFetch<any>('/api/auth/login', {
-          method: 'POST',
-          body: {
-            username: form.username,
-            password: form.password,
-            turnstileToken: form.turnstileToken
-          }
-        });
+    if (!valid) return
+    loading.value = true
+    try {
+      const { data } = await apiFetch<{
+        user: { fullName?: string; username?: string }
+        permissions: string[]
+      }>('/api/auth/login', {
+        method: 'POST',
+        body: {
+          username: form.username,
+          password: form.password,
+          turnstileToken: form.turnstileToken
+        }
+      })
 
-        authStore.setAuth(data.user, data.permissions);
-        const displayName = data.user?.fullName || data.user?.username || form.username;
-        ElMessage.success(t('login.welcome', { name: displayName }));
-        navigateTo('/');
-      } catch (err: any) {
-        ElMessage.error(err.data?.statusMessage || t('login.failed'));
-        resetTurnstile();
-      } finally {
-        loading.value = false;
-      }
+      authStore.setAuth(data.user, data.permissions)
+      const displayName = data.user?.fullName || data.user?.username || form.username
+      ElMessage.success(t('login.welcome', { name: displayName }))
+      navigateTo('/')
+    } catch (err: any) {
+      ElMessage.error(err.data?.statusMessage || t('login.failed'))
+      resetTurnstile()
+    } finally {
+      loading.value = false
     }
-  });
-};
+  })
+}
+
+useSeoMeta({
+  title: () => `${t('login.title')} — ${t('app.name')}`
+})
 </script>

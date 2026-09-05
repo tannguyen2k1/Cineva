@@ -3,80 +3,120 @@
     <header :class="styles.header">
       <div :class="styles.headerInner">
         <NuxtLink to="/" :class="styles.brand" :title="t('app.name')">
-          <span :class="styles.brandMark" aria-hidden="true">C</span>
+          <img
+            src="/brand/cineva-mark.svg"
+            alt=""
+            width="36"
+            height="36"
+            :class="styles.brandLogo"
+          />
           <span :class="styles.brandText">
             <strong>{{ t('app.name') }}</strong>
             <small>{{ t('app.tagline') }}</small>
           </span>
         </NuxtLink>
 
-        <form :class="styles.search" @submit.prevent="onSearch">
-          <el-icon :class="styles.searchIcon"><Search /></el-icon>
-          <input
-            v-model="keyword"
-            type="search"
-            :placeholder="t('cineva.searchPlaceholder')"
-            :class="styles.searchInput"
-            autocomplete="off"
-          />
-        </form>
+        <div :class="styles.searchSlot">
+          <HeaderSearch />
+        </div>
 
         <nav :class="styles.menu">
           <NuxtLink to="/phim">{{ t('cineva.movies') }}</NuxtLink>
           <NuxtLink to="/phim?type=phim-le">{{ t('cineva.moviesSingle') }}</NuxtLink>
           <NuxtLink to="/phim?type=phim-bo">{{ t('cineva.moviesSeries') }}</NuxtLink>
-          <el-dropdown trigger="hover" :teleported="true">
-            <span :class="styles.menuDrop">{{ t('cineva.genres') }}</span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item
-                  v-for="g in navGenres"
-                  :key="g.slug"
-                  @click="go(`/phim?genre=${g.slug}`)"
-                >
-                  {{ g.name }}
-                </el-dropdown-item>
-                <el-dropdown-item divided @click="go('/phim')">
-                  {{ t('cineva.viewAll') }}
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-          <el-dropdown trigger="hover">
-            <span :class="styles.menuDrop">{{ t('cineva.countries') }}</span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item
-                  v-for="c in navCountries"
-                  :key="c.slug"
-                  @click="go(`/phim?country=${c.slug}`)"
-                >
-                  {{ c.name }}
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
+
+          <div
+            :class="[styles.mega, openMenu === 'genres' ? styles.megaOpen : '']"
+            @mouseenter="openMenu = 'genres'"
+            @mouseleave="openMenu = null"
+          >
+            <button type="button" :class="styles.menuDrop" :aria-expanded="openMenu === 'genres'">
+              {{ t('cineva.genres') }}
+              <span :class="styles.chev" aria-hidden="true" />
+            </button>
+            <div :class="[styles.megaPanel, styles.megaWide]" role="menu">
+              <NuxtLink
+                v-for="g in navGenres"
+                :key="g.slug"
+                :to="`/phim?genre=${g.slug}`"
+                role="menuitem"
+                @click="openMenu = null"
+              >
+                {{ g.name }}
+              </NuxtLink>
+              <NuxtLink
+                v-if="navGenres.length"
+                :to="'/phim'"
+                :class="styles.megaAll"
+                role="menuitem"
+                @click="openMenu = null"
+              >
+                {{ t('cineva.viewAll') }} →
+              </NuxtLink>
+            </div>
+          </div>
+
+          <div
+            :class="[styles.mega, openMenu === 'countries' ? styles.megaOpen : '']"
+            @mouseenter="openMenu = 'countries'"
+            @mouseleave="openMenu = null"
+          >
+            <button type="button" :class="styles.menuDrop" :aria-expanded="openMenu === 'countries'">
+              {{ t('cineva.countries') }}
+              <span :class="styles.chev" aria-hidden="true" />
+            </button>
+            <div :class="[styles.megaPanel, styles.megaNarrow]" role="menu">
+              <NuxtLink
+                v-for="c in navCountries"
+                :key="c.slug"
+                :to="`/phim?country=${c.slug}`"
+                role="menuitem"
+                @click="openMenu = null"
+              >
+                {{ c.name }}
+              </NuxtLink>
+            </div>
+          </div>
         </nav>
 
         <div :class="styles.actions">
-          <NuxtLink
-            v-if="authStore.hasPermission('read:dashboard')"
-            to="/dashboard"
-            :class="styles.navLink"
-          >
-            {{ t('cineva.admin') }}
-          </NuxtLink>
           <NuxtLink v-if="!authStore.isLoggedIn" to="/login" :class="styles.memberBtn">
             {{ t('cineva.member') }}
           </NuxtLink>
-          <el-dropdown v-else trigger="click" @command="onCommand">
-            <button type="button" :class="styles.memberBtn">
-              {{ authStore.user?.username || t('cineva.member') }}
+          <el-dropdown
+            v-else
+            trigger="click"
+            popper-class="cineva-dark-select"
+            @command="onCommand"
+          >
+            <button type="button" :class="styles.userTrigger">
+              <UserProfile
+                :username="authStore.user?.username || ''"
+                :full-name="authStore.user?.fullName"
+                :avatar="authStore.user?.avatar"
+                :size="32"
+                :text-class="styles.userName"
+              />
+              <el-icon :class="styles.userChevron"><ArrowDown /></el-icon>
             </button>
             <template #dropdown>
               <el-dropdown-menu>
+                <el-dropdown-item command="profile">{{ t('header.profile') }}</el-dropdown-item>
+                <el-dropdown-item command="watched">{{ t('cineva.watched') }}</el-dropdown-item>
                 <el-dropdown-item command="watchlist">{{ t('cineva.watchlist') }}</el-dropdown-item>
-                <el-dropdown-item command="logout" divided>{{ t('header.logout') }}</el-dropdown-item>
+                <el-dropdown-item
+                  v-if="authStore.hasPermission('read:dashboard')"
+                  command="admin"
+                  divided
+                >
+                  {{ t('cineva.admin') }}
+                </el-dropdown-item>
+                <el-dropdown-item
+                  command="logout"
+                  :divided="!authStore.hasPermission('read:dashboard')"
+                >
+                  {{ t('header.logout') }}
+                </el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -89,10 +129,62 @@
     </main>
 
     <footer :class="styles.footer">
+      <div :class="styles.footerGlow" aria-hidden="true" />
       <div :class="styles.footerInner">
-        <strong>{{ t('app.name') }}</strong>
-        <p>{{ t('cineva.footerBlurb') }}</p>
+        <div :class="styles.footerBrand">
+          <NuxtLink to="/" :class="styles.footerLogo">
+            <img
+              src="/brand/cineva-mark.svg"
+              alt=""
+              width="40"
+              height="40"
+              :class="styles.brandLogo"
+            />
+            <span>
+              <strong>{{ t('app.name') }}</strong>
+              <small>{{ t('app.tagline') }}</small>
+            </span>
+          </NuxtLink>
+          <p>{{ t('cineva.footerBlurb') }}</p>
+        </div>
+
+        <div :class="styles.footerCol">
+          <h3>{{ t('cineva.footerExplore') }}</h3>
+          <NuxtLink to="/phim">{{ t('cineva.movies') }}</NuxtLink>
+          <NuxtLink to="/phim?type=phim-le">{{ t('cineva.moviesSingle') }}</NuxtLink>
+          <NuxtLink to="/phim?type=phim-bo">{{ t('cineva.moviesSeries') }}</NuxtLink>
+          <NuxtLink to="/phim?type=dang-chieu">{{ t('cineva.nowShowing') }}</NuxtLink>
+          <NuxtLink v-if="authStore.isLoggedIn" to="/da-xem">{{ t('cineva.watched') }}</NuxtLink>
+          <NuxtLink v-if="authStore.isLoggedIn" to="/tu-phim">{{ t('cineva.watchlist') }}</NuxtLink>
+        </div>
+
+        <div :class="styles.footerCol">
+          <h3>{{ t('cineva.genres') }}</h3>
+          <NuxtLink
+            v-for="g in footerGenres"
+            :key="g.slug"
+            :to="`/phim?genre=${g.slug}`"
+          >
+            {{ g.name }}
+          </NuxtLink>
+          <NuxtLink to="/phim" :class="styles.footerMore">{{ t('cineva.viewAll') }} →</NuxtLink>
+        </div>
+
+        <div :class="styles.footerCol">
+          <h3>{{ t('cineva.countries') }}</h3>
+          <NuxtLink
+            v-for="c in footerCountries"
+            :key="c.slug"
+            :to="`/phim?country=${c.slug}`"
+          >
+            {{ c.name }}
+          </NuxtLink>
+        </div>
+      </div>
+
+      <div :class="styles.footerBottom">
         <span>{{ t('app.footer', { year: new Date().getFullYear() }) }}</span>
+        <span>{{ t('cineva.footerNote') }}</span>
       </div>
     </footer>
   </div>
@@ -100,7 +192,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { Search } from '@element-plus/icons-vue'
+import { ArrowDown } from '@element-plus/icons-vue'
 import styles from './public.module.scss'
 
 const { t } = useI18n()
@@ -109,7 +201,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const rootEl = ref<HTMLElement | null>(null)
-const keyword = ref(typeof route.query.q === 'string' ? route.query.q : '')
+const openMenu = ref<'genres' | 'countries' | null>(null)
 
 type TaxonomyItem = { slug: string; name: string }
 type TaxonomiesResponse = {
@@ -127,29 +219,34 @@ const { data: tax } = await useAsyncData('public-taxonomies-nav', () =>
 
 const navGenres = computed(() => tax.value?.data?.genres || [])
 const navCountries = computed(() => tax.value?.data?.countries || [])
+const footerGenres = computed(() => navGenres.value.slice(0, 6))
+const footerCountries = computed(() => navCountries.value.slice(0, 6))
 
-// Layout scrolls inside .root (body is overflow:hidden), so reset on navigate
 watch(
   () => route.fullPath,
   async () => {
+    openMenu.value = null
     await nextTick()
     if (rootEl.value) rootEl.value.scrollTop = 0
     window.scrollTo(0, 0)
   }
 )
 
-function onSearch() {
-  const q = keyword.value.trim()
-  router.push(q ? { path: '/tim-kiem', query: { q } } : '/phim')
-}
-
-function go(path: string) {
-  router.push(path)
-}
-
 async function onCommand(cmd: string) {
+  if (cmd === 'profile') {
+    await router.push('/profile')
+    return
+  }
+  if (cmd === 'watched') {
+    await router.push('/da-xem')
+    return
+  }
   if (cmd === 'watchlist') {
     await router.push('/tu-phim')
+    return
+  }
+  if (cmd === 'admin') {
+    await router.push('/dashboard')
     return
   }
   if (cmd === 'logout') {

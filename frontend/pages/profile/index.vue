@@ -138,6 +138,8 @@ import { Camera, Loading } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';
 
+definePageMeta({ layout: 'public' })
+
 const authStore = useAuthStore();
 const formRef = ref<FormInstance>();
 const loading = ref(false);

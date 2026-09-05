@@ -15,15 +15,40 @@
           <span v-if="film.language">{{ film.language }}</span>
           <span v-if="film.currentEpisode">{{ film.currentEpisode }}</span>
         </div>
-        <p :class="styles.rating">
-          ★ {{ film.avgRating || 0 }}
-          <small>({{ film.ratingCount || 0 }})</small>
-        </p>
+        <div :class="styles.ratingRow">
+          <div v-if="(film.ratingCount || 0) > 0" :class="styles.rating">
+            ★ {{ film.avgRating }}
+            <small>({{ film.ratingCount }})</small>
+          </div>
+          <div v-if="authStore.isLoggedIn" :class="styles.rateBox">
+            <span>{{ t('cineva.yourRating') }}</span>
+            <el-rate
+              v-model="userScore"
+              :max="10"
+              :clearable="false"
+              :colors="['#ffd66b', '#ffd66b', '#ffd66b']"
+              void-color="rgba(255,255,255,0.2)"
+              disabled-void-color="rgba(255,255,255,0.15)"
+              @change="onRate"
+            />
+          </div>
+          <NuxtLink v-else to="/login" :class="styles.rateHint">
+            {{ t('cineva.loginToRate') }}
+          </NuxtLink>
+        </div>
         <div :class="styles.actions">
           <NuxtLink :to="watchLink" :class="styles.primaryBtn">{{ t('cineva.watchNow') }}</NuxtLink>
-          <el-button v-if="authStore.isLoggedIn" @click="toggleWatchlist">
+          <button
+            v-if="authStore.isLoggedIn"
+            type="button"
+            :class="[styles.ghostBtn, film.inWatchlist ? styles.ghostActive : '']"
+            @click="toggleWatchlist"
+          >
             {{ film.inWatchlist ? t('cineva.removeWatchlist') : t('cineva.addWatchlist') }}
-          </el-button>
+          </button>
+          <NuxtLink v-else to="/login" :class="styles.ghostBtn">
+            {{ t('cineva.addWatchlist') }}
+          </NuxtLink>
         </div>
         <p v-if="film.director"><strong>{{ t('cineva.director') }}:</strong> {{ film.director }}</p>
         <p v-if="film.casts"><strong>{{ t('cineva.casts') }}:</strong> {{ film.casts }}</p>
@@ -68,21 +93,39 @@
           v-model="commentBody"
           type="textarea"
           :rows="3"
+          :class="styles.commentInput"
           :placeholder="t('cineva.commentPlaceholder')"
           maxlength="2000"
           show-word-limit
         />
-        <el-button type="primary" :loading="commenting" @click="submitComment">
-          {{ t('cineva.postComment') }}
-        </el-button>
+        <button
+          type="button"
+          :class="styles.commentSubmit"
+          :disabled="commenting || !commentBody.trim()"
+          @click="submitComment"
+        >
+          {{ commenting ? '...' : t('cineva.postComment') }}
+        </button>
       </div>
       <p v-else :class="styles.loginHint">
         <NuxtLink to="/login">{{ t('login.title') }}</NuxtLink> {{ t('cineva.toComment') }}
       </p>
       <div v-if="comments.length" :class="styles.commentList">
         <article v-for="c in comments" :key="c.id" :class="styles.commentItem">
-          <strong>{{ c.username }}</strong>
-          <p>{{ c.body }}</p>
+          <UserProfile
+            :username="c.username"
+            :full-name="c.fullName"
+            :avatar="c.avatar"
+            :size="40"
+            :show-name="false"
+          />
+          <div :class="styles.commentBody">
+            <div :class="styles.commentMeta">
+              <strong>{{ c.fullName || c.username }}</strong>
+              <time v-if="c.createdAt">{{ formatDateTime(c.createdAt) }}</time>
+            </div>
+            <p>{{ c.body }}</p>
+          </div>
         </article>
       </div>
       <el-empty v-else :description="t('cineva.noComments')" :image-size="64" />
@@ -112,6 +155,7 @@ type FilmDetail = {
   currentEpisode?: string | null
   avgRating?: number
   ratingCount?: number
+  userScore?: number | null
   director?: string | null
   casts?: string | null
   description?: string | null
@@ -120,21 +164,40 @@ type FilmDetail = {
   episodes?: EpisodeServer[]
 }
 type FilmDetailResponse = { success: boolean; data: FilmDetail }
-type CommentItem = { id: string | number; username: string; body: string }
+type CommentItem = {
+  id: string | number
+  username: string
+  fullName?: string | null
+  avatar?: string | null
+  body: string
+  createdAt?: string
+}
 type CommentsResponse = { success: boolean; data: CommentItem[] }
 
 const { t } = useI18n()
+const { formatDateTime } = useDateTime()
 const route = useRoute()
 const authStore = useAuthStore()
 const slug = computed(() => String(route.params.slug || ''))
+const requestFetch = useRequestFetch()
 
 const { data, pending, refresh } = await useAsyncData(
   () => `film-${slug.value}`,
-  () => $fetch<FilmDetailResponse>(`/api/public/films/${slug.value}`),
+  () => requestFetch<FilmDetailResponse>(`/api/public/films/${slug.value}`),
   { watch: [slug] }
 )
 
 const film = computed(() => data.value?.data || null)
+const userScore = ref(0)
+
+watch(
+  film,
+  (f) => {
+    userScore.value = f?.userScore || 0
+  },
+  { immediate: true }
+)
+
 const watchLink = computed(() => {
   const f = film.value
   if (!f) return '/'
@@ -168,6 +231,28 @@ async function toggleWatchlist() {
     }
     await refresh()
   } catch (err: any) {
+    ElMessage.error(err?.data?.statusMessage || t('common.actionFailed'))
+  }
+}
+
+async function onRate(score: number) {
+  const value = Math.round(Number(score))
+  if (value < 1 || value > 10) return
+  try {
+    const res = await useApiFetch(`/api/me/ratings/${slug.value}`, {
+      method: 'PUT',
+      body: { score: value }
+    })
+    const payload = res?.data
+    if (data.value?.data && payload) {
+      data.value.data.avgRating = payload.avgRating
+      data.value.data.ratingCount = payload.ratingCount
+      data.value.data.userScore = payload.score
+    }
+    userScore.value = value
+    ElMessage.success(t('cineva.ratedOk'))
+  } catch (err: any) {
+    userScore.value = film.value?.userScore || 0
     ElMessage.error(err?.data?.statusMessage || t('common.actionFailed'))
   }
 }

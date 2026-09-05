@@ -12,7 +12,7 @@
           <div :class="styles.heroInner">
             <h1 :class="styles.heroTitle">{{ active.name }}</h1>
             <p :class="styles.heroMeta">
-              <span v-if="active.avgRating" :class="styles.imdb">IMDb {{ active.avgRating }}</span>
+              <span v-if="active.avgRating" :class="styles.imdb">★ {{ active.avgRating }}</span>
               <span v-if="active.year">{{ active.year }}</span>
               <span v-if="active.quality">{{ active.quality }}</span>
               <span v-if="active.language">{{ active.language }}</span>

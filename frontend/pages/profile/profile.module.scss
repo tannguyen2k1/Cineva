@@ -1,13 +1,11 @@
 .page {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  background: var(--bg-body);
-  padding: 32px;
+  width: 100%;
+  padding: 1.5rem 1.25rem 2.5rem;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
   align-items: flex-start;
+  color: #e4e4e7;
 }
 
 .content {
@@ -16,11 +14,11 @@
 }
 
 .card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  margin-bottom: 16px;
+  background: rgba(22, 22, 30, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  margin-bottom: 1rem;
   overflow: hidden;
 }
 
@@ -29,11 +27,11 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 36px 32px 32px;
+  padding: 2.25rem 2rem 2rem;
 }
 
 .avatarUpload {
-  margin-bottom: 16px;
+  margin-bottom: 1rem;
 
   :global(.el-upload) {
     display: block;
@@ -47,8 +45,8 @@
   border-radius: 50%;
   overflow: hidden;
   cursor: pointer;
-  box-shadow: var(--shadow-md);
-  background: var(--bg-body);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  background: rgba(255, 255, 255, 0.06);
 
   &:hover .avatarOverlay {
     opacity: 1;
@@ -64,15 +62,15 @@
     height: 100%;
     object-fit: cover;
     object-position: center;
-    image-rendering: auto;
   }
 }
 
 .avatarFallback {
-  background: var(--primary-color) !important;
+  background: #ffd66b !important;
+  color: #111 !important;
   font-family: 'Outfit', sans-serif;
   font-size: 34px !important;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .avatarOverlay {
@@ -81,7 +79,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(15, 23, 42, 0.5);
+  background: rgba(11, 11, 15, 0.55);
   color: #fff;
   font-size: 22px;
   opacity: 0;
@@ -89,69 +87,81 @@
 }
 
 .name {
-  margin: 0 0 4px;
+  margin: 0 0 0.25rem;
   font-family: 'Outfit', sans-serif;
   font-size: 1.5rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.02em;
-  color: var(--text-primary);
+  color: #fff !important;
   line-height: 1.25;
 }
 
-.handle {
+.handle,
+.email {
   margin: 0;
-  font-size: 0.9375rem;
-  color: var(--text-secondary);
+  font-size: 0.9rem;
+  color: #a1a1aa;
 }
 
 .email {
-  margin: 6px 0 0;
-  font-size: 0.8125rem;
-  color: var(--text-secondary);
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
 }
 
 .alert {
-  margin-bottom: 16px;
+  margin-bottom: 1rem;
 }
 
 .cardHead {
-  padding: 20px 28px 16px;
-  border-bottom: 1px solid var(--border-color);
+  padding: 1.25rem 1.75rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .cardTitle {
-  margin: 0 0 2px;
+  margin: 0 0 0.15rem;
   font-family: 'Outfit', sans-serif;
   font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-weight: 700;
+  color: #fff !important;
 }
 
 .cardDesc {
   margin: 0;
-  font-size: 13px;
-  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  color: #a1a1aa;
   line-height: 1.4;
 }
 
 .cardBody {
-  padding: 22px 28px 8px;
+  padding: 1.35rem 1.75rem 0.5rem;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0 20px;
+  gap: 0 1.25rem;
 
   :global(.el-form-item) {
-    margin-bottom: 18px;
+    margin-bottom: 1.1rem;
   }
 
   :global(.el-form-item__label) {
     font-weight: 500;
-    color: var(--text-primary);
-    padding-bottom: 6px;
+    color: #e4e4e7 !important;
+    padding-bottom: 0.35rem;
   }
 
   :global(.el-input__wrapper) {
-    min-height: 42px;
+    min-height: 2.6rem;
+    border-radius: 0.65rem !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) inset !important;
+  }
+
+  :global(.el-input__wrapper:hover),
+  :global(.el-input__wrapper.is-focus) {
+    box-shadow: 0 0 0 1px rgba(255, 214, 107, 0.45) inset !important;
+  }
+
+  :global(.el-input__inner) {
+    color: #fff !important;
   }
 }
 
@@ -160,37 +170,40 @@
 }
 
 .sectionDivider {
-  margin: 4px 0 0;
-  padding: 20px 28px 0;
-  border-top: 1px solid var(--border-color);
+  margin: 0.25rem 0 0;
+  padding: 1.25rem 1.75rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .cardFoot {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 16px;
-  padding: 14px 28px;
-  border-top: 1px solid var(--border-color);
-  background: color-mix(in srgb, var(--bg-body) 55%, var(--bg-card));
+  gap: 1rem;
+  padding: 0.9rem 1.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
 
   :global(.el-button--primary) {
-    min-width: 140px;
+    min-width: 8.75rem;
+    border: 0 !important;
+    border-radius: 999px !important;
+    background: #ffd66b !important;
+    color: #111 !important;
     font-family: 'Outfit', sans-serif;
-    font-weight: 600;
+    font-weight: 700;
   }
 }
 
 .footHint {
   margin-right: auto;
-  font-size: 12px;
-  color: var(--text-secondary);
+  font-size: 0.75rem;
+  color: #71717a;
 }
 
 @media (max-width: 720px) {
   .page {
-    align-items: flex-start;
-    padding: 20px 16px 36px;
+    padding: 1.25rem 1rem 2.25rem;
   }
 
   .cardBody {

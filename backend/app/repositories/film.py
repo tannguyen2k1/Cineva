@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from slugify import slugify
 from sqlalchemy import Select, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -56,8 +57,14 @@ def _apply_filters(
     if not include_hidden:
         stmt = stmt.where(Film.is_hidden.is_(False))
     if q:
-        like = f"%{q.strip()}%"
-        stmt = stmt.where(or_(Film.name.ilike(like), Film.original_name.ilike(like)))
+        raw = q.strip()
+        like = f"%{raw}%"
+        # Accent-insensitive fallback via slug (e.g. "pham nhan" → pham-nhan-…)
+        slug_token = slugify(raw)
+        clauses = [Film.name.ilike(like), Film.original_name.ilike(like)]
+        if slug_token:
+            clauses.append(Film.source_slug.ilike(f"%{slug_token}%"))
+        stmt = stmt.where(or_(*clauses))
     if year:
         stmt = stmt.where(Film.year == year)
     if genre:
@@ -92,7 +99,7 @@ async def list_films_page(
     year: str | None = None,
     film_type: str | None = None,
     include_hidden: bool = False,
-    order_by_modified: bool = True,
+    sort: str = "newest",
 ) -> tuple[list[Film], int]:
     base = select(Film)
     base = _apply_filters(
@@ -108,12 +115,16 @@ async def list_films_page(
     count_stmt = select(func.count()).select_from(base.subquery())
     total = (await db.execute(count_stmt)).scalar_one()
 
-    order = (
-        Film.source_modified_at.desc().nullslast(),
-        Film.synced_at.desc().nullslast(),
-    )
-    if not order_by_modified:
-        order = (Film.created_at.desc(),)
+    if sort == "name":
+        order = (Film.name.asc(), Film.id.asc())
+    elif sort == "year":
+        order = (Film.year.desc().nullslast(), Film.source_modified_at.desc().nullslast())
+    else:
+        # newest (default)
+        order = (
+            Film.source_modified_at.desc().nullslast(),
+            Film.synced_at.desc().nullslast(),
+        )
 
     result = await db.execute(
         base.options(*film_with_taxonomy_options())

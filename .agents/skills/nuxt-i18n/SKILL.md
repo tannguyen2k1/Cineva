@@ -3,12 +3,12 @@ name: nuxt-i18n
 description: >-
   Internationalization workflow for the Nuxt frontend using @nuxtjs/i18n.
   Covers file locations, key naming conventions, adding new translations,
-  keeping vi/en in sync, using t() correctly in components/forms/dialogs,
+  Vietnamese-only catalog (`vi.json`), using t() correctly in components/forms/dialogs,
   and Element Plus locale integration.
   Use when adding new pages, creating UI features, fixing missing translations,
   or reviewing i18n consistency.
   Triggers on "i18n", "translation", "dịch", "ngôn ngữ", "locale", "t()",
-  "vi.json", "en.json", "language", "multilingual".
+  "vi.json", "language", "multilingual".
 ---
 
 # i18n Workflow
@@ -16,20 +16,19 @@ description: >-
 ## Stack
 
 - **Module**: `@nuxtjs/i18n` (configured in `frontend/nuxt.config.ts`)
-- **Default locale**: `vi` (Vietnamese)
-- **Strategy**: `no_prefix` (no `/vi/` or `/en/` path prefix)
-- **Detection**: Cookie-based (`i18n_redirected`), fallback `vi`
+- **Default locale**: `vi` (Vietnamese only — no multi-language UI)
+- **Strategy**: `no_prefix`
+- **Detection**: disabled (`detectBrowserLanguage: false`)
 
 ## File locations
 
 ```
 frontend/i18n/
 └── locales/
-    ├── vi.json    ← Vietnamese (default, authoritative)
-    └── en.json    ← English
+    └── vi.json    ← Vietnamese (only locale)
 ```
 
-Both files must stay **in sync** — every key in `vi.json` must exist in `en.json` and vice versa.
+Copy lives in `vi.json`. Do **not** add `en.json` or a language switcher unless product explicitly brings multi-language back.
 
 ## Key naming conventions
 
@@ -49,7 +48,6 @@ Keys are grouped by feature/resource. Use flat dot notation:
 | `header` | App header actions | `header.profile`, `header.logout` |
 | `common` | Shared actions/labels (reuse!) | `common.cancel`, `common.save`, `common.delete` |
 | `login` | Login page | `login.title`, `login.submit` |
-| `lang` | Language names | `lang.vi`, `lang.en` |
 | `{resource}` | Resource-specific CRUD | `users.add`, `roles.deleteConfirm` |
 
 ### Per-resource keys (standard set)
@@ -160,20 +158,19 @@ Before adding a resource-specific key, check if `common.*` already has it:
 | `common.failed` | Thất bại | Failed |
 | `common.actionFailed` | Thao tác thất bại | Action failed |
 
-## Element Plus locale sync
+## Element Plus locale
 
-Element Plus locale is synced with i18n locale in `app.vue` via `<el-config-provider>`.
-When adding a new locale beyond vi/en, also add its Element Plus locale import.
+Element Plus uses Vietnamese in `app.vue` via `<el-config-provider :locale="vi">`.
 
 ## Workflow checklist
 
-- [ ] Keys added to **both** `vi.json` and `en.json`
+- [ ] Keys added to `vi.json`
 - [ ] `nav.{resource}` added (sidebar label)
 - [ ] `pages.{resource}` added (page title)
 - [ ] Standard CRUD keys added under `{resource}.*`
 - [ ] Shared labels use `common.*` (not duplicated)
 - [ ] All user-facing strings use `t()` — no hardcoded text
-- [ ] Form rules wrapped in `computed` (reactive to locale)
+- [ ] Form rules wrapped in `computed` when they use `t()`
 - [ ] `ElMessage` / `ElMessageBox` use `t()` for all strings
 - [ ] Dynamic text uses interpolation `t('key', { name })`, not concatenation
-- [ ] Both locale files have identical key structure
+- [ ] Do **not** add `en.json` or LocaleSwitcher unless product asks for multi-language again
