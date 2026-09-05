@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from app.models.film_rating import FilmRating
     from app.models.film_type_link import FilmTypeLink
     from app.models.featured_film import FeaturedFilm
+    from app.models.film_follow import FilmFollow
     from app.models.watch_progress import WatchProgress
     from app.models.watchlist_item import WatchlistItem
 
@@ -73,6 +74,9 @@ class Film(Base):
         back_populates="film", cascade="all, delete-orphan"
     )
     watchlist_items: Mapped[list[WatchlistItem]] = relationship(
+        back_populates="film", cascade="all, delete-orphan"
+    )
+    follows: Mapped[list[FilmFollow]] = relationship(
         back_populates="film", cascade="all, delete-orphan"
     )
     watch_progress_items: Mapped[list[WatchProgress]] = relationship(

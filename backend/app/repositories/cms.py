@@ -52,7 +52,7 @@ async def delete_banner(db: AsyncSession, banner: Banner) -> None:
 
 
 async def list_featured(
-    db: AsyncSession, *, section: str | None = None
+    db: AsyncSession, *, section: str | None = None, include_hidden: bool = False
 ) -> list[FeaturedFilm]:
     stmt = (
         select(FeaturedFilm)
@@ -62,7 +62,22 @@ async def list_featured(
     if section:
         stmt = stmt.where(FeaturedFilm.section == section)
     result = await db.execute(stmt)
-    return [f for f in result.scalars().unique().all() if f.film and not f.film.is_hidden]
+    rows = list(result.scalars().unique().all())
+    out: list[FeaturedFilm] = []
+    for f in rows:
+        if not f.film:
+            continue
+        if not include_hidden and f.film.is_hidden:
+            continue
+        out.append(f)
+    return out
+
+
+async def latest_sync_run(db: AsyncSession) -> SyncRun | None:
+    result = await db.execute(
+        select(SyncRun).order_by(SyncRun.created_at.desc()).limit(1)
+    )
+    return result.scalar_one_or_none()
 
 
 async def get_featured(db: AsyncSession, *, featured_id: str) -> FeaturedFilm | None:

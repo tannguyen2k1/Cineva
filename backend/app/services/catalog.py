@@ -90,9 +90,16 @@ async def list_logs(
 
 
 async def dashboard_stats(db: AsyncSession) -> dict:
+    from app.repositories import cms as cms_repo
+    from app.repositories import engagement as eng_repo
+    from app.repositories import film as film_repo
+
     users = await user_repo.count_active(db)
     roles = await role_repo.count_active(db)
     logs_count = await system_log_repo.count_all(db)
+    films = await film_repo.count_films(db, include_hidden=True)
+    comments = await eng_repo.count_comments(db)
+    last_sync = await cms_repo.latest_sync_run(db)
 
     recent_logs = []
     for log in await system_log_repo.list_recent(db, limit=20):
@@ -130,6 +137,17 @@ async def dashboard_stats(db: AsyncSession) -> dict:
         for u in await user_repo.list_recent(db, limit=4)
     ]
 
+    last_sync_payload = None
+    if last_sync:
+        last_sync_payload = {
+            "id": last_sync.id,
+            "jobType": last_sync.job_type,
+            "status": last_sync.status,
+            "itemsUpserted": last_sync.items_upserted,
+            "startedAt": last_sync.started_at,
+            "finishedAt": last_sync.finished_at,
+        }
+
     return {
         "success": True,
         "data": {
@@ -137,7 +155,10 @@ async def dashboard_stats(db: AsyncSession) -> dict:
                 "users": users,
                 "roles": roles,
                 "logs": logs_count,
+                "films": films,
+                "comments": comments,
             },
+            "lastSync": last_sync_payload,
             "recentLogs": recent_logs,
             "server": get_server_stats(),
             "recentUsers": recent_users,

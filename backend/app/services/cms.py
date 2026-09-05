@@ -91,7 +91,7 @@ async def delete_banner(db: AsyncSession, *, actor_id: str, banner_id: str) -> d
 
 
 async def admin_list_featured(db: AsyncSession, *, section: str | None = None) -> dict:
-    rows = await cms_repo.list_featured(db, section=section)
+    rows = await cms_repo.list_featured(db, section=section, include_hidden=True)
     return {
         "success": True,
         "data": [

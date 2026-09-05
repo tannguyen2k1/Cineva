@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
@@ -12,6 +14,7 @@ from app.core.config import get_settings
 from app.core.errors import register_exception_handlers
 from app.core.timeutil import register_fastapi_utc_json
 from app.services.server_stats import ensure_upload_dirs
+from app.services.sync_scheduler import start_sync_scheduler, stop_sync_scheduler
 from app.websocket.server_stats import router as ws_router
 
 settings = get_settings()
@@ -23,6 +26,16 @@ PUBLIC_OPENAPI_PATHS = {
     "/api/auth/refresh",
     "/api/auth/token",
 }
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    start_sync_scheduler()
+    try:
+        yield
+    finally:
+        await stop_sync_scheduler()
+
 
 app = FastAPI(
     title="Cineva API",
@@ -39,6 +52,7 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
     openapi_url="/api/openapi.json",
+    lifespan=lifespan,
 )
 
 # Last added = outermost. Order: CORS → RateLimit → CSRF → app

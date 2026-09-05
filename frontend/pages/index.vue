@@ -2,7 +2,7 @@
   <div :class="styles.page">
     <section v-if="active" :class="styles.hero">
       <Transition name="hero-fade" mode="out-in">
-        <div :key="active.slug" :class="styles.heroStage">
+        <div :key="`${active.slug}-${slideIndex}`" :class="styles.heroStage">
           <img
             :src="active.posterUrl || active.thumbUrl || ''"
             :alt="active.name"
@@ -26,10 +26,15 @@
               {{ truncate(active.description, 220) }}
             </p>
             <div :class="styles.heroActions">
-              <NuxtLink :to="`/xem/${active.slug}`" :class="styles.playBtn">
+              <NuxtLink :to="watchHref(active)" :class="styles.playBtn">
                 {{ t('cineva.watchNow') }}
               </NuxtLink>
-              <NuxtLink :to="`/phim/${active.slug}`" :class="styles.iconBtn" :title="t('cineva.details')">
+              <NuxtLink
+                v-if="!active.isCustomBanner"
+                :to="`/phim/${active.slug}`"
+                :class="styles.iconBtn"
+                :title="t('cineva.details')"
+              >
                 i
               </NuxtLink>
             </div>
@@ -40,7 +45,7 @@
       <div :class="styles.thumbStrip" role="tablist" :aria-label="t('cineva.featured')">
         <button
           v-for="(slide, idx) in slides"
-          :key="slide.slug"
+          :key="`${slide.slug}-${idx}`"
           type="button"
           role="tab"
           :aria-selected="idx === slideIndex"
@@ -114,6 +119,8 @@ type HomeSlide = FilmCardData & {
   totalEpisodes?: string | number | null
   description?: string | null
   genres?: { slug: string; name: string }[]
+  linkUrl?: string | null
+  isCustomBanner?: boolean
 }
 
 type HomeTopic = {
@@ -187,6 +194,12 @@ function truncate(text: string, max: number) {
   const clean = text.replace(/<[^>]+>/g, '').trim()
   if (clean.length <= max) return clean
   return `${clean.slice(0, max).trim()}…`
+}
+
+function watchHref(slide: HomeSlide) {
+  if (slide.linkUrl) return slide.linkUrl
+  if (slide.isCustomBanner) return '/phim'
+  return `/xem/${slide.slug}`
 }
 
 watch(slides, (list) => {

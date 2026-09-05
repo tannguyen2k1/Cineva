@@ -51,6 +51,7 @@ class FilmDetailOut(FilmCardOut):
     episodes: list[EpisodeServerOut] = []
     user_score: int | None = Field(default=None, alias="userScore")
     in_watchlist: bool | None = Field(default=None, alias="inWatchlist")
+    is_following: bool | None = Field(default=None, alias="isFollowing")
 
 
 class BannerOut(ORMModel):
@@ -122,6 +123,7 @@ class RatingUpdate(ORMModel):
 
 class CommentCreate(ORMModel):
     body: str = Field(min_length=1, max_length=2000)
+    parent_id: str | None = Field(default=None, alias="parentId")
 
 
 class CommentOut(ORMModel):
@@ -132,6 +134,8 @@ class CommentOut(ORMModel):
     is_hidden: bool | None = Field(default=None, alias="isHidden")
     film_slug: str | None = Field(default=None, alias="filmSlug")
     film_name: str | None = Field(default=None, alias="filmName")
+    parent_id: str | None = Field(default=None, alias="parentId")
+    replies: list["CommentOut"] | None = None
 
 
 class FilmHideUpdate(ORMModel):

@@ -41,6 +41,17 @@
           <button
             v-if="authStore.isLoggedIn"
             type="button"
+            :class="[styles.ghostBtn, film.isFollowing ? styles.ghostActive : '']"
+            @click="toggleFollow"
+          >
+            {{ film.isFollowing ? t('cineva.unfollow') : t('cineva.follow') }}
+          </button>
+          <NuxtLink v-else to="/login" :class="styles.ghostBtn">
+            {{ t('cineva.follow') }}
+          </NuxtLink>
+          <button
+            v-if="authStore.isLoggedIn"
+            type="button"
             :class="[styles.ghostBtn, film.inWatchlist ? styles.ghostActive : '']"
             @click="toggleWatchlist"
           >
@@ -88,26 +99,33 @@
 
     <section :class="styles.block">
       <h2>{{ t('cineva.comments') }}</h2>
-      <div v-if="authStore.isLoggedIn" :class="styles.commentForm">
-        <el-input
-          v-model="commentBody"
-          type="textarea"
-          :rows="3"
-          :class="styles.commentInput"
-          :placeholder="t('cineva.commentPlaceholder')"
-          maxlength="2000"
-          show-word-limit
-        />
-        <button
-          type="button"
-          :class="styles.commentSubmit"
-          :disabled="commenting || !commentBody.trim()"
-          @click="submitComment"
-        >
-          {{ commenting ? '...' : t('cineva.postComment') }}
-        </button>
+      <div v-if="authStore.isLoggedIn && !replyTo" :class="styles.commentForm">
+        <div :class="styles.composer">
+          <el-input
+            v-model="commentBody"
+            type="textarea"
+            :rows="3"
+            :class="styles.commentInput"
+            :placeholder="t('cineva.commentPlaceholder')"
+            maxlength="2000"
+            show-word-limit
+          />
+          <div :class="styles.composerTools">
+            <EmojiPicker @pick="insertEmoji" />
+          </div>
+        </div>
+        <div :class="styles.commentActions">
+          <button
+            type="button"
+            :class="styles.commentSubmit"
+            :disabled="commenting || !commentBody.trim()"
+            @click="submitComment"
+          >
+            {{ commenting ? '...' : t('cineva.postComment') }}
+          </button>
+        </div>
       </div>
-      <p v-else :class="styles.loginHint">
+      <p v-else-if="!authStore.isLoggedIn" :class="styles.loginHint">
         <NuxtLink to="/login">{{ t('login.title') }}</NuxtLink> {{ t('cineva.toComment') }}
       </p>
       <div v-if="comments.length" :class="styles.commentList">
@@ -125,6 +143,83 @@
               <time v-if="c.createdAt">{{ formatDateTime(c.createdAt) }}</time>
             </div>
             <p>{{ c.body }}</p>
+            <button
+              v-if="authStore.isLoggedIn && replyParentId !== c.id"
+              type="button"
+              :class="styles.replyBtn"
+              @click="startReply(c)"
+            >
+              {{ t('cineva.reply') }}
+            </button>
+
+            <div v-if="c.replies?.length" :class="styles.replies">
+              <article
+                v-for="r in c.replies"
+                :key="r.id"
+                :class="[styles.commentItem, styles.replyItem]"
+              >
+                <UserProfile
+                  :username="r.username"
+                  :full-name="r.fullName"
+                  :avatar="r.avatar"
+                  :size="32"
+                  :show-name="false"
+                />
+                <div :class="styles.commentBody">
+                  <div :class="styles.commentMeta">
+                    <strong>{{ r.fullName || r.username }}</strong>
+                    <time v-if="r.createdAt">{{ formatDateTime(r.createdAt) }}</time>
+                  </div>
+                  <p>{{ r.body }}</p>
+                  <button
+                    v-if="authStore.isLoggedIn && String(replyParentId) !== String(c.id)"
+                    type="button"
+                    :class="styles.replyBtn"
+                    @click="startReply(c, r)"
+                  >
+                    {{ t('cineva.reply') }}
+                  </button>
+                </div>
+              </article>
+            </div>
+
+            <div
+              v-if="authStore.isLoggedIn && replyTo && String(replyParentId) === String(c.id)"
+              :class="styles.inlineReply"
+            >
+              <p :class="styles.replyingTo">
+                {{ t('cineva.replyingTo', { name: replyTo.fullName || replyTo.username }) }}
+              </p>
+              <div :class="styles.inlineComposer">
+                <el-input
+                  ref="replyInputRef"
+                  v-model="commentBody"
+                  type="textarea"
+                  :rows="2"
+                  :autosize="{ minRows: 1, maxRows: 3 }"
+                  :class="styles.inlineInput"
+                  :placeholder="t('cineva.replyPlaceholder', { name: replyTo.fullName || replyTo.username })"
+                  maxlength="2000"
+                  @keydown.ctrl.enter="submitComment"
+                />
+                <div :class="styles.inlineEmoji">
+                  <EmojiPicker compact @pick="insertEmoji" />
+                </div>
+              </div>
+              <div :class="styles.inlineActions">
+                <button type="button" :class="styles.inlineCancel" @click="cancelReply">
+                  {{ t('common.cancel') }}
+                </button>
+                <button
+                  type="button"
+                  :class="styles.inlineSubmit"
+                  :disabled="commenting || !commentBody.trim()"
+                  @click="submitComment"
+                >
+                  {{ commenting ? '...' : t('cineva.postReply') }}
+                </button>
+              </div>
+            </div>
           </div>
         </article>
       </div>
@@ -135,7 +230,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import styles from './slug.module.scss'
 
@@ -160,6 +255,7 @@ type FilmDetail = {
   casts?: string | null
   description?: string | null
   inWatchlist?: boolean
+  isFollowing?: boolean
   genres?: { slug: string; name: string }[]
   episodes?: EpisodeServer[]
 }
@@ -171,6 +267,8 @@ type CommentItem = {
   avatar?: string | null
   body: string
   createdAt?: string
+  parentId?: string | null
+  replies?: CommentItem[]
 }
 type CommentsResponse = { success: boolean; data: CommentItem[] }
 
@@ -219,6 +317,42 @@ const comments = computed(() => commentsData.value?.data || [])
 
 const commentBody = ref('')
 const commenting = ref(false)
+const replyTo = ref<CommentItem | null>(null)
+const replyParentId = ref<string | number | null>(null)
+const replyInputRef = ref<{ focus?: () => void } | null>(null)
+
+async function startReply(root: CommentItem, mention?: CommentItem) {
+  replyParentId.value = root.id
+  replyTo.value = mention || root
+  commentBody.value = ''
+  await nextTick()
+  replyInputRef.value?.focus?.()
+}
+
+function cancelReply() {
+  replyTo.value = null
+  replyParentId.value = null
+  commentBody.value = ''
+}
+
+function insertEmoji(emoji: string) {
+  commentBody.value = `${commentBody.value}${emoji}`
+}
+
+async function toggleFollow() {
+  try {
+    if (film.value?.isFollowing) {
+      await useApiFetch(`/api/me/follows/${slug.value}`, { method: 'DELETE' })
+      ElMessage.success(t('cineva.unfollowed'))
+    } else {
+      await useApiFetch(`/api/me/follows/${slug.value}`, { method: 'POST' })
+      ElMessage.success(t('cineva.followed'))
+    }
+    await refresh()
+  } catch (err: any) {
+    ElMessage.error(err?.data?.statusMessage || t('common.actionFailed'))
+  }
+}
 
 async function toggleWatchlist() {
   try {
@@ -263,9 +397,13 @@ async function submitComment() {
   try {
     await useApiFetch(`/api/public/films/${slug.value}/comments`, {
       method: 'POST',
-      body: { body: commentBody.value.trim() }
+      body: {
+        body: commentBody.value.trim(),
+        ...(replyParentId.value ? { parentId: String(replyParentId.value) } : {})
+      }
     })
     commentBody.value = ''
+    cancelReply()
     ElMessage.success(t('common.success'))
     await refreshComments()
   } catch (err: any) {

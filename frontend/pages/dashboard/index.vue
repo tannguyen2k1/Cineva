@@ -82,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-import { User, TopRight, Key, Document, BottomRight } from '@element-plus/icons-vue';
+import { User, Film, ChatDotRound, Refresh } from '@element-plus/icons-vue';
 import styles from './dashboard.module.scss';
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import type { Component } from 'vue';
@@ -96,38 +96,45 @@ const pending = ref(false);
 type IconTone = 'Blue' | 'Green' | 'Amber' | 'Red';
 type TrendTone = 'Success' | 'Warning' | 'Danger';
 
+const lastSyncText = computed(() => {
+  const sync = statsData.value?.lastSync;
+  if (!sync?.startedAt) return t('dashboard.noSyncYet');
+  const status = sync.status === 'success' ? t('sync.statusSuccess') : sync.status;
+  return `${formatDateTime(sync.startedAt)} · ${status}`;
+});
+
 const statCards = computed(() => {
   const stats = statsData.value?.stats;
   return [
+    {
+      key: 'films',
+      title: t('dashboard.films'),
+      value: stats?.films || 0,
+      icon: Film,
+      iconTone: 'Amber' as IconTone,
+      trendText: lastSyncText.value,
+      trendTone: 'Success' as TrendTone,
+      trendIcon: Refresh as Component
+    },
+    {
+      key: 'comments',
+      title: t('dashboard.comments'),
+      value: stats?.comments || 0,
+      icon: ChatDotRound,
+      iconTone: 'Green' as IconTone,
+      trendText: t('dashboard.noChange'),
+      trendTone: 'Success' as TrendTone,
+      trendIcon: Refresh as Component
+    },
     {
       key: 'users',
       title: t('dashboard.users'),
       value: stats?.users || 0,
       icon: User,
       iconTone: 'Blue' as IconTone,
-      trendText: `+12% ${t('dashboard.vsLastMonth')}`,
-      trendTone: 'Success' as TrendTone,
-      trendIcon: TopRight as Component
-    },
-    {
-      key: 'roles',
-      title: t('dashboard.roles'),
-      value: stats?.roles || 0,
-      icon: Key,
-      iconTone: 'Green' as IconTone,
-      trendText: `+8% ${t('dashboard.vsLastMonth')}`,
-      trendTone: 'Success' as TrendTone,
-      trendIcon: TopRight as Component
-    },
-    {
-      key: 'logs',
-      title: t('dashboard.logs'),
-      value: stats?.logs || 0,
-      icon: Document,
-      iconTone: 'Red' as IconTone,
-      trendText: `-2% ${t('dashboard.vsLastWeek')}`,
-      trendTone: 'Danger' as TrendTone,
-      trendIcon: BottomRight as Component
+      trendText: t('dashboard.noChange'),
+      trendTone: 'Warning' as TrendTone,
+      trendIcon: Refresh as Component
     }
   ];
 });

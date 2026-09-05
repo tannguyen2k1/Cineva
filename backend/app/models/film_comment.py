@@ -19,6 +19,7 @@ class FilmComment(Base):
     __table_args__ = (
         Index("ix_film_comments_film_id", "film_id"),
         Index("ix_film_comments_user_id", "user_id"),
+        Index("ix_film_comments_parent_id", "parent_id"),
         Index("ix_film_comments_deleted_at", "deleted_at"),
         Index("ix_film_comments_is_hidden", "is_hidden"),
     )
@@ -29,6 +30,9 @@ class FilmComment(Base):
     )
     film_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("films.id", ondelete="CASCADE"), nullable=False
+    )
+    parent_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("film_comments.id", ondelete="CASCADE"), nullable=True
     )
     body: Mapped[str] = mapped_column(Text, nullable=False)
     is_hidden: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -42,3 +46,9 @@ class FilmComment(Base):
 
     film: Mapped[Film] = relationship(back_populates="comments")
     user: Mapped[User] = relationship()
+    parent: Mapped[FilmComment | None] = relationship(
+        remote_side="FilmComment.id", back_populates="replies"
+    )
+    replies: Mapped[list[FilmComment]] = relationship(
+        back_populates="parent", cascade="all, delete-orphan"
+    )

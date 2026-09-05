@@ -214,7 +214,36 @@ async def home(db: AsyncSession) -> dict:
     banners = await cms_repo.list_active_banners(db)
     featured = await cms_repo.list_featured(db, section="home_hot")
     newest = await film_repo.list_newest(db, limit=24)
-    slides = newest[:8]
+
+    slides: list[dict] = []
+    for b in banners:
+        if b.film_slug:
+            film = await film_repo.get_by_slug(
+                db, slug=b.film_slug, with_taxonomy=True
+            )
+            if film and not film.is_hidden:
+                card = serialize_film_card(film, include_description=True)
+                if b.image_url:
+                    card["posterUrl"] = b.image_url
+                    card["thumbUrl"] = b.image_url
+                slides.append(card)
+                continue
+        slides.append(
+            {
+                "slug": b.film_slug or f"banner-{b.id}",
+                "name": b.title,
+                "posterUrl": b.image_url,
+                "thumbUrl": b.image_url,
+                "description": None,
+                "linkUrl": b.link_url,
+                "isCustomBanner": True,
+                "avgRating": 0,
+                "ratingCount": 0,
+                "genres": [],
+            }
+        )
+    if not slides:
+        slides = [serialize_film_card(f, include_description=True) for f in newest[:8]]
 
     sections: list[dict] = []
     for kind, slug, title, href in HOME_SECTIONS:
@@ -265,7 +294,7 @@ async def home(db: AsyncSession) -> dict:
                 for f in featured
                 if f.film
             ],
-            "slides": [serialize_film_card(f, include_description=True) for f in slides],
+            "slides": slides,
             "newest": [serialize_film_card(f) for f in newest],
             "topics": HOME_TOPICS,
             "sections": sections,
@@ -358,8 +387,10 @@ async def get_detail(
     if user_id:
         rating = await eng_repo.get_rating(db, user_id=user_id, film_id=film.id)
         watch = await eng_repo.get_watchlist_item(db, user_id=user_id, film_id=film.id)
+        follow = await eng_repo.get_follow(db, user_id=user_id, film_id=film.id)
         payload["userScore"] = rating.score if rating else None
         payload["inWatchlist"] = watch is not None
+        payload["isFollowing"] = follow is not None
 
     return {"success": True, "data": payload}
 

@@ -4,12 +4,33 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.timeutil import utcnow
-from app.models import FilmComment, WatchlistItem
+from app.models import FilmComment, FilmFollow, WatchlistItem
 from app.repositories import engagement as eng_repo
 from app.repositories import film as film_repo
+from app.repositories import notifications as notif_repo
 from app.schemas.film import CommentCreate, ProgressUpdate, RatingUpdate
 from app.services.film_mapper import serialize_film_card
 from app.services.system_log import write_system_log
+
+
+def _serialize_comment(c: FilmComment, *, with_replies: bool = False) -> dict:
+    data = {
+        "id": c.id,
+        "body": c.body,
+        "username": c.user.username if c.user else "user",
+        "fullName": c.user.full_name if c.user else None,
+        "avatar": c.user.avatar if c.user else None,
+        "createdAt": c.created_at,
+        "parentId": c.parent_id,
+    }
+    if with_replies:
+        replies = [
+            _serialize_comment(r)
+            for r in sorted(c.replies or [], key=lambda x: x.created_at)
+            if r.deleted_at is None and not r.is_hidden
+        ]
+        data["replies"] = replies
+    return data
 
 
 async def _require_visible_film(db: AsyncSession, slug: str):
@@ -58,6 +79,26 @@ async def list_watchlist(
         "page": page,
         "pageSize": page_size,
     }
+
+
+async def follow_film(db: AsyncSession, *, user_id: str, slug: str) -> dict:
+    film = await _require_visible_film(db, slug)
+    existing = await eng_repo.get_follow(db, user_id=user_id, film_id=film.id)
+    if not existing:
+        await eng_repo.add_follow(db, FilmFollow(user_id=user_id, film_id=film.id))
+        await db.commit()
+    return {"success": True, "message": "Đã theo dõi phim"}
+
+
+async def unfollow_film(db: AsyncSession, *, user_id: str, slug: str) -> dict:
+    film = await film_repo.get_by_slug(db, slug=slug)
+    if not film:
+        raise HTTPException(status_code=404, detail="Không tìm thấy phim")
+    existing = await eng_repo.get_follow(db, user_id=user_id, film_id=film.id)
+    if existing:
+        await eng_repo.delete_follow(db, existing)
+        await db.commit()
+    return {"success": True, "message": "Đã bỏ theo dõi"}
 
 
 async def save_progress(
@@ -132,17 +173,7 @@ async def list_comments(
     )
     return {
         "success": True,
-        "data": [
-            {
-                "id": c.id,
-                "body": c.body,
-                "username": c.user.username if c.user else "user",
-                "fullName": c.user.full_name if c.user else None,
-                "avatar": c.user.avatar if c.user else None,
-                "createdAt": c.created_at,
-            }
-            for c in rows
-        ],
+        "data": [_serialize_comment(c, with_replies=True) for c in rows],
         "total": total,
         "page": page,
         "pageSize": page_size,
@@ -156,20 +187,64 @@ async def add_comment(
     text = body.body.strip()
     if not text:
         raise HTTPException(status_code=400, detail="Nội dung trống")
+
+    parent_id = body.parent_id
+    parent = None
+    notify_user_id: str | None = None
+    if parent_id:
+        parent = await eng_repo.get_comment(db, comment_id=parent_id)
+        if (
+            not parent
+            or parent.deleted_at is not None
+            or parent.film_id != film.id
+            or parent.is_hidden
+        ):
+            raise HTTPException(status_code=404, detail="Không tìm thấy bình luận")
+        # Notify the author being replied to (even if we flatten nesting)
+        if parent.user_id != user_id:
+            notify_user_id = parent.user_id
+        # One-level threads: reply-to-reply attaches to the root parent
+        if parent.parent_id:
+            root = await eng_repo.get_comment(db, comment_id=parent.parent_id)
+            if root:
+                parent_id = root.id
+                parent = root
+
     comment = await eng_repo.add_comment(
-        db, FilmComment(user_id=user_id, film_id=film.id, body=text)
+        db,
+        FilmComment(
+            user_id=user_id,
+            film_id=film.id,
+            parent_id=parent_id,
+            body=text,
+        ),
     )
+    await db.flush()
+
+    if notify_user_id and parent:
+        actor_name = "Ai đó"
+        comment = await eng_repo.get_comment(db, comment_id=comment.id)
+        if comment and comment.user:
+            actor_name = comment.user.full_name or comment.user.username
+        await notif_repo.create_notification(
+            db,
+            user_id=notify_user_id,
+            kind="comment_reply",
+            title=f"{actor_name} đã trả lời bình luận của bạn",
+            body=text[:180],
+            link_url=f"/phim/{film.source_slug}",
+            ref_key=f"reply:{comment.id if comment else parent_id}",
+            actor_id=user_id,
+            film_id=film.id,
+            comment_id=comment.id if comment else None,
+        )
+
     await db.commit()
     comment = await eng_repo.get_comment(db, comment_id=comment.id)
     assert comment is not None
     return {
         "success": True,
-        "data": {
-            "id": comment.id,
-            "body": comment.body,
-            "username": comment.user.username if comment.user else "user",
-            "createdAt": comment.created_at,
-        },
+        "data": _serialize_comment(comment),
     }
 
 

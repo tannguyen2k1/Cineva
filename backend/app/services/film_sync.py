@@ -62,8 +62,11 @@ CATALOG_COUNTRIES: list[tuple[str, str]] = [
 
 
 async def upsert_list_item(db: AsyncSession, item) -> Film:
+    from app.repositories import notifications as notif_repo
+
     film = await film_repo.get_by_slug(db, slug=item.slug)
     now = utcnow()
+    old_episode = film.current_episode if film else None
     if not film:
         film = Film(source_slug=item.slug, name=item.name or item.slug)
         apply_list_item_to_film(film, item)
@@ -73,6 +76,26 @@ async def upsert_list_item(db: AsyncSession, item) -> Film:
         apply_list_item_to_film(film, item)
         film.synced_at = now
         await db.flush()
+
+    new_episode = (item.current_episode or "").strip()
+    if (
+        old_episode
+        and new_episode
+        and old_episode != new_episode
+        and film.id
+    ):
+        user_ids = await notif_repo.list_follow_user_ids(db, film_id=film.id)
+        for uid in user_ids:
+            await notif_repo.create_notification(
+                db,
+                user_id=uid,
+                kind="episode_update",
+                title=f"{film.name} có tập mới",
+                body=new_episode,
+                link_url=f"/phim/{film.source_slug}",
+                ref_key=f"ep:{film.id}:{new_episode}",
+                film_id=film.id,
+            )
     return film
 
 

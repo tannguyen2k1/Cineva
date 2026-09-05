@@ -20,6 +20,8 @@ from app.models.user import User
 from app.models.user_role import UserRole
 from app.models.watch_progress import WatchProgress
 from app.models.watchlist_item import WatchlistItem
+from app.models.film_follow import FilmFollow
+from app.models.notification import Notification
 
 __all__ = [
     "User",
@@ -40,8 +42,10 @@ __all__ = [
     "Banner",
     "FeaturedFilm",
     "WatchlistItem",
+    "FilmFollow",
     "WatchProgress",
     "FilmRating",
     "FilmComment",
+    "Notification",
     "SyncRun",
 ]

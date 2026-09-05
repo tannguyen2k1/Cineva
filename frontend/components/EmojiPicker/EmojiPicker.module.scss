@@ -1,0 +1,121 @@
+.root {
+  position: relative;
+  display: inline-flex;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 0;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 1rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: background 0.15s ease, transform 0.15s ease;
+
+  &:hover,
+  &[aria-expanded='true'] {
+    background: rgba(255, 214, 107, 0.16);
+    transform: scale(1.05);
+  }
+}
+
+.compact {
+  width: 1.75rem;
+  height: 1.75rem;
+  font-size: 0.92rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.panel {
+  position: absolute;
+  z-index: 50;
+  bottom: calc(100% + 0.4rem);
+  right: 0;
+  left: auto;
+  transform-origin: bottom right;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0.18s ease;
+  will-change: opacity, transform;
+
+  :global(.v3-emoji-picker) {
+    width: min(320px, 86vw) !important;
+    border-radius: 0.85rem !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5) !important;
+    background: #141416 !important;
+    color: #e4e4e7 !important;
+    overflow: hidden;
+  }
+
+  :global(.v3-header),
+  :global(.v3-body),
+  :global(.v3-footer),
+  :global(.v3-groups),
+  :global(.v3-foot) {
+    background: #141416 !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  :global(.v3-groups) {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+
+  :global(.v3-group) {
+    color: #a1a1aa !important;
+    opacity: 1 !important;
+
+    &:hover,
+    &.is-active,
+    &.active,
+    &[aria-selected='true'] {
+      color: #ffd66b !important;
+    }
+  }
+
+  :global(.v3-search input),
+  :global(input) {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #f4f4f5 !important;
+    border-radius: 0.5rem !important;
+    box-shadow: none !important;
+  }
+
+  :global(input::placeholder) {
+    color: #71717a !important;
+  }
+
+  :global(.v3-group-name),
+  :global(.v3-body .is-sticky) {
+    background: #141416 !important;
+    color: #a1a1aa !important;
+  }
+
+  :global(.v3-footer),
+  :global(.v3-foot) {
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+}
+
+.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.closed {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(6px) scale(0.96);
+}

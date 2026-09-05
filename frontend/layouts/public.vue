@@ -83,43 +83,45 @@
           <NuxtLink v-if="!authStore.isLoggedIn" to="/login" :class="styles.memberBtn">
             {{ t('cineva.member') }}
           </NuxtLink>
-          <el-dropdown
-            v-else
-            trigger="click"
-            popper-class="cineva-dark-select"
-            @command="onCommand"
-          >
-            <button type="button" :class="styles.userTrigger">
-              <UserProfile
-                :username="authStore.user?.username || ''"
-                :full-name="authStore.user?.fullName"
-                :avatar="authStore.user?.avatar"
-                :size="32"
-                :text-class="styles.userName"
-              />
-              <el-icon :class="styles.userChevron"><ArrowDown /></el-icon>
-            </button>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="profile">{{ t('header.profile') }}</el-dropdown-item>
-                <el-dropdown-item command="watched">{{ t('cineva.watched') }}</el-dropdown-item>
-                <el-dropdown-item command="watchlist">{{ t('cineva.watchlist') }}</el-dropdown-item>
-                <el-dropdown-item
-                  v-if="authStore.hasPermission('read:dashboard')"
-                  command="admin"
-                  divided
-                >
-                  {{ t('cineva.admin') }}
-                </el-dropdown-item>
-                <el-dropdown-item
-                  command="logout"
-                  :divided="!authStore.hasPermission('read:dashboard')"
-                >
-                  {{ t('header.logout') }}
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
+          <template v-else>
+            <HeaderNotifications />
+            <el-dropdown
+              trigger="click"
+              popper-class="cineva-dark-select"
+              @command="onCommand"
+            >
+              <button type="button" :class="styles.userTrigger">
+                <UserProfile
+                  :username="authStore.user?.username || ''"
+                  :full-name="authStore.user?.fullName"
+                  :avatar="authStore.user?.avatar"
+                  :size="32"
+                  :text-class="styles.userName"
+                />
+                <el-icon :class="styles.userChevron"><ArrowDown /></el-icon>
+              </button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="profile">{{ t('header.profile') }}</el-dropdown-item>
+                  <el-dropdown-item command="watched">{{ t('cineva.watched') }}</el-dropdown-item>
+                  <el-dropdown-item command="watchlist">{{ t('cineva.watchlist') }}</el-dropdown-item>
+                  <el-dropdown-item
+                    v-if="authStore.hasPermission('read:dashboard')"
+                    command="admin"
+                    divided
+                  >
+                    {{ t('cineva.admin') }}
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                    command="logout"
+                    :divided="!authStore.hasPermission('read:dashboard')"
+                  >
+                    {{ t('header.logout') }}
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </template>
         </div>
       </div>
     </header>

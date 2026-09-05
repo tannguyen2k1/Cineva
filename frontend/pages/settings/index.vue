@@ -6,7 +6,6 @@
         <h1 :class="styles.title">Khám phá thêm</h1>
         <p :class="styles.subtitle">Truy cập nhanh các khu vực khác của hệ thống.</p>
       </div>
-      <ThemeSwitcher />
     </div>
 
     <!-- Profile Card -->

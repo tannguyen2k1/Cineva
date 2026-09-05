@@ -18,7 +18,6 @@
           <h1 :class="styles.title">Khám phá thêm</h1>
           <p :class="styles.subtitle">Truy cập nhanh các khu vực khác của hệ thống.</p>
         </div>
-        <ThemeSwitcher />
       </div>
 
       <!-- Profile Card -->
@@ -97,6 +96,31 @@
 
       <!-- System Links List -->
       <div :class="styles.listSection">
+        <div v-if="authStore.hasPermission('read:sync')" :class="styles.listItem" @click="goTo('/films/sync')">
+          <el-icon><Refresh /></el-icon>
+          <span>{{ t('pages.sync') }}</span>
+          <el-icon :class="styles.chevron"><ArrowRight /></el-icon>
+        </div>
+        <div v-if="authStore.hasPermission('read:films')" :class="styles.listItem" @click="goTo('/films')">
+          <el-icon><Film /></el-icon>
+          <span>{{ t('pages.adminFilms') }}</span>
+          <el-icon :class="styles.chevron"><ArrowRight /></el-icon>
+        </div>
+        <div v-if="authStore.hasPermission('read:banners')" :class="styles.listItem" @click="goTo('/films/banners')">
+          <el-icon><Picture /></el-icon>
+          <span>{{ t('pages.banners') }}</span>
+          <el-icon :class="styles.chevron"><ArrowRight /></el-icon>
+        </div>
+        <div v-if="authStore.hasPermission('read:featured')" :class="styles.listItem" @click="goTo('/films/featured')">
+          <el-icon><Star /></el-icon>
+          <span>{{ t('pages.featured') }}</span>
+          <el-icon :class="styles.chevron"><ArrowRight /></el-icon>
+        </div>
+        <div v-if="authStore.hasPermission('read:comments')" :class="styles.listItem" @click="goTo('/films/comments')">
+          <el-icon><ChatDotRound /></el-icon>
+          <span>{{ t('pages.commentsAdmin') }}</span>
+          <el-icon :class="styles.chevron"><ArrowRight /></el-icon>
+        </div>
         <div v-if="authStore.hasPermission('read:users')" :class="styles.listItem" @click="goTo('/systems/users')">
           <el-icon><UserFilled /></el-icon>
           <span>{{ t('pages.users') }}</span>
@@ -125,7 +149,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { ArrowRight, DataLine, Box, Tickets, User, Star, ChatLineRound, UserFilled, Setting, Document, SwitchButton } from '@element-plus/icons-vue';
+import { ArrowRight, DataLine, Box, Tickets, User, Star, ChatLineRound, UserFilled, Setting, Document, SwitchButton, Refresh, Film, Picture, ChatDotRound } from '@element-plus/icons-vue';
 import styles from './MobileMenuDrawer.module.scss';
 
 const props = defineProps<{

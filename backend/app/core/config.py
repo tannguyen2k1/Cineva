@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     nguonc_timeout_seconds: float = 20.0
     film_detail_cache_ttl_seconds: int = 600
     sync_max_pages_per_run: int = 5
+    # Daily incremental sync (local wall-clock in sync_schedule_timezone)
+    sync_schedule_enabled: bool = True
+    sync_schedule_timezone: str = "Asia/Ho_Chi_Minh"
+    sync_schedule_hour: int = 0
+    sync_schedule_minute: int = 0
 
     @property
     def is_prod(self) -> bool:

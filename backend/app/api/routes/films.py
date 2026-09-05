@@ -18,6 +18,7 @@ from app.services import cms as cms_service
 from app.services import engagement as engagement_service
 from app.services import film_sync as film_sync_service
 from app.services import films as films_service
+from app.services import notifications as notifications_service
 
 public_router = APIRouter(prefix="/public", tags=["Public Films"])
 me_router = APIRouter(prefix="/me", tags=["My Films"])
@@ -126,6 +127,24 @@ async def me_list_watchlist(
     )
 
 
+@me_router.post("/follows/{slug}")
+async def me_follow_film(
+    slug: str,
+    db: AsyncSession = Depends(get_db),
+    current: CurrentUser = Depends(get_current_user),
+):
+    return await engagement_service.follow_film(db, user_id=current.id, slug=slug)
+
+
+@me_router.delete("/follows/{slug}")
+async def me_unfollow_film(
+    slug: str,
+    db: AsyncSession = Depends(get_db),
+    current: CurrentUser = Depends(get_current_user),
+):
+    return await engagement_service.unfollow_film(db, user_id=current.id, slug=slug)
+
+
 @me_router.put("/progress")
 async def me_save_progress(
     body: ProgressUpdate,
@@ -141,6 +160,45 @@ async def me_continue(
     current: CurrentUser = Depends(get_current_user),
 ):
     return await engagement_service.list_continue(db, user_id=current.id)
+
+
+@me_router.get("/notifications")
+async def me_list_notifications(
+    page: int = Query(1, ge=1),
+    pageSize: int = Query(20, ge=1, le=50),
+    db: AsyncSession = Depends(get_db),
+    current: CurrentUser = Depends(get_current_user),
+):
+    return await notifications_service.list_mine(
+        db, user_id=current.id, page=page, page_size=pageSize
+    )
+
+
+@me_router.get("/notifications/unread-count")
+async def me_notifications_unread(
+    db: AsyncSession = Depends(get_db),
+    current: CurrentUser = Depends(get_current_user),
+):
+    return await notifications_service.unread_count(db, user_id=current.id)
+
+
+@me_router.post("/notifications/read-all")
+async def me_notifications_read_all(
+    db: AsyncSession = Depends(get_db),
+    current: CurrentUser = Depends(get_current_user),
+):
+    return await notifications_service.mark_all_read(db, user_id=current.id)
+
+
+@me_router.put("/notifications/{notification_id}/read")
+async def me_notification_read(
+    notification_id: str,
+    db: AsyncSession = Depends(get_db),
+    current: CurrentUser = Depends(get_current_user),
+):
+    return await notifications_service.mark_one_read(
+        db, user_id=current.id, notification_id=notification_id
+    )
 
 
 @me_router.put("/ratings/{slug}")

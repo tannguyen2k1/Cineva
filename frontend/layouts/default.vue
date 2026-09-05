@@ -10,7 +10,6 @@
 
         <div :class="styles.headerRight">
           <div :class="styles.desktopOnly">
-            <ThemeSwitcher />
             <el-dropdown trigger="click" @command="handleCommand">
               <button type="button" :class="styles.userTrigger">
                 <UserProfile
@@ -98,6 +97,11 @@ const pageTitleKeys: Record<string, string> = {
   '/dashboard': 'pages.dashboard',
   '/profile': 'pages.profile',
   '/settings': 'nav.settings',
+  '/films': 'pages.adminFilms',
+  '/films/sync': 'pages.sync',
+  '/films/banners': 'pages.banners',
+  '/films/featured': 'pages.featured',
+  '/films/comments': 'pages.commentsAdmin',
   '/systems/users': 'pages.users',
   '/systems/roles': 'pages.roles',
   '/systems/logs': 'pages.logs'

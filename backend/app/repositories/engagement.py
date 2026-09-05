@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.timeutil import utcnow
-from app.models import Film, FilmComment, FilmRating, WatchProgress, WatchlistItem
+from app.models import Film, FilmComment, FilmFollow, FilmRating, WatchProgress, WatchlistItem
 from app.repositories.film import film_with_taxonomy_options
 
 
@@ -47,6 +47,30 @@ async def add_watchlist(db: AsyncSession, item: WatchlistItem) -> WatchlistItem:
 
 
 async def delete_watchlist(db: AsyncSession, item: WatchlistItem) -> None:
+    await db.delete(item)
+    await db.flush()
+
+
+async def get_follow(
+    db: AsyncSession, *, user_id: str, film_id: str
+) -> FilmFollow | None:
+    return (
+        await db.execute(
+            select(FilmFollow).where(
+                FilmFollow.user_id == user_id,
+                FilmFollow.film_id == film_id,
+            )
+        )
+    ).scalar_one_or_none()
+
+
+async def add_follow(db: AsyncSession, item: FilmFollow) -> FilmFollow:
+    db.add(item)
+    await db.flush()
+    return item
+
+
+async def delete_follow(db: AsyncSession, item: FilmFollow) -> None:
     await db.delete(item)
     await db.flush()
 
@@ -161,9 +185,11 @@ async def list_comments(
     page_size: int,
     include_hidden: bool = False,
 ) -> tuple[list[FilmComment], int]:
+    """Paginate top-level comments; each includes nested replies."""
     filters = [
         FilmComment.film_id == film_id,
         FilmComment.deleted_at.is_(None),
+        FilmComment.parent_id.is_(None),
     ]
     if not include_hidden:
         filters.append(FilmComment.is_hidden.is_(False))
@@ -173,12 +199,15 @@ async def list_comments(
     result = await db.execute(
         select(FilmComment)
         .where(*filters)
-        .options(selectinload(FilmComment.user))
+        .options(
+            selectinload(FilmComment.user),
+            selectinload(FilmComment.replies).selectinload(FilmComment.user),
+        )
         .order_by(FilmComment.created_at.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
-    return list(result.scalars().all()), total
+    return list(result.scalars().unique().all()), total
 
 
 async def add_comment(db: AsyncSession, comment: FilmComment) -> FilmComment:
@@ -192,7 +221,11 @@ async def get_comment(db: AsyncSession, *, comment_id: str) -> FilmComment | Non
         await db.execute(
             select(FilmComment)
             .where(FilmComment.id == comment_id)
-            .options(selectinload(FilmComment.user), selectinload(FilmComment.film))
+            .options(
+                selectinload(FilmComment.user),
+                selectinload(FilmComment.film),
+                selectinload(FilmComment.parent).selectinload(FilmComment.user),
+            )
         )
     ).scalar_one_or_none()
 
@@ -218,3 +251,13 @@ async def list_admin_comments(
         .limit(page_size)
     )
     return list(result.scalars().all()), total
+
+
+async def count_comments(db: AsyncSession, *, include_deleted: bool = False) -> int:
+    filters = []
+    if not include_deleted:
+        filters.append(FilmComment.deleted_at.is_(None))
+    stmt = select(func.count()).select_from(FilmComment)
+    if filters:
+        stmt = stmt.where(*filters)
+    return (await db.execute(stmt)).scalar_one()

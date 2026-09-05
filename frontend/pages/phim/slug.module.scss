@@ -217,9 +217,44 @@
 .commentForm {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: stretch;
   gap: 0.75rem;
   margin-bottom: 1.25rem;
+}
+
+.composer {
+  position: relative;
+}
+
+.composerTools {
+  position: absolute;
+  right: 0.65rem;
+  bottom: 0.55rem;
+  z-index: 2;
+}
+
+.commentActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.commentCancel {
+  padding: 0.65rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: #d4d4d8;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    border-color: rgba(255, 214, 107, 0.4);
+    color: #ffd66b;
+  }
 }
 
 .commentInput {
@@ -231,7 +266,7 @@
     background: rgba(255, 255, 255, 0.05) !important;
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) inset !important;
     color: #fff !important;
-    padding: 0.85rem 1rem 1.6rem !important;
+    padding: 0.85rem 1rem 2.35rem !important;
   }
 
   :global(.el-textarea__inner:hover),
@@ -246,6 +281,9 @@
   :global(.el-input__count) {
     background: transparent;
     color: #71717a;
+    left: 0.75rem !important;
+    right: auto !important;
+    bottom: 0.55rem !important;
   }
 }
 
@@ -312,17 +350,139 @@
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.45rem 0.75rem;
+  gap: 0.55rem;
 
   strong {
-    color: #fff;
+    color: #f4f4f5;
     font-size: 0.92rem;
-    font-weight: 700;
   }
 
   time {
     color: #71717a;
-    font-size: 0.78rem;
+    font-size: 0.75rem;
+  }
+}
+
+.replyBtn {
+  margin-top: 0.45rem;
+  border: 0;
+  background: transparent;
+  color: #ffd66b;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.replies {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding-left: 0.35rem;
+  border-left: 2px solid rgba(255, 214, 107, 0.22);
+}
+
+.replyItem {
+  padding: 0.7rem 0.8rem !important;
+  background: rgba(0, 0, 0, 0.18) !important;
+}
+
+.inlineReply {
+  margin-top: 0.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.replyingTo {
+  margin: 0;
+  color: #a1a1aa;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.inlineComposer {
+  position: relative;
+}
+
+.inlineEmoji {
+  position: absolute;
+  right: 0.4rem;
+  bottom: 0.35rem;
+  z-index: 2;
+}
+
+.inlineInput {
+  width: 100%;
+
+  :global(.el-textarea__inner) {
+    min-height: 2.4rem !important;
+    border-radius: 0.55rem !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) inset !important;
+    color: #fff !important;
+    padding: 0.45rem 2.2rem 0.45rem 0.65rem !important;
+    font-size: 0.85rem !important;
+    line-height: 1.4 !important;
+  }
+
+  :global(.el-textarea__inner:hover),
+  :global(.el-textarea__inner:focus) {
+    box-shadow: 0 0 0 1px rgba(255, 214, 107, 0.4) inset !important;
+  }
+
+  :global(.el-textarea__inner::placeholder) {
+    color: #71717a;
+  }
+}
+
+.inlineActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.inlineCancel,
+.inlineSubmit {
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.28rem 0.7rem;
+  line-height: 1.2;
+}
+
+.inlineCancel {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: #a1a1aa;
+
+  &:hover {
+    border-color: rgba(255, 214, 107, 0.35);
+    color: #ffd66b;
+  }
+}
+
+.inlineSubmit {
+  border: 0;
+  background: #ffd66b;
+  color: #111;
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.05);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 }
 

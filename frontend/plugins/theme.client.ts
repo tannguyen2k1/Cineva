@@ -1,9 +1,7 @@
 import { useDark } from '@vueuse/core'
 
-/**
- * Ensure VueUse color-scheme stays in sync with the blocking head script
- * (avoids hydration flash when toggling dark/light).
- */
+/** Cineva is dark-only (no light theme toggle). */
 export default defineNuxtPlugin(() => {
-  useDark()
+  const isDark = useDark({ initialValue: 'dark' })
+  isDark.value = true
 })

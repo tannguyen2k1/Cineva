@@ -13,7 +13,7 @@ export default defineNuxtConfig({
     head: {
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover' },
-        { name: 'color-scheme', content: 'light dark' }
+        { name: 'color-scheme', content: 'dark' }
       ],
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/brand/cineva-mark.svg' },
@@ -22,7 +22,7 @@ export default defineNuxtConfig({
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: 'anonymous' },
         { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap' }
       ],
-      // Apply dark class before first paint (matches VueUse useDark storage key)
+      // Force dark before first paint
       script: [{ src: '/theme-init.js', tagPosition: 'head' }]
     }
   },
@@ -73,5 +73,9 @@ export default defineNuxtConfig({
       '/api/**': { proxy: `${apiProxy}/api/**` },
       '/uploads/**': { proxy: `${apiProxy}/uploads/**` }
     }
+  },
+
+  build: {
+    transpile: ['vue3-emoji-picker']
   }
 })

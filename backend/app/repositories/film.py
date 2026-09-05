@@ -305,6 +305,13 @@ async def list_years(db: AsyncSession) -> list[str]:
     return [y for y in result.scalars().all() if y]
 
 
+async def count_films(db: AsyncSession, *, include_hidden: bool = True) -> int:
+    stmt = select(func.count()).select_from(Film)
+    if not include_hidden:
+        stmt = stmt.where(Film.is_hidden.is_(False))
+    return (await db.execute(stmt)).scalar_one()
+
+
 async def latest_source_modified(db: AsyncSession) -> datetime | None:
     return (
         await db.execute(select(func.max(Film.source_modified_at)))
