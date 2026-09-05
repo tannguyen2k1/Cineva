@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from fastapi import HTTPException
@@ -225,83 +226,114 @@ async def run_catalog_sync(
     actor_id: str | None = None,
     pages_per_source: int = 2,
 ) -> dict:
-    """Pull newest + curated danh-sach / thể loại / quốc gia and tag films."""
-    client = get_nguonc_client()
+    """Start catalog sync in the background (avoids proxy/gateway timeouts)."""
+    if await cms_repo.has_running_sync(db, job_type="catalog"):
+        raise HTTPException(
+            status_code=409, detail="Đang có job catalog chạy — đợi xong rồi thử lại"
+        )
+
     run = SyncRun(job_type="catalog", status="running", page_from=1)
     await cms_repo.add_sync_run(db, run)
     await db.commit()
 
-    upserted = 0
-    try:
-        await seed_catalog_taxonomies(db)
-        await db.commit()
-
-        upserted += await _sync_listing_pages(
-            db,
-            fetch=client.fetch_newest,
-            pages=pages_per_source,
+    asyncio.create_task(
+        _execute_catalog_sync(
+            run_id=run.id,
+            actor_id=actor_id,
+            pages_per_source=pages_per_source,
         )
+    )
 
-        for slug, name in CATALOG_LISTS:
+    return {
+        "success": True,
+        "data": {
+            "id": run.id,
+            "jobType": run.job_type,
+            "status": run.status,
+            "pageFrom": run.page_from,
+            "pageTo": run.page_to,
+            "itemsUpserted": run.items_upserted,
+            "startedAt": run.started_at,
+            "finishedAt": run.finished_at,
+            "async": True,
+        },
+    }
+
+
+async def _execute_catalog_sync(
+    *,
+    run_id: str,
+    actor_id: str | None,
+    pages_per_source: int,
+) -> None:
+    from app.db.session import AsyncSessionLocal
+
+    client = get_nguonc_client()
+    upserted = 0
+    async with AsyncSessionLocal() as db:
+        run = await cms_repo.get_sync_run(db, run_id=run_id)
+        if not run:
+            logger.error("Catalog sync run %s not found", run_id)
+            return
+        try:
+            await seed_catalog_taxonomies(db)
+            await db.commit()
+
             upserted += await _sync_listing_pages(
                 db,
-                fetch=lambda page, s=slug: client.fetch_by_list(s, page),
+                fetch=client.fetch_newest,
                 pages=pages_per_source,
-                film_type=(slug, name),
             )
 
-        for slug, name in CATALOG_GENRES:
-            upserted += await _sync_listing_pages(
-                db,
-                fetch=lambda page, s=slug: client.fetch_by_genre(s, page),
-                pages=pages_per_source,
-                genre=(slug, name),
-            )
+            for slug, name in CATALOG_LISTS:
+                upserted += await _sync_listing_pages(
+                    db,
+                    fetch=lambda page, s=slug: client.fetch_by_list(s, page),
+                    pages=pages_per_source,
+                    film_type=(slug, name),
+                )
 
-        for slug, name in CATALOG_COUNTRIES:
-            upserted += await _sync_listing_pages(
-                db,
-                fetch=lambda page, s=slug: client.fetch_by_country(s, page),
-                pages=pages_per_source,
-                country=(slug, name),
-            )
+            for slug, name in CATALOG_GENRES:
+                upserted += await _sync_listing_pages(
+                    db,
+                    fetch=lambda page, s=slug: client.fetch_by_genre(s, page),
+                    pages=pages_per_source,
+                    genre=(slug, name),
+                )
 
-        run.status = "success"
-        run.page_to = pages_per_source
-        run.items_upserted = upserted
-        run.finished_at = utcnow()
-        await db.commit()
+            for slug, name in CATALOG_COUNTRIES:
+                upserted += await _sync_listing_pages(
+                    db,
+                    fetch=lambda page, s=slug: client.fetch_by_country(s, page),
+                    pages=pages_per_source,
+                    country=(slug, name),
+                )
 
-        if actor_id:
-            await write_system_log(
-                db,
-                user_id=actor_id,
-                action="SYNC_CATALOG",
-                resource="Sync",
-                details=f"catalog upserted={upserted} pages_per_source={pages_per_source}",
-            )
+            run.status = "success"
+            run.page_to = pages_per_source
+            run.items_upserted = upserted
+            run.finished_at = utcnow()
+            await db.commit()
 
-        return {
-            "success": True,
-            "data": {
-                "id": run.id,
-                "jobType": run.job_type,
-                "status": run.status,
-                "pageFrom": run.page_from,
-                "pageTo": run.page_to,
-                "itemsUpserted": run.items_upserted,
-                "startedAt": run.started_at,
-                "finishedAt": run.finished_at,
-            },
-        }
-    except Exception as exc:
-        logger.exception("Catalog sync failed")
-        run.status = "failed"
-        run.error = str(exc)[:2000]
-        run.items_upserted = upserted
-        run.finished_at = utcnow()
-        await db.commit()
-        raise HTTPException(status_code=502, detail=f"Đồng bộ catalog thất bại: {exc}") from exc
+            if actor_id:
+                await write_system_log(
+                    db,
+                    user_id=actor_id,
+                    action="SYNC_CATALOG",
+                    resource="Sync",
+                    details=f"catalog upserted={upserted} pages_per_source={pages_per_source}",
+                )
+                await db.commit()
+        except Exception as exc:
+            logger.exception("Catalog sync failed")
+            await db.rollback()
+            run = await cms_repo.get_sync_run(db, run_id=run_id)
+            if run:
+                run.status = "failed"
+                run.error = str(exc)[:2000]
+                run.items_upserted = upserted
+                run.finished_at = utcnow()
+                await db.commit()
 
 
 async def list_sync_runs(db: AsyncSession, *, page: int = 1, page_size: int = 20) -> dict:

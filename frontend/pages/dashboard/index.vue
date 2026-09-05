@@ -261,7 +261,18 @@ async function connectWs() {
   try {
     const { ticket } = await useApiFetch('/api/auth/ws-ticket')
     const config = useRuntimeConfig()
-    const base = String(config.public.wsBase || 'ws://127.0.0.1:8000').replace(/\/$/, '')
+    const configured = String(config.public.wsBase || 'ws://127.0.0.1:8000').replace(/\/$/, '')
+    let base = configured
+    try {
+      const u = new URL(configured)
+      if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') {
+        u.hostname = window.location.hostname
+        if (window.location.protocol === 'https:') u.protocol = 'wss:'
+        base = u.origin
+      }
+    } catch {
+      // keep configured
+    }
     const url = `${base}/ws/server-stats?token=${ticket}`
 
     ws = new WebSocket(url)

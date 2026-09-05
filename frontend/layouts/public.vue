@@ -27,8 +27,8 @@
 
           <div
             :class="[styles.mega, openMenu === 'genres' ? styles.megaOpen : '']"
-            @mouseenter="openMenu = 'genres'"
-            @mouseleave="openMenu = null"
+            @mouseenter="openNav('genres')"
+            @mouseleave="scheduleCloseNav"
           >
             <button type="button" :class="styles.menuDrop" :aria-expanded="openMenu === 'genres'">
               {{ t('cineva.genres') }}
@@ -40,7 +40,7 @@
                 :key="g.slug"
                 :to="`/phim?genre=${g.slug}`"
                 role="menuitem"
-                @click="openMenu = null"
+                @click="closeNav"
               >
                 {{ g.name }}
               </NuxtLink>
@@ -49,7 +49,7 @@
                 :to="'/phim'"
                 :class="styles.megaAll"
                 role="menuitem"
-                @click="openMenu = null"
+                @click="closeNav"
               >
                 {{ t('cineva.viewAll') }} →
               </NuxtLink>
@@ -58,8 +58,8 @@
 
           <div
             :class="[styles.mega, openMenu === 'countries' ? styles.megaOpen : '']"
-            @mouseenter="openMenu = 'countries'"
-            @mouseleave="openMenu = null"
+            @mouseenter="openNav('countries')"
+            @mouseleave="scheduleCloseNav"
           >
             <button type="button" :class="styles.menuDrop" :aria-expanded="openMenu === 'countries'">
               {{ t('cineva.countries') }}
@@ -71,7 +71,7 @@
                 :key="c.slug"
                 :to="`/phim?country=${c.slug}`"
                 role="menuitem"
-                @click="openMenu = null"
+                @click="closeNav"
               >
                 {{ c.name }}
               </NuxtLink>
@@ -204,6 +204,31 @@ const authStore = useAuthStore()
 
 const rootEl = ref<HTMLElement | null>(null)
 const openMenu = ref<'genres' | 'countries' | null>(null)
+let closeNavTimer: ReturnType<typeof setTimeout> | null = null
+
+function openNav(menu: 'genres' | 'countries') {
+  if (closeNavTimer) {
+    clearTimeout(closeNavTimer)
+    closeNavTimer = null
+  }
+  openMenu.value = menu
+}
+
+function scheduleCloseNav() {
+  if (closeNavTimer) clearTimeout(closeNavTimer)
+  closeNavTimer = setTimeout(() => {
+    openMenu.value = null
+    closeNavTimer = null
+  }, 180)
+}
+
+function closeNav() {
+  if (closeNavTimer) {
+    clearTimeout(closeNavTimer)
+    closeNavTimer = null
+  }
+  openMenu.value = null
+}
 
 type TaxonomyItem = { slug: string; name: string }
 type TaxonomiesResponse = {
@@ -227,7 +252,7 @@ const footerCountries = computed(() => navCountries.value.slice(0, 6))
 watch(
   () => route.fullPath,
   async (path) => {
-    openMenu.value = null
+    closeNav()
     if (!import.meta.client) return
 
     await nextTick()

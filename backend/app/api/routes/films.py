@@ -239,12 +239,12 @@ async def admin_sync_run(
 
 @admin_films_router.post("/sync/catalog")
 async def admin_sync_catalog(
-    pagesPerSource: int = 2,
+    pagesPerSource: int = 5,
     db: AsyncSession = Depends(get_db),
     current: CurrentUser = Depends(require_permission("create:sync")),
 ):
     return await film_sync_service.run_catalog_sync(
-        db, actor_id=current.id, pages_per_source=max(1, min(pagesPerSource, 5))
+        db, actor_id=current.id, pages_per_source=max(1, min(pagesPerSource, 10))
     )
 
 

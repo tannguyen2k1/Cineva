@@ -280,19 +280,39 @@ const runCatalog = async () => {
   runningCatalog.value = true
   error.value = null
   try {
-    const res = await useApiFetch('/api/admin/sync/catalog', {
+    await useApiFetch('/api/admin/sync/catalog', {
       method: 'POST',
-      params: { pagesPerSource: 2 },
-      timeout: SYNC_TIMEOUT_MS
+      params: { pagesPerSource: 5 },
+      timeout: 60_000
     })
-    ElMessage.success(
-      t('sync.runSuccess', { count: res?.data?.itemsUpserted ?? 0 })
-    )
+    ElMessage.success(t('sync.runStarted'))
     currentPage.value = 1
     await fetchData()
+    // Poll history until catalog job leaves "running"
+    for (let i = 0; i < 90; i++) {
+      await new Promise((r) => setTimeout(r, 4000))
+      await fetchData()
+      const rows = (apiResponse.value?.data || mobileItems.value || []) as SyncRunRow[]
+      const latest = rows.find((r) => r.jobType === 'catalog')
+      if (!latest || latest.status !== 'running') {
+        if (latest?.status === 'success') {
+          ElMessage.success(
+            t('sync.runSuccess', { count: latest.itemsUpserted ?? 0 })
+          )
+        } else if (latest?.status === 'failed') {
+          ElMessage.error(latest.error || t('sync.runFailed'))
+        }
+        break
+      }
+    }
   } catch (err: any) {
     error.value = err
-    ElMessage.error(err?.data?.detail || t('sync.runFailed'))
+    const detail = err?.data?.detail || ''
+    ElMessage.error(
+      err?.statusCode === 409 || err?.status === 409
+        ? t('sync.runBusy')
+        : detail || t('sync.runFailed')
+    )
   } finally {
     runningCatalog.value = false
   }

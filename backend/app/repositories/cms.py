@@ -121,6 +121,20 @@ async def add_sync_run(db: AsyncSession, run: SyncRun) -> SyncRun:
     return run
 
 
+async def get_sync_run(db: AsyncSession, *, run_id: str) -> SyncRun | None:
+    result = await db.execute(select(SyncRun).where(SyncRun.id == run_id))
+    return result.scalar_one_or_none()
+
+
+async def has_running_sync(db: AsyncSession, *, job_type: str | None = None) -> bool:
+    from sqlalchemy import func
+
+    q = select(func.count()).select_from(SyncRun).where(SyncRun.status == "running")
+    if job_type:
+        q = q.where(SyncRun.job_type == job_type)
+    return bool((await db.execute(q)).scalar_one())
+
+
 async def list_sync_runs(
     db: AsyncSession, *, page: int = 1, page_size: int = 20
 ) -> tuple[list[SyncRun], int]:
