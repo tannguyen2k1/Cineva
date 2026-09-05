@@ -312,6 +312,14 @@ async def count_films(db: AsyncSession, *, include_hidden: bool = True) -> int:
     return (await db.execute(stmt)).scalar_one()
 
 
+async def count_hidden_films(db: AsyncSession) -> int:
+    return (
+        await db.execute(
+            select(func.count()).select_from(Film).where(Film.is_hidden.is_(True))
+        )
+    ).scalar_one()
+
+
 async def latest_source_modified(db: AsyncSession) -> datetime | None:
     return (
         await db.execute(select(func.max(Film.source_modified_at)))

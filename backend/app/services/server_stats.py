@@ -2,18 +2,18 @@ from __future__ import annotations
 
 import os
 import platform
-import random
 from pathlib import Path
 
 import psutil
 
 from app.core.timeutil import to_iso_utc
 
+# Non-blocking cpu_percent needs a prior call to have a baseline.
+psutil.cpu_percent(interval=None)
+
 
 def get_server_stats() -> dict:
     cpu = psutil.cpu_percent(interval=None)
-    if cpu == 0.0 and platform.system() == "Windows":
-        cpu = round(random.uniform(5, 25), 1)
 
     mem = psutil.virtual_memory()
     ram_used = round(mem.used / (1024**3), 2)
@@ -27,10 +27,10 @@ def get_server_stats() -> dict:
         disk_total = round(disk.total / (1024**3), 2)
         disk_pct = round(disk.percent, 1)
     except Exception:  # noqa: BLE001
-        disk_used, disk_total, disk_pct = 10.0, 100.0, 10.0
+        disk_used, disk_total, disk_pct = 0.0, 0.0, 0.0
 
     return {
-        "cpu": cpu,
+        "cpu": round(float(cpu), 1),
         "cpuCores": os.cpu_count() or 1,
         "ram": ram,
         "ramUsed": ram_used,

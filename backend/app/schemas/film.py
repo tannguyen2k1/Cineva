@@ -147,6 +147,7 @@ class RegisterRequest(ORMModel):
     password: str = Field(min_length=6, max_length=128)
     email: str | None = None
     full_name: str | None = Field(default=None, alias="fullName")
+    turnstile_token: str = Field(alias="turnstileToken")
 
 
 class SyncRunOut(ORMModel):

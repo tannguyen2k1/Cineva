@@ -1,0 +1,127 @@
+.card {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+
+  :global(.el-card__header) {
+    padding: 14px 18px;
+    border-bottom-color: var(--border-color);
+    flex-shrink: 0;
+  }
+
+  :global(.el-card__body) {
+    padding: 14px 16px 16px;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.hint {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.chartWrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.legViews::before,
+.legVisitors::before,
+.legLogins::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.legViews::before { background: #ffd66b; }
+.legVisitors::before { background: #60a5fa; }
+.legLogins::before { background: #34d399; }
+
+.svg {
+  width: 100%;
+  height: auto;
+  flex: 1;
+  min-height: 180px;
+}
+
+.barViews { fill: #ffd66b; }
+.barVisitors { fill: #60a5fa; }
+.barLogins { fill: #34d399; }
+
+.axisLabel {
+  fill: var(--text-secondary);
+  font-size: 10px;
+}
+
+.totals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding-top: 4px;
+
+  div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
+  }
+
+  strong {
+    font-size: 1.05rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  span {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+}
+
+.empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  min-height: 160px;
+  text-align: center;
+  padding: 16px;
+}

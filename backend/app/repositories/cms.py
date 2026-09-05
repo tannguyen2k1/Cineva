@@ -80,6 +80,24 @@ async def latest_sync_run(db: AsyncSession) -> SyncRun | None:
     return result.scalar_one_or_none()
 
 
+async def count_banners(db: AsyncSession, *, active_only: bool = False) -> int:
+    from sqlalchemy import func
+
+    stmt = select(func.count()).select_from(Banner)
+    if active_only:
+        stmt = stmt.where(Banner.is_active.is_(True))
+    return (await db.execute(stmt)).scalar_one()
+
+
+async def count_featured(db: AsyncSession, *, section: str | None = None) -> int:
+    from sqlalchemy import func
+
+    stmt = select(func.count()).select_from(FeaturedFilm)
+    if section:
+        stmt = stmt.where(FeaturedFilm.section == section)
+    return (await db.execute(stmt)).scalar_one()
+
+
 async def get_featured(db: AsyncSession, *, featured_id: str) -> FeaturedFilm | None:
     return (
         await db.execute(select(FeaturedFilm).where(FeaturedFilm.id == featured_id))

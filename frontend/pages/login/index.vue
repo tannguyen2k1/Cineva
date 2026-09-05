@@ -72,6 +72,10 @@
         </el-form>
 
         <p :class="styles.meta">{{ t('login.footer') }}</p>
+        <p :class="styles.meta">
+          {{ t('login.noAccount') }}
+          <NuxtLink to="/register" :class="styles.inlineLink">{{ t('login.goRegister') }}</NuxtLink>
+        </p>
         <NuxtLink to="/" :class="styles.backHome">← {{ t('login.backHome') }}</NuxtLink>
       </section>
     </main>
@@ -81,6 +85,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import { ElMessage } from 'element-plus'
+import type { User } from '~/stores/auth'
 import styles from './login.module.scss'
 
 definePageMeta({
@@ -116,9 +121,12 @@ const handleLogin = async () => {
     if (!valid) return
     loading.value = true
     try {
-      const { data } = await apiFetch<{
-        user: { fullName?: string; username?: string }
-        permissions: string[]
+      const res = await apiFetch<{
+        success: boolean
+        data: {
+          user: User
+          permissions: string[]
+        }
       }>('/api/auth/login', {
         method: 'POST',
         body: {
@@ -128,6 +136,7 @@ const handleLogin = async () => {
         }
       })
 
+      const data = res.data
       authStore.setAuth(data.user, data.permissions)
       const displayName = data.user?.fullName || data.user?.username || form.username
       ElMessage.success(t('login.welcome', { name: displayName }))

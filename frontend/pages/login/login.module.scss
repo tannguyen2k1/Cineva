@@ -233,8 +233,21 @@
 .meta {
   margin: 1.15rem 0 0.65rem;
   text-align: center;
-  font-size: 0.75rem;
-  color: #71717a;
+  font-size: 0.85rem;
+  color: #a1a1aa;
+}
+
+.inlineLink {
+  display: inline;
+  margin-left: 0.35rem;
+  color: #ffd66b !important;
+  text-decoration: none;
+  font-size: inherit;
+  font-weight: 600;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
 .backHome {

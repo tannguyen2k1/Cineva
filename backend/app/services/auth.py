@@ -353,6 +353,13 @@ async def register(db: AsyncSession, body, response: Response) -> dict:
     if not isinstance(body, RegisterRequest):
         body = RegisterRequest.model_validate(body)
 
+    if not body.turnstile_token:
+        raise HTTPException(status_code=400, detail="Vui lòng xác minh Cloudflare Turnstile")
+
+    turnstile = await verify_login_turnstile(body.turnstile_token)
+    if not turnstile.get("success"):
+        raise HTTPException(status_code=403, detail="Xác minh Turnstile thất bại")
+
     username = body.username.strip()
     if await user_repo.find_active_username(db, username=username):
         raise HTTPException(status_code=409, detail="Username đã tồn tại")

@@ -226,12 +226,27 @@ const footerCountries = computed(() => navCountries.value.slice(0, 6))
 
 watch(
   () => route.fullPath,
-  async () => {
+  async (path) => {
     openMenu.value = null
     await nextTick()
     if (rootEl.value) rootEl.value.scrollTop = 0
     window.scrollTo(0, 0)
-  }
+
+    if (!import.meta.client) return
+    try {
+      await useApiFetch('/api/public/traffic/hit', {
+        method: 'POST',
+        body: {
+          path,
+          referrer: document.referrer || null,
+          language: navigator.language || null
+        }
+      })
+    } catch {
+      // ignore tracking failures
+    }
+  },
+  { immediate: true }
 )
 
 async function onCommand(cmd: string) {

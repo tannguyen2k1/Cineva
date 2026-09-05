@@ -253,10 +253,14 @@ async def list_admin_comments(
     return list(result.scalars().all()), total
 
 
-async def count_comments(db: AsyncSession, *, include_deleted: bool = False) -> int:
+async def count_comments(
+    db: AsyncSession, *, include_deleted: bool = False, hidden_only: bool = False
+) -> int:
     filters = []
     if not include_deleted:
         filters.append(FilmComment.deleted_at.is_(None))
+    if hidden_only:
+        filters.append(FilmComment.is_hidden.is_(True))
     stmt = select(func.count()).select_from(FilmComment)
     if filters:
         stmt = stmt.where(*filters)

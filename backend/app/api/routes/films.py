@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_optional_user, require_permission
@@ -19,10 +19,26 @@ from app.services import engagement as engagement_service
 from app.services import film_sync as film_sync_service
 from app.services import films as films_service
 from app.services import notifications as notifications_service
+from app.services import traffic as traffic_service
 
 public_router = APIRouter(prefix="/public", tags=["Public Films"])
 me_router = APIRouter(prefix="/me", tags=["My Films"])
 admin_films_router = APIRouter(prefix="/admin", tags=["Admin Films"])
+
+
+@public_router.post("/traffic/hit", summary="Record a public page view")
+async def public_traffic_hit(
+    request: Request,
+    body: traffic_service.TrafficHitBody | None = None,
+    db: AsyncSession = Depends(get_db),
+    current: CurrentUser | None = Depends(get_optional_user),
+):
+    return await traffic_service.hit(
+        db,
+        request=request,
+        body=body,
+        user_id=current.id if current else None,
+    )
 
 
 @public_router.get("/home")

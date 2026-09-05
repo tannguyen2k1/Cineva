@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { cookieForwardHeaders, requestHasCookie } from '~/utils/authCookies'
 import { apiFetch } from '~/utils/apiFetch'
 
-interface User {
+export interface User {
   id: string
   username: string
   fullName: string | null

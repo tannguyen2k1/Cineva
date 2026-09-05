@@ -59,7 +59,6 @@
   </el-container>
 
   <MobileBottomNav />
-  <ChatWidget />
 </template>
 
 <script setup lang="ts">

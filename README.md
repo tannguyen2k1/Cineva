@@ -1,13 +1,38 @@
-# Cineva — Nuxt frontend + FastAPI backend
+# Cineva
 
-Monorepo xem phim (single-org, không multi-tenant):
+Nền tảng xem phim (monorepo): giao diện công khai + quản trị nội dung, một tổ chức (không multi-tenant).
 
 ```
-frontend/   Nuxt 4 UI (Element Plus, i18n, Pinia)
-backend/    FastAPI + SQLAlchemy 2 + Alembic + Scalar docs
+frontend/   Nuxt 4 · Vue 3 · Element Plus · Pinia · i18n
+backend/    FastAPI · SQLAlchemy 2 · Alembic · PostgreSQL · Scalar
 ```
 
-## Quick start (local)
+> **Lưu ý:** Toàn bộ dự án mang tính chất học tập / nghiên cứu. Tác giả **không chịu trách nhiệm** nếu bạn dùng cho mục đích thương mại hoặc bất kỳ mục đích nào khác ngoài học tập.
+
+## Tính năng chính
+
+**Công khai**
+- Trang chủ, danh mục / tìm kiếm phim, trang chi tiết, xem tập
+- Đăng ký / đăng nhập (Cloudflare Turnstile)
+- Tủ phim, lịch sử đã xem, theo dõi / đánh giá / bình luận (khi đã đăng nhập)
+
+**Quản trị**
+- Kho phim, đồng bộ catalog (thủ công + lịch 00:00 Asia/Ho_Chi_Minh)
+- Banner trang chủ, phim nổi bật, duyệt bình luận
+- Người dùng / vai trò / quyền, nhật ký hệ thống
+- Dashboard: thống kê, lưu lượng truy cập 7 ngày, trạng thái server
+
+## Yêu cầu
+
+| Thành phần | Phiên bản |
+|------------|-----------|
+| Node.js | 20+ (khuyến nghị) |
+| Python | 3.11+ |
+| [uv](https://docs.astral.sh/uv/) | mới nhất |
+| Docker | cho Postgres / full stack |
+| Cloudflare Turnstile | site key + secret (dev: key test trong `.env.example`) |
+
+## Chạy local
 
 ### 1. Database
 
@@ -15,33 +40,30 @@ backend/    FastAPI + SQLAlchemy 2 + Alembic + Scalar docs
 docker compose up -d db
 ```
 
-### 2. Backend
+Postgres: `localhost:5432` · DB `cineva` · user/pass `postgres` / `password123`
 
-Cần [uv](https://docs.astral.sh/uv/) đã cài sẵn.
+### 2. Backend
 
 ```bash
 cd backend
 uv sync --extra dev
 
-# Copy env
 # macOS / Linux:
 cp .env.example .env
 # Windows:
 # copy .env.example .env
 
-# Edit .env if needed (JWT_SECRET / DB), then:
 uv run alembic upgrade head
 uv run python scripts/seed.py
 uv run uvicorn app.main:app --reload --port 8000
 ```
 
-Dependencies: `backend/pyproject.toml` + lockfile `backend/uv.lock` (không dùng `requirements.txt`).  
+- Docs (Scalar): http://localhost:8000/api/docs  
+- OpenAPI: http://localhost:8000/api/openapi.json  
+- Admin mặc định (seed): `admin` / `admin123456`
+
+Dependencies nằm trong `pyproject.toml` + `uv.lock` (không dùng `requirements.txt`).  
 Thêm / gỡ package: `uv add <pkg>` / `uv remove <pkg>`.
-
-- API docs (Scalar): http://localhost:8000/api/docs  
-- OpenAPI JSON: http://localhost:8000/api/openapi.json  
-
-Default admin (seed): `admin` / `admin123456`
 
 ### 3. Frontend
 
@@ -68,25 +90,73 @@ WebSocket nối thẳng FastAPI (`NUXT_PUBLIC_WS_BASE`, mặc định `ws://127.
 docker compose up --build
 ```
 
-- Web: http://localhost:3000  
-- API: http://localhost:8000  
-- Docs: http://localhost:8000/api/docs  
+| Service | URL |
+|---------|-----|
+| Web | http://localhost:3000 |
+| API | http://localhost:8000 |
+| Docs | http://localhost:8000/api/docs |
 
-## Architecture
+## Kiến trúc
 
 ```
-Browser → Nuxt (:3000) ──proxy /api──→ FastAPI (:8000) → Postgres
-                      └──proxy /ws──→ FastAPI WebSocket
+Browser → Nuxt (:3000) ──proxy /api, /uploads──→ FastAPI (:8000) → Postgres
+                      └── WS (NUXT_PUBLIC_WS_BASE) ──→ FastAPI WebSocket
 ```
 
-Backend layers: `api/routes` → `services` → `repositories` → SQLAlchemy `models` (+ Pydantic `schemas`).  
-Auth: browser = HttpOnly cookies (`auth_token` / `refresh_token`); API/Scalar = OAuth2 `POST /api/auth/token` → Bearer.
+Backend theo lớp: `api/routes` → `services` → `repositories` → `models` (+ Pydantic `schemas`).
 
-## Env
+**Auth**
+- Trình duyệt: HttpOnly cookies (`auth_token` / `refresh_token`) + CSRF — không gửi Bearer từ Nuxt
+- API / Scalar: `POST /api/auth/token` (OAuth2 password) → Bearer; refresh bằng `grant_type=refresh_token`
 
-| File | Purpose |
-|------|---------|
-| `backend/.env` | `DATABASE_URL`, `JWT_SECRET`, `TURNSTILE_SECRET_KEY`, admin defaults |
+**Gọi API từ frontend:** dùng `useApiFetch` / `apiFetch` (relative `/api/...`), không dùng bare `$fetch` cho `/api/**`.
+
+## Biến môi trường
+
+| File | Mục đích |
+|------|----------|
+| `backend/.env` | `DATABASE_URL`, `JWT_SECRET`, `TURNSTILE_SECRET_KEY`, admin mặc định, rate limit, `ENVIRONMENT` |
 | `frontend/.env` | `NUXT_PUBLIC_TURNSTILE_SITE_KEY`, `NUXT_API_PROXY`, `NUXT_PUBLIC_WS_BASE` |
 
-**Note:** Schema SQLAlchemy dùng snake_case (`users`, `full_name`, …). Nếu volume Postgres schema lệch (đổi nhánh / DB cũ), reset: `docker compose down -v`.
+Chi tiết mẫu: `backend/.env.example`, `frontend/.env.example`.
+
+## Cấu trúc thư mục (tóm tắt)
+
+```
+frontend/
+  pages/          Route Nuxt (công khai + admin)
+  components/     UI tái sử dụng (CSS Modules)
+  stores/         Pinia (auth, …)
+  i18n/locales/   Bản dịch (vi)
+backend/
+  app/
+    api/          Routes, deps, CSRF, rate limit
+    services/     Nghiệp vụ (films, auth, traffic, sync, …)
+    repositories/ Truy vấn SQLAlchemy
+    models/       ORM
+    schemas/      Pydantic I/O
+  alembic/        Migrations
+  scripts/        Seed, tiện ích
+```
+
+## Ghi chú vận hành
+
+- Schema SQLAlchemy dùng **snake_case** (`users`, `full_name`, …). Nếu volume Postgres lệch schema (đổi nhánh / DB cũ): `docker compose down -v` rồi chạy lại migrate + seed.
+- Turnstile key test chấp nhận token `XXXX.DUMMY.TOKEN.XXXX` (login/register web).
+- Đồng bộ phim: lịch hàng ngày lúc **00:00** (Asia/Ho_Chi_Minh); có thể chạy thủ công từ `/films/sync`.
+- Theme UI cố định dark; ngôn ngữ mặc định tiếng Việt.
+
+## Scripts hữu ích
+
+```bash
+# Backend
+cd backend
+uv run alembic upgrade head
+uv run alembic revision --autogenerate -m "mo_ta"
+uv run ruff check .
+
+# Frontend
+cd frontend
+npm run typecheck
+npm run build
+```

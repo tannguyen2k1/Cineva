@@ -22,6 +22,7 @@ from app.models.watch_progress import WatchProgress
 from app.models.watchlist_item import WatchlistItem
 from app.models.film_follow import FilmFollow
 from app.models.notification import Notification
+from app.models.site_traffic import SiteTrafficDaily, SiteVisit, SiteVisitorDay
 
 __all__ = [
     "User",
@@ -48,4 +49,7 @@ __all__ = [
     "FilmComment",
     "Notification",
     "SyncRun",
+    "SiteVisit",
+    "SiteTrafficDaily",
+    "SiteVisitorDay",
 ]

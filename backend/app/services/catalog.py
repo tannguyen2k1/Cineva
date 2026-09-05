@@ -95,47 +95,15 @@ async def dashboard_stats(db: AsyncSession) -> dict:
     from app.repositories import film as film_repo
 
     users = await user_repo.count_active(db)
-    roles = await role_repo.count_active(db)
-    logs_count = await system_log_repo.count_all(db)
     films = await film_repo.count_films(db, include_hidden=True)
+    films_hidden = await film_repo.count_hidden_films(db)
+    films_visible = max(0, films - films_hidden)
     comments = await eng_repo.count_comments(db)
+    comments_hidden = await eng_repo.count_comments(db, hidden_only=True)
+    banners = await cms_repo.count_banners(db)
+    banners_active = await cms_repo.count_banners(db, active_only=True)
+    featured = await cms_repo.count_featured(db, section="home_hot")
     last_sync = await cms_repo.latest_sync_run(db)
-
-    recent_logs = []
-    for log in await system_log_repo.list_recent(db, limit=20):
-        action_upper = (log.action or "").upper()
-        if "LỖI" in action_upper or "ERROR" in action_upper:
-            log_type = "danger"
-        elif "CẢNH BÁO" in action_upper or "WARN" in action_upper:
-            log_type = "warning"
-        else:
-            log_type = "primary"
-        details = log.details
-        if details:
-            try:
-                details = json.loads(details)
-            except (TypeError, json.JSONDecodeError):
-                pass
-        recent_logs.append(
-            {
-                "id": log.id,
-                "action": log.action,
-                "details": details,
-                "createdAt": log.created_at,
-                "type": log_type,
-            }
-        )
-
-    recent_users = [
-        {
-            "id": u.id,
-            "username": u.username,
-            "fullName": u.full_name,
-            "avatar": u.avatar,
-            "createdAt": u.created_at,
-        }
-        for u in await user_repo.list_recent(db, limit=4)
-    ]
 
     last_sync_payload = None
     if last_sync:
@@ -144,23 +112,31 @@ async def dashboard_stats(db: AsyncSession) -> dict:
             "jobType": last_sync.job_type,
             "status": last_sync.status,
             "itemsUpserted": last_sync.items_upserted,
+            "error": last_sync.error,
             "startedAt": last_sync.started_at,
             "finishedAt": last_sync.finished_at,
         }
+
+    from app.services import traffic as traffic_service
+
+    traffic = await traffic_service.series_last_days(db, days=7)
 
     return {
         "success": True,
         "data": {
             "stats": {
                 "users": users,
-                "roles": roles,
-                "logs": logs_count,
                 "films": films,
+                "filmsVisible": films_visible,
+                "filmsHidden": films_hidden,
                 "comments": comments,
+                "commentsHidden": comments_hidden,
+                "banners": banners,
+                "bannersActive": banners_active,
+                "featured": featured,
             },
             "lastSync": last_sync_payload,
-            "recentLogs": recent_logs,
+            "traffic": traffic,
             "server": get_server_stats(),
-            "recentUsers": recent_users,
         },
     }

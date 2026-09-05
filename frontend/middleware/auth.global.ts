@@ -2,7 +2,7 @@ import { defineNuxtRouteMiddleware, navigateTo, useCookie } from '#imports'
 
 import { requestHasCookie } from '~/utils/authCookies'
 
-const PUBLIC_EXACT = new Set(['/', '/login', '/dang-ky', '/tim-kiem'])
+const PUBLIC_EXACT = new Set(['/', '/login', '/register', '/tim-kiem'])
 const PUBLIC_PREFIXES = [
   '/phim',
   '/xem',
@@ -31,7 +31,7 @@ export default defineNuxtRouteMiddleware((to) => {
     return navigateTo('/login')
   }
 
-  if (isLoggedIn && to.path === '/login') {
+  if (isLoggedIn && (to.path === '/login' || to.path === '/register')) {
     return navigateTo('/')
   }
 })

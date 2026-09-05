@@ -56,13 +56,10 @@ const props = withDefaults(defineProps<{
 
 const { t } = useI18n();
 
-const formatBytes = (bytes: number = 0) => {
-  if (!bytes || bytes < 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  const value = bytes / Math.pow(1024, i);
-  const digits = value >= 100 || i === 0 ? 0 : value >= 10 ? 1 : 2;
-  return `${value.toFixed(digits)} ${units[i]}`;
+const formatGiB = (gib: number = 0) => {
+  const value = Number.isFinite(gib) ? gib : 0;
+  const digits = value >= 100 ? 0 : value >= 10 ? 1 : 2;
+  return `${value.toFixed(digits)} GB`;
 };
 
 const getUsageStatus = (percentage: number = 0) => {
@@ -78,19 +75,19 @@ const metrics = computed(() => {
       key: 'cpu',
       label: 'CPU',
       detail: `${s.cpu || 0}% · ${s.cpuCores || 0} ${t('dashboard.cores')}`,
-      percentage: s.cpu || 0
+      percentage: Math.min(100, Math.max(0, s.cpu || 0))
     },
     {
       key: 'ram',
       label: 'RAM',
-      detail: `${formatBytes(s.ramUsed)} / ${formatBytes(s.ramTotal)}`,
-      percentage: s.ram || 0
+      detail: `${formatGiB(s.ramUsed)} / ${formatGiB(s.ramTotal)}`,
+      percentage: Math.min(100, Math.max(0, s.ram || 0))
     },
     {
       key: 'disk',
       label: 'Disk',
-      detail: `${formatBytes(s.diskUsed)} / ${formatBytes(s.diskTotal)}`,
-      percentage: s.disk || 0
+      detail: `${formatGiB(s.diskUsed)} / ${formatGiB(s.diskTotal)}`,
+      percentage: Math.min(100, Math.max(0, s.disk || 0))
     }
   ];
 });

@@ -13,7 +13,7 @@
   @media (max-width: 1024px) {
     overflow-y: auto;
     height: auto;
-    display: block; // Fallback or just let it expand naturally
+    display: block;
   }
 }
 
@@ -34,7 +34,7 @@
   flex: 1 1 0;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
   gap: 16px;
   align-items: stretch;
 
@@ -50,6 +50,12 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  width: 100%;
+
+  > :last-child {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
 }
 
 .premiumCard {
@@ -57,11 +63,6 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
-  transition: box-shadow 0.3s ease;
-
-  &:hover {
-    box-shadow: var(--shadow-md);
-  }
 
   :global(.el-card__header) {
     padding: 14px 18px;
@@ -94,29 +95,8 @@
 
   @media (max-width: 1024px) {
     height: auto;
-    min-height: 400px;
-  }
-}
-
-.membersCard {
-  flex: 1 1 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-
-  :global(.el-card__body) {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    
-    @media (max-width: 1024px) {
-      overflow-y: visible;
-    }
-  }
-
-  @media (max-width: 1024px) {
-    height: auto;
-    min-height: 300px;
+    min-height: 360px;
+    margin-bottom: 16px;
   }
 }
 
@@ -130,63 +110,127 @@
   gap: 12px;
 }
 
-.timelineScroll {
+.overviewBody {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+
+  @media (max-width: 1024px) {
+    overflow: visible;
+  }
+}
+
+.syncBlock {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--bg-body);
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.syncHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+
+  strong {
+    font-size: 0.95rem;
+  }
+}
+
+.syncMeta {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.syncError {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: var(--el-color-danger);
+  word-break: break-word;
+}
+
+.reportList {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 2px;
 
-  :global(.el-timeline-item__wrapper) {
-    padding-left: 22px;
+  @media (max-width: 1024px) {
+    overflow: visible;
+  }
+}
+
+.reportRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-card);
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--primary-color) 45%, var(--border-color));
+    background: var(--bg-body);
+  }
+}
+
+.reportLabel {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+
+  :global(.el-icon) {
+    margin-top: 2px;
+    font-size: 18px;
+    color: var(--text-secondary);
   }
 
-  :global(.el-timeline-item__timestamp) {
-    font-size: 13px;
-  }
-
-  :global(.el-card) {
-    border-radius: var(--radius-md);
-  }
-
-  :global(.el-card__body) {
-    padding: 10px 12px;
-  }
-
-  h4 {
-    margin: 0 0 4px;
-    font-size: 14px;
+  strong {
+    display: block;
+    font-size: 0.92rem;
     font-weight: 600;
   }
 
-  p {
-    margin: 0;
-    font-size: 13px;
+  span {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.8rem;
     color: var(--text-secondary);
-    line-height: 1.4;
-    word-break: break-word;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  @media (max-width: 1024px) {
-    overflow-y: visible;
+    line-height: 1.35;
   }
 }
 
-.memberRow {
+.reportValue {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-}
-
-.mt3 {
-  margin-top: 14px;
-}
-
-.memberDate {
-  font-size: 13px;
-  color: var(--text-secondary);
+  gap: 8px;
   flex-shrink: 0;
+
+  b {
+    font-size: 1.05rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  :global(.el-icon) {
+    color: var(--text-secondary);
+  }
 }
