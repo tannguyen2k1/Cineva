@@ -201,7 +201,7 @@ async def taxonomies(db: AsyncSession) -> dict:
 # Curated topic cards for home (RoPhim-style discovery)
 HOME_TOPICS: list[dict] = [
     {"slug": "khoa-hoc-vien-tuong", "name": "Viễn Tưởng", "href": "/phim?genre=khoa-hoc-vien-tuong", "tone": "violet"},
-    {"slug": "thai-lan", "name": "Thái Lan", "href": "/phim?country=thai-lan", "tone": "rose"},
+    {"slug": "hanh-dong", "name": "Hành Động", "href": "/phim?genre=hanh-dong", "tone": "rose"},
     {"slug": "dang-chieu", "name": "Chiếu Rạp", "href": "/phim?type=dang-chieu", "tone": "amber"},
     {"slug": "kinh-di", "name": "Kinh Dị", "href": "/phim?genre=kinh-di", "tone": "crimson"},
     {"slug": "co-trang", "name": "Cổ Trang", "href": "/phim?genre=co-trang", "tone": "gold"},
