@@ -351,4 +351,28 @@
     width: 72px;
     height: 44px;
   }
+
+  .body {
+    padding: 1.35rem 1rem 2.25rem;
+  }
+
+  .topicRail,
+  .rail {
+    gap: 0.75rem;
+    padding-inline-end: 1rem;
+    scroll-padding-inline-end: 1rem;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  .topicRail {
+    grid-auto-columns: minmax(148px, 66vw);
+  }
+
+  .rail {
+    grid-auto-columns: minmax(132px, 40vw);
+  }
 }

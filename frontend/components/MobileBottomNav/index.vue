@@ -1,48 +1,85 @@
 <template>
-  <nav :class="styles.bottomNav">
-    <NuxtLink to="/dashboard" :class="[styles.navItem, isActive('/dashboard') && styles.active]">
-      <el-icon :class="styles.icon"><Menu /></el-icon>
+  <nav :class="styles.bottomNav" aria-label="Điều hướng admin">
+    <NuxtLink
+      v-if="authStore.hasPermission('read:dashboard')"
+      to="/dashboard"
+      :class="[styles.navItem, isActive('/dashboard') && styles.active]"
+    >
+      <el-icon :class="styles.icon"><Odometer /></el-icon>
       <span :class="styles.label">{{ t('nav.dashboard') }}</span>
     </NuxtLink>
 
-    <NuxtLink to="/orders" :class="[styles.navItem, isActive('/orders') && styles.active]">
-      <el-icon :class="styles.icon"><ShoppingCart /></el-icon>
-      <span :class="styles.label">{{ t('nav.orders') }}</span>
+    <NuxtLink
+      v-if="authStore.hasPermission('read:films')"
+      to="/films"
+      :class="[styles.navItem, isFilmsActive && styles.active]"
+    >
+      <el-icon :class="styles.icon"><Film /></el-icon>
+      <span :class="styles.label">{{ t('nav.adminFilms') }}</span>
     </NuxtLink>
 
-    <NuxtLink to="/products" :class="[styles.navItem, isActive('/products') && styles.active]">
-      <el-icon :class="styles.icon"><Goods /></el-icon>
-      <span :class="styles.label">{{ t('nav.products') }}</span>
-    </NuxtLink>
-    
-    <NuxtLink to="/customers" :class="[styles.navItem, isActive('/customers') && styles.active]">
-      <el-icon :class="styles.icon"><User /></el-icon>
-      <span :class="styles.label">{{ t('nav.customers') }}</span>
+    <NuxtLink
+      v-if="authStore.hasPermission('read:sync')"
+      to="/films/sync"
+      :class="[styles.navItem, isActive('/films/sync') && styles.active]"
+    >
+      <el-icon :class="styles.icon"><Refresh /></el-icon>
+      <span :class="styles.label">{{ t('nav.sync') }}</span>
     </NuxtLink>
 
-    <div :class="[styles.navItem, isDrawerOpen && styles.active]" @click="isDrawerOpen = true">
+    <NuxtLink
+      v-if="authStore.hasPermission('read:users')"
+      to="/systems/users"
+      :class="[styles.navItem, isActive('/systems/users') && styles.active]"
+    >
+      <el-icon :class="styles.icon"><UserFilled /></el-icon>
+      <span :class="styles.label">{{ t('nav.users') }}</span>
+    </NuxtLink>
+
+    <button
+      type="button"
+      :class="[styles.navItem, isDrawerOpen && styles.active]"
+      @click="isDrawerOpen = true"
+    >
       <el-icon :class="styles.icon"><MoreFilled /></el-icon>
       <span :class="styles.label">{{ t('nav.menu') }}</span>
-    </div>
+    </button>
 
     <MobileMenuDrawer v-model="isDrawerOpen" />
   </nav>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { useRoute } from 'vue-router';
-import { useI18n } from 'vue-i18n';
-import { Menu, ShoppingCart, Goods, User, MoreFilled } from '@element-plus/icons-vue';
-import styles from './MobileBottomNav.module.scss';
+import { ref, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import {
+  Odometer,
+  Film,
+  Refresh,
+  UserFilled,
+  MoreFilled
+} from '@element-plus/icons-vue'
+import styles from './MobileBottomNav.module.scss'
 
-const route = useRoute();
-const { t } = useI18n();
+const route = useRoute()
+const { t } = useI18n()
+const authStore = useAuthStore()
 
-const isDrawerOpen = ref(false);
+const isDrawerOpen = ref(false)
 
-const isActive = (path: string) => {
-  if (path === '/') return route.path === '/';
-  return route.path.startsWith(path);
-};
+const isFilmsActive = computed(() => {
+  return route.path === '/films'
+})
+
+function isActive(path: string) {
+  return route.path === path || route.path.startsWith(`${path}/`)
+}
+
+watch(
+  () => route.fullPath,
+  () => {
+    isDrawerOpen.value = false
+  }
+)
 </script>

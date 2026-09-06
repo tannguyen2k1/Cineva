@@ -1,16 +1,26 @@
 .root {
   position: relative;
   width: 100%;
+  min-width: 0;
+}
+
+/* Desktop: full field, no icon trigger / cancel / backdrop */
+.iconBtn,
+.cancel,
+.backdrop {
+  display: none;
 }
 
 .field {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  width: 100%;
   padding: 0.5rem 0.85rem;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
 
   &:focus-within {
     border-color: rgba(255, 214, 107, 0.5);
@@ -36,7 +46,6 @@
     color: #71717a;
   }
 
-  // Hide browser native clear (conflicts with our clear button)
   &::-webkit-search-cancel-button,
   &::-webkit-search-decoration {
     -webkit-appearance: none;
@@ -61,13 +70,27 @@
   }
 }
 
+.cancel {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0.15rem 0.35rem;
+  border: 0;
+  background: transparent;
+  color: #ffd66b;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 .panel {
   position: absolute;
   z-index: 80;
   top: calc(100% + 0.45rem);
   left: 0;
   right: 0;
-  min-width: min(360px, 92vw);
+  max-width: 100%;
   max-height: min(420px, 70vh);
   overflow: auto;
   border-radius: 0.85rem;
@@ -149,8 +172,159 @@
   }
 }
 
-@media (max-width: 900px) {
+/* Mobile: icon only; expand overlays header */
+@media (max-width: 1099px) {
+  .root {
+    width: auto;
+  }
+
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: rgba(6, 6, 10, 0.55);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.32s ease;
+  }
+
+  .iconBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    width: 1.75rem;
+    height: 2.25rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0.4rem;
+    background: transparent;
+    color: #e4e4e7;
+    cursor: pointer;
+    transition:
+      color 0.2s ease,
+      opacity 0.22s ease,
+      transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+
+    &:active {
+      transform: scale(0.88);
+      color: #ffd66b;
+    }
+  }
+
+  .field {
+    position: fixed;
+    top: max(0.45rem, env(safe-area-inset-top, 0px));
+    right: 0.85rem;
+    left: auto;
+    z-index: 100;
+    display: flex;
+    width: 2rem;
+    height: 2.4rem;
+    margin: 0;
+    padding: 0 0.4rem;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate3d(8px, 0, 0) scale(0.88);
+    transform-origin: right center;
+    background: rgba(20, 20, 24, 0.96);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: none;
+    transition:
+      width 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+      left 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+      right 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+      padding 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.22s ease,
+      transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.3s ease,
+      box-shadow 0.36s ease,
+      background 0.3s ease;
+
+    .icon,
+    .input,
+    .clear,
+    .cancel {
+      opacity: 0;
+      transform: translateX(6px);
+      transition:
+        opacity 0.22s ease,
+        transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+  }
+
+  .cancel {
+    display: inline-flex;
+  }
+
   .panel {
-    min-width: 100%;
+    position: fixed;
+    top: calc(0.45rem + 2.4rem + 0.55rem);
+    left: 0.75rem;
+    right: 0.75rem;
+    z-index: 100;
+    max-width: none;
+    opacity: 0;
+    transform: translateY(-6px);
+    pointer-events: none;
+    transition:
+      opacity 0.28s ease,
+      transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .expanded {
+    .backdrop {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .iconBtn {
+      opacity: 0;
+      transform: scale(0.55);
+      pointer-events: none;
+    }
+
+    .field {
+      left: 0.75rem;
+      right: 0.75rem;
+      width: auto;
+      padding: 0.5rem 0.85rem;
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate3d(0, 0, 0) scale(1);
+      background: #141416;
+      border-color: rgba(255, 214, 107, 0.5);
+      box-shadow:
+        0 14px 36px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(255, 214, 107, 0.1);
+
+      .icon,
+      .input,
+      .clear {
+        opacity: 1;
+        transform: translateX(0);
+        transition-delay: 0.12s;
+      }
+
+      .cancel {
+        opacity: 1;
+        transform: translateX(0);
+        transition-delay: 0.18s;
+      }
+    }
+
+    .panel {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+      transition-delay: 0.08s;
+    }
   }
 }

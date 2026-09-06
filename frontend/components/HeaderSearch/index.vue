@@ -1,8 +1,31 @@
 <template>
-  <div ref="rootEl" :class="styles.root">
+  <div
+    ref="rootEl"
+    :class="[styles.root, expanded && styles.expanded]"
+    :data-expanded="expanded ? 'true' : undefined"
+  >
+    <button
+      type="button"
+      :class="styles.iconBtn"
+      :aria-label="t('cineva.search')"
+      @click="expand"
+    >
+      <el-icon :size="22"><Search /></el-icon>
+    </button>
+
+    <button
+      v-if="isCompact"
+      type="button"
+      :class="styles.backdrop"
+      tabindex="-1"
+      aria-hidden="true"
+      @click="collapse"
+    />
+
     <form :class="styles.field" @submit.prevent="goSearch">
       <el-icon :class="styles.icon"><Search /></el-icon>
       <input
+        ref="inputEl"
         v-model="keyword"
         type="search"
         :placeholder="t('cineva.searchPlaceholder')"
@@ -23,9 +46,16 @@
       >
         <el-icon><Close /></el-icon>
       </button>
+      <button
+        type="button"
+        :class="styles.cancel"
+        @click="collapse"
+      >
+        {{ t('common.cancel') }}
+      </button>
     </form>
 
-    <div v-if="open" :class="styles.panel" role="listbox">
+    <div v-if="open && (!isCompact || expanded)" :class="styles.panel" role="listbox">
       <p v-if="loading" :class="styles.status">{{ t('common.loading') }}</p>
       <template v-else-if="suggestions.length">
         <NuxtLink
@@ -67,7 +97,7 @@
 
 <script setup lang="ts">
 import { Close, Search } from '@element-plus/icons-vue'
-import { onClickOutside, watchDebounced } from '@vueuse/core'
+import { onClickOutside, useMediaQuery, watchDebounced } from '@vueuse/core'
 import styles from './HeaderSearch.module.scss'
 
 type Suggestion = {
@@ -90,13 +120,21 @@ const route = useRoute()
 const router = useRouter()
 
 const rootEl = ref<HTMLElement | null>(null)
+const inputEl = ref<HTMLInputElement | null>(null)
 const keyword = ref(typeof route.query.q === 'string' ? route.query.q : '')
 const debouncedQ = ref('')
 const suggestions = ref<Suggestion[]>([])
 const loading = ref(false)
 const open = ref(false)
 const activeIndex = ref(-1)
+const expanded = ref(false)
+const isCompact = useMediaQuery('(max-width: 1099px)')
 let requestId = 0
+let focusTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(isCompact, (compact) => {
+  if (!compact) expanded.value = false
+})
 
 watch(
   () => route.query.q,
@@ -137,9 +175,34 @@ watch(debouncedQ, async (q) => {
   }
 })
 
-onClickOutside(rootEl, () => {
+onClickOutside(rootEl, (event) => {
+  const target = event.target as HTMLElement | null
+  if (target?.closest?.(`.${styles.backdrop}`)) return
   open.value = false
+  if (isCompact.value && expanded.value && !keyword.value.trim()) {
+    collapse()
+  }
 })
+
+onBeforeUnmount(() => {
+  if (focusTimer) clearTimeout(focusTimer)
+})
+
+function expand() {
+  expanded.value = true
+  if (focusTimer) clearTimeout(focusTimer)
+  focusTimer = setTimeout(() => {
+    inputEl.value?.focus()
+  }, 220)
+}
+
+function collapse() {
+  if (focusTimer) clearTimeout(focusTimer)
+  inputEl.value?.blur()
+  expanded.value = false
+  open.value = false
+  activeIndex.value = -1
+}
 
 function onFocus() {
   if (debouncedQ.value) open.value = true
@@ -148,6 +211,7 @@ function onFocus() {
 function close() {
   open.value = false
   activeIndex.value = -1
+  if (isCompact.value) collapse()
 }
 
 function clear() {
@@ -155,6 +219,7 @@ function clear() {
   debouncedQ.value = ''
   suggestions.value = []
   open.value = false
+  inputEl.value?.focus()
 }
 
 function goSearch() {
@@ -164,10 +229,16 @@ function goSearch() {
 }
 
 function onKeydown(e: KeyboardEvent) {
-  if (!open.value || !suggestions.value.length) {
-    if (e.key === 'Escape') close()
+  if (e.key === 'Escape') {
+    if (isCompact.value && expanded.value) {
+      e.preventDefault()
+      collapse()
+      return
+    }
+    close()
     return
   }
+  if (!open.value || !suggestions.value.length) return
   if (e.key === 'ArrowDown') {
     e.preventDefault()
     activeIndex.value = (activeIndex.value + 1) % suggestions.value.length
@@ -182,8 +253,6 @@ function onKeydown(e: KeyboardEvent) {
       close()
       router.push(`/phim/${film.slug}`)
     }
-  } else if (e.key === 'Escape') {
-    close()
   }
 }
 </script>

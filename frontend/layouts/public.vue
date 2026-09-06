@@ -16,10 +16,6 @@
           </span>
         </NuxtLink>
 
-        <div :class="styles.searchSlot">
-          <HeaderSearch />
-        </div>
-
         <nav :class="styles.menu">
           <NuxtLink to="/phim">{{ t('cineva.movies') }}</NuxtLink>
           <NuxtLink to="/phim?type=phim-le">{{ t('cineva.moviesSingle') }}</NuxtLink>
@@ -79,12 +75,15 @@
           </div>
         </nav>
 
-        <div :class="styles.actions">
-          <NuxtLink v-if="!authStore.isLoggedIn" to="/login" :class="styles.memberBtn">
-            {{ t('cineva.member') }}
-          </NuxtLink>
-          <template v-else>
-            <HeaderNotifications />
+        <div :class="styles.headerRight">
+          <div :class="styles.searchSlot">
+            <HeaderSearch />
+          </div>
+
+          <div v-if="authStore.isLoggedIn" :class="styles.actions">
+            <div :class="styles.headerNotif">
+              <HeaderNotifications />
+            </div>
             <el-dropdown
               trigger="click"
               popper-class="cineva-dark-select"
@@ -121,7 +120,15 @@
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
-          </template>
+          </div>
+
+          <NuxtLink
+            v-else-if="!isMobileHeader"
+            to="/login"
+            :class="styles.memberBtn"
+          >
+            {{ t('cineva.member') }}
+          </NuxtLink>
         </div>
       </div>
     </header>
@@ -152,35 +159,51 @@
 
         <div :class="styles.footerCol">
           <h3>{{ t('cineva.footerExplore') }}</h3>
-          <NuxtLink to="/phim">{{ t('cineva.movies') }}</NuxtLink>
-          <NuxtLink to="/phim?type=phim-le">{{ t('cineva.moviesSingle') }}</NuxtLink>
-          <NuxtLink to="/phim?type=phim-bo">{{ t('cineva.moviesSeries') }}</NuxtLink>
-          <NuxtLink to="/phim?type=dang-chieu">{{ t('cineva.nowShowing') }}</NuxtLink>
-          <NuxtLink v-if="authStore.isLoggedIn" to="/da-xem">{{ t('cineva.watched') }}</NuxtLink>
-          <NuxtLink v-if="authStore.isLoggedIn" to="/tu-phim">{{ t('cineva.watchlist') }}</NuxtLink>
+          <div :class="styles.footerLinks">
+            <NuxtLink to="/phim">{{ t('cineva.movies') }}</NuxtLink>
+            <NuxtLink to="/phim?type=phim-le">{{ t('cineva.moviesSingle') }}</NuxtLink>
+            <NuxtLink to="/phim?type=phim-bo">{{ t('cineva.moviesSeries') }}</NuxtLink>
+            <NuxtLink to="/phim?type=dang-chieu">{{ t('cineva.nowShowing') }}</NuxtLink>
+            <NuxtLink
+              v-if="authStore.isLoggedIn && !isMobileHeader"
+              to="/da-xem"
+            >
+              {{ t('cineva.watched') }}
+            </NuxtLink>
+            <NuxtLink
+              v-if="authStore.isLoggedIn && !isMobileHeader"
+              to="/tu-phim"
+            >
+              {{ t('cineva.watchlist') }}
+            </NuxtLink>
+          </div>
         </div>
 
         <div :class="styles.footerCol">
           <h3>{{ t('cineva.genres') }}</h3>
-          <NuxtLink
-            v-for="g in footerGenres"
-            :key="g.slug"
-            :to="`/phim?genre=${g.slug}`"
-          >
-            {{ g.name }}
-          </NuxtLink>
-          <NuxtLink to="/phim" :class="styles.footerMore">{{ t('cineva.viewAll') }} →</NuxtLink>
+          <div :class="styles.footerLinks">
+            <NuxtLink
+              v-for="g in footerGenres"
+              :key="g.slug"
+              :to="`/phim?genre=${g.slug}`"
+            >
+              {{ g.name }}
+            </NuxtLink>
+            <NuxtLink to="/phim" :class="styles.footerMore">{{ t('cineva.viewAll') }} →</NuxtLink>
+          </div>
         </div>
 
         <div :class="styles.footerCol">
           <h3>{{ t('cineva.countries') }}</h3>
-          <NuxtLink
-            v-for="c in footerCountries"
-            :key="c.slug"
-            :to="`/phim?country=${c.slug}`"
-          >
-            {{ c.name }}
-          </NuxtLink>
+          <div :class="styles.footerLinks">
+            <NuxtLink
+              v-for="c in footerCountries"
+              :key="c.slug"
+              :to="`/phim?country=${c.slug}`"
+            >
+              {{ c.name }}
+            </NuxtLink>
+          </div>
         </div>
       </div>
 
@@ -189,18 +212,21 @@
         <span>{{ t('cineva.footerNote') }}</span>
       </div>
     </footer>
+    <PublicMobileBottomNav :genres="navGenres" :countries="navCountries" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { ArrowDown } from '@element-plus/icons-vue'
+import { useMediaQuery } from '@vueuse/core'
 import styles from './public.module.scss'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const isMobileHeader = useMediaQuery('(max-width: 1099px)')
 
 const rootEl = ref<HTMLElement | null>(null)
 const openMenu = ref<'genres' | 'countries' | null>(null)

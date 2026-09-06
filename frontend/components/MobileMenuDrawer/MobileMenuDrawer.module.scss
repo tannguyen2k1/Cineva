@@ -78,6 +78,11 @@
   gap: 12px;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
+  margin: 0;
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
 
   &:active {
@@ -128,8 +133,15 @@
 .listItem {
   display: flex;
   align-items: center;
+  width: 100%;
   padding: 16px;
+  margin: 0;
+  border: 0;
   border-bottom: 1px solid var(--border-color);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
   transition: background-color 0.2s ease;
 
@@ -161,7 +173,7 @@
 
   &.logout {
     :global(.el-icon), span {
-      color: #f97316; /* Orange color from screenshot */
+      color: #f97316;
     }
   }
 }

@@ -33,6 +33,11 @@
   color: var(--text-secondary);
   flex: 1;
   height: 100%;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
   transition: all 0.2s ease;
   padding-top: 4px;
 

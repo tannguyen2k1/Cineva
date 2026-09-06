@@ -173,3 +173,16 @@
   font-size: 0.85rem;
   text-align: center;
 }
+
+@media (max-width: 1099px) {
+  .panel {
+    position: fixed;
+    top: auto;
+    right: 1rem;
+    left: 1rem;
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    max-height: min(50vh, 380px);
+    z-index: 4100;
+  }
+}
