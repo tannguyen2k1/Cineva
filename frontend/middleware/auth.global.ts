@@ -24,7 +24,9 @@ export default defineNuxtRouteMiddleware((to) => {
   let isLoggedIn = authIndicator.value === '1' || (import.meta.client && authStore.loggedIn)
 
   if (!isLoggedIn && import.meta.server) {
-    isLoggedIn = requestHasCookie('auth_token')
+    // auth_token may have expired (15m); auth_logged_in / refresh still mean a session.
+    isLoggedIn =
+      requestHasCookie('auth_token') || requestHasCookie('auth_logged_in')
   }
 
   if (!isLoggedIn && !isPublicPath(to.path)) {

@@ -60,6 +60,13 @@ export const useAuthStore = defineStore('auth', {
 
     async fetchUser(isRetry = false) {
       if (!this.loggedIn) return
+
+      // refresh_token cookie is path=/api/auth — it is NOT sent on document SSR
+      // requests. Skipping here lets the client refresh with the real cookie.
+      if (import.meta.server && !requestHasCookie('auth_token')) {
+        return
+      }
+
       try {
         const { data } = await apiFetch<any>('/api/auth/me', { headers: cookieForwardHeaders() })
         if (data) {
@@ -77,12 +84,10 @@ export const useAuthStore = defineStore('auth', {
           if (result === 'unavailable') return
         }
         if (status >= 500 || status === 0) return
+        // Only hard-logout in the browser after refresh failed — SSR must not
+        // clear the session (client still has refresh_token).
         if (import.meta.client && status === 401) {
           await this.logout()
-        } else {
-          this.user = null
-          this.permissions = []
-          this.loggedIn = false
         }
       }
     },
