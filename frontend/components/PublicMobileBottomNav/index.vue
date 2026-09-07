@@ -2,43 +2,43 @@
   <nav :class="styles.bottomNav" aria-label="Điều hướng mobile">
     <NuxtLink
       to="/"
-      :class="[styles.tab, isActiveExact('/') && styles.active]"
+      :class="[styles.navItem, isActiveExact('/') && styles.active]"
     >
       <el-icon :class="styles.icon"><HomeFilled /></el-icon>
-      <span>{{ t('cineva.home') }}</span>
+      <span :class="styles.label">{{ t('cineva.home') }}</span>
     </NuxtLink>
 
     <NuxtLink
       to="/phim"
-      :class="[styles.tab, isActive('/phim') && styles.active]"
+      :class="[styles.navItem, isActive('/phim') && styles.active]"
     >
       <el-icon :class="styles.icon"><Film /></el-icon>
-      <span>{{ t('cineva.movies') }}</span>
+      <span :class="styles.label">{{ t('cineva.movies') }}</span>
     </NuxtLink>
 
     <NuxtLink
       :to="authStore.isLoggedIn ? '/tu-phim' : '/login'"
-      :class="[styles.tab, isActive('/tu-phim') && styles.active]"
+      :class="[styles.navItem, isActive('/tu-phim') && styles.active]"
     >
       <el-icon :class="styles.icon"><StarFilled /></el-icon>
-      <span>{{ t('cineva.watchlistShort') }}</span>
+      <span :class="styles.label">{{ t('cineva.watchlistShort') }}</span>
     </NuxtLink>
 
     <NuxtLink
       :to="authStore.isLoggedIn ? '/da-xem' : '/login'"
-      :class="[styles.tab, isActive('/da-xem') && styles.active]"
+      :class="[styles.navItem, isActive('/da-xem') && styles.active]"
     >
       <el-icon :class="styles.icon"><Clock /></el-icon>
-      <span>{{ t('cineva.watchedShort') }}</span>
+      <span :class="styles.label">{{ t('cineva.watchedShort') }}</span>
     </NuxtLink>
 
     <button
       type="button"
-      :class="[styles.tab, menuOpen && styles.active]"
+      :class="[styles.navItem, menuOpen && styles.active]"
       @click="menuOpen = true"
     >
       <el-icon :class="styles.icon"><MoreFilled /></el-icon>
-      <span>{{ t('nav.menu') }}</span>
+      <span :class="styles.label">{{ t('nav.menu') }}</span>
     </button>
 
     <PublicMobileMoreMenu
@@ -47,7 +47,6 @@
       :countries="countries"
     />
   </nav>
-  <div :class="styles.bottomSpacer" aria-hidden="true" />
 </template>
 
 <script setup lang="ts">

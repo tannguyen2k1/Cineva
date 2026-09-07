@@ -64,6 +64,14 @@ html.dark {
 }
 
 /* --- BASE STYLES --- */
+html {
+  /* PWA / iOS notch — used with viewport-fit=cover */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+
 body {
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   background-color: var(--bg-body);
@@ -72,6 +80,11 @@ body {
   padding: 0;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Toasts must clear the status bar / notch in standalone PWA */
+.el-message {
+  top: calc(12px + var(--safe-top)) !important;
 }
 
 h1,

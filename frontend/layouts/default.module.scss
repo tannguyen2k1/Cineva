@@ -11,9 +11,12 @@
 
 .layoutContainer {
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
   background-color: var(--bg-body);
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: border-box;
 }
 
 
@@ -21,7 +24,7 @@
   background-color: var(--bg-body);
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   overflow: hidden;
 }
 

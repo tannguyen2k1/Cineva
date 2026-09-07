@@ -33,6 +33,7 @@
   position: sticky;
   top: 0;
   z-index: 50;
+  padding-top: var(--safe-top, env(safe-area-inset-top, 0px));
   background: rgba(11, 11, 15, 0.82);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
@@ -257,6 +258,7 @@
 }
 
 .memberBtn {
+  display: none;
   border: 0;
   cursor: pointer;
   border-radius: 999px;
@@ -431,6 +433,11 @@
 
 @media (min-width: 1100px) {
   .menu { display: flex; }
+
+  .memberBtn {
+    display: inline-flex;
+    align-items: center;
+  }
 }
 
 @media (max-width: 900px) {
@@ -527,6 +534,11 @@
   .headerRight {
     gap: 0.25rem;
     margin-right: -0.15rem;
+  }
+
+  .memberBtn,
+  .desktopOnlyLink {
+    display: none !important;
   }
 
   .searchSlot {

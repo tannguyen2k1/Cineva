@@ -123,7 +123,7 @@
           </div>
 
           <NuxtLink
-            v-else-if="!isMobileHeader"
+            v-else
             to="/login"
             :class="styles.memberBtn"
           >
@@ -165,14 +165,16 @@
             <NuxtLink to="/phim?type=phim-bo">{{ t('cineva.moviesSeries') }}</NuxtLink>
             <NuxtLink to="/phim?type=dang-chieu">{{ t('cineva.nowShowing') }}</NuxtLink>
             <NuxtLink
-              v-if="authStore.isLoggedIn && !isMobileHeader"
+              v-if="authStore.isLoggedIn"
               to="/da-xem"
+              :class="styles.desktopOnlyLink"
             >
               {{ t('cineva.watched') }}
             </NuxtLink>
             <NuxtLink
-              v-if="authStore.isLoggedIn && !isMobileHeader"
+              v-if="authStore.isLoggedIn"
               to="/tu-phim"
+              :class="styles.desktopOnlyLink"
             >
               {{ t('cineva.watchlist') }}
             </NuxtLink>
@@ -212,21 +214,20 @@
         <span>{{ t('cineva.footerNote') }}</span>
       </div>
     </footer>
-    <PublicMobileBottomNav :genres="navGenres" :countries="navCountries" />
   </div>
+
+  <PublicMobileBottomNav :genres="navGenres" :countries="navCountries" />
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { ArrowDown } from '@element-plus/icons-vue'
-import { useMediaQuery } from '@vueuse/core'
 import styles from './public.module.scss'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const isMobileHeader = useMediaQuery('(max-width: 1099px)')
 
 const rootEl = ref<HTMLElement | null>(null)
 const openMenu = ref<'genres' | 'countries' | null>(null)
