@@ -13,11 +13,17 @@ export default defineNuxtConfig({
     head: {
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover' },
-        { name: 'color-scheme', content: 'dark' }
+        { name: 'color-scheme', content: 'dark' },
+        { name: 'theme-color', content: '#0b0b0f' },
+        { name: 'mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
+        { name: 'apple-mobile-web-app-title', content: 'Cineva' }
       ],
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/brand/cineva-mark.svg' },
-        { rel: 'apple-touch-icon', href: '/brand/cineva-logo.png' },
+        { rel: 'apple-touch-icon', href: '/brand/cineva-pwa-192.png' },
+        { rel: 'manifest', href: '/manifest.webmanifest' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: 'anonymous' },
         { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap' }
