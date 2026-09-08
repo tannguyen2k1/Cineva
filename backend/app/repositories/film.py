@@ -44,6 +44,21 @@ async def get_by_id(
     return (await db.execute(stmt)).scalar_one_or_none()
 
 
+async def get_by_slugs_with_taxonomy(
+    db: AsyncSession, *, slugs: list[str]
+) -> list[Film]:
+    """Load search results and their taxonomy in one async-safe batch."""
+    if not slugs:
+        return []
+    result = await db.execute(
+        select(Film)
+        .where(Film.source_slug.in_(slugs))
+        .options(*film_with_taxonomy_options())
+    )
+    films_by_slug = {film.source_slug: film for film in result.scalars().unique().all()}
+    return [films_by_slug[slug] for slug in slugs if slug in films_by_slug]
+
+
 def _apply_filters(
     stmt: Select,
     *,

@@ -242,6 +242,33 @@ const reportRows = computed(() => {
 let ws: WebSocket | null = null
 const wsConnected = ref(false)
 
+function resolveWsBase(configured: string): string {
+  let raw = configured.trim().replace(/\/$/, '')
+
+  // Tolerate common deployment typos such as ws://http//host:port.
+  raw = raw
+    .replace(/^ws:\/\/http\/\//i, 'http://')
+    .replace(/^wss:\/\/https\/\//i, 'https://')
+
+  const url = new URL(raw)
+  if (url.protocol === 'http:') url.protocol = 'ws:'
+  if (url.protocol === 'https:') url.protocol = 'wss:'
+
+  if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+    url.hostname = window.location.hostname
+  }
+
+  // Browsers block ws:// from an HTTPS page before a connection is attempted.
+  if (window.location.protocol === 'https:' && url.protocol === 'ws:') {
+    url.protocol = 'wss:'
+  }
+
+  if (url.protocol !== 'ws:' && url.protocol !== 'wss:') {
+    throw new Error(`Unsupported WebSocket protocol: ${url.protocol}`)
+  }
+  return url.origin
+}
+
 function onWsMessage(event: MessageEvent) {
   try {
     const payload = JSON.parse(typeof event.data === 'string' ? event.data : '')
@@ -262,26 +289,19 @@ async function connectWs() {
     const { ticket } = await useApiFetch('/api/auth/ws-ticket')
     const config = useRuntimeConfig()
     const configured = String(config.public.wsBase || 'ws://127.0.0.1:8000').replace(/\/$/, '')
-    let base = configured
-    try {
-      const u = new URL(configured)
-      if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') {
-        u.hostname = window.location.hostname
-        if (window.location.protocol === 'https:') u.protocol = 'wss:'
-        base = u.origin
-      }
-    } catch {
-      // keep configured
-    }
+    const base = resolveWsBase(configured)
     const url = `${base}/ws/server-stats?token=${ticket}`
 
     ws = new WebSocket(url)
     ws.onopen = () => { wsConnected.value = true }
     ws.onmessage = onWsMessage
     ws.onclose = () => { wsConnected.value = false }
-    ws.onerror = () => { wsConnected.value = false }
-  } catch {
-    console.error('Failed to get WS ticket')
+    ws.onerror = () => {
+      wsConnected.value = false
+      console.error('WebSocket server-stats connection failed')
+    }
+  } catch (err) {
+    console.error('Failed to initialize server-stats WebSocket:', err)
   }
 }
 

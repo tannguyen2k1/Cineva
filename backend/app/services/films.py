@@ -56,8 +56,12 @@ async def list_films(
 
             listing = await get_nguonc_client().search(keyword, page=page)
             if listing.items:
-                films = [await upsert_list_item(db, item) for item in listing.items]
+                for item in listing.items:
+                    await upsert_list_item(db, item)
                 await db.commit()
+                films = await film_repo.get_by_slugs_with_taxonomy(
+                    db, slugs=[item.slug for item in listing.items]
+                )
                 return {
                     "success": True,
                     "data": [
