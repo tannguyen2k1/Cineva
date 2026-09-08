@@ -45,4 +45,5 @@ def get_server_stats() -> dict:
 def ensure_upload_dirs(base: str | Path) -> Path:
     root = Path(base)
     (root / "avatars").mkdir(parents=True, exist_ok=True)
+    (root / "films").mkdir(parents=True, exist_ok=True)
     return root

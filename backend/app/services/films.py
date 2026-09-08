@@ -42,39 +42,6 @@ async def list_films(
 ) -> dict:
     keyword = (q or "").strip() or None
     sort_key = sort if sort in {"newest", "name", "year"} else "newest"
-    # Catalog sync is partial — keyword search hits nguonc live, then upserts.
-    if (
-        keyword
-        and not include_hidden
-        and not genre
-        and not country
-        and not year
-        and not film_type
-    ):
-        try:
-            from app.services.film_sync import upsert_list_item
-
-            listing = await get_nguonc_client().search(keyword, page=page)
-            if listing.items:
-                for item in listing.items:
-                    await upsert_list_item(db, item)
-                await db.commit()
-                films = await film_repo.get_by_slugs_with_taxonomy(
-                    db, slugs=[item.slug for item in listing.items]
-                )
-                return {
-                    "success": True,
-                    "data": [
-                        serialize_film_card(f, include_hidden=include_hidden)
-                        for f in films[:page_size]
-                    ],
-                    "total": listing.total_items or len(films),
-                    "page": page,
-                    "pageSize": page_size,
-                }
-        except Exception:
-            logger.exception("Nguonc search failed for %r", keyword)
-            await db.rollback()
 
     # Single taxonomy browse: pull a page from nguonc so filters aren't empty.
     if (

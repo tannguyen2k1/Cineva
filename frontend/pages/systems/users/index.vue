@@ -89,7 +89,7 @@
         </el-table-column>
       </DataTable>
 
-      <div v-else ref="mobileListRef" :class="styles.mobileList">
+      <div v-else :class="styles.mobileList">
         <div v-for="user in mobileUsers" :key="user.id" :class="styles.userCard">
           
           <div :class="styles.cardHeader">
@@ -214,7 +214,7 @@
 
 <script setup lang="ts">
 import styles from './users.module.scss';
-import { ref, reactive, computed, watch, onMounted } from 'vue';
+import { ref, reactive, computed, watch, onMounted, inject, type Ref } from 'vue';
 import { Search, Plus, Edit, Delete } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { useAuthStore } from '~/stores/auth';
@@ -248,20 +248,23 @@ const pageSize = ref(10);
 const mobileUsers = ref<UserRow[]>([]);
 const mobilePage = ref(1);
 const hasMoreMobile = ref(true);
-const mobileListRef = ref<HTMLElement | null>(null);
+const appScrollEl = inject<Ref<HTMLElement | null>>('appScrollEl', ref(null));
 
 const apiResponse = ref<any>(null);
 const pending = ref(false);
 const error = ref<any>(null);
 
 useInfiniteScroll(
-  mobileListRef,
-  () => {
-    if (!pending.value && hasMoreMobile.value) {
-      loadMore();
-    }
+  appScrollEl,
+  async () => {
+    if (!appStore.isMobile || pending.value || !hasMoreMobile.value) return;
+    await loadMore();
   },
-  { distance: 50 }
+  {
+    distance: 50,
+    canLoadMore: () =>
+      appStore.isMobile && !pending.value && hasMoreMobile.value
+  }
 );
 
 const dialogVisible = ref(false);
@@ -346,9 +349,9 @@ const fetchData = async (isLoadMore = false) => {
   }
 };
 
-const loadMore = () => {
+const loadMore = async () => {
   if (pending.value || !hasMoreMobile.value) return;
-  fetchData(true);
+  await fetchData(true);
 };
 
 const fetchRoles = async () => {

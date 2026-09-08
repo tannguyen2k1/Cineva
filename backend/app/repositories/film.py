@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from slugify import slugify
-from sqlalchemy import Select, func, or_, select, update
+from sqlalchemy import Select, case, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -57,6 +57,31 @@ async def get_by_slugs_with_taxonomy(
     )
     films_by_slug = {film.source_slug: film for film in result.scalars().unique().all()}
     return [films_by_slug[slug] for slug in slugs if slug in films_by_slug]
+
+
+async def get_by_slugs(db: AsyncSession, *, slugs: list[str]) -> dict[str, Film]:
+    if not slugs:
+        return {}
+    result = await db.execute(select(Film).where(Film.source_slug.in_(slugs)))
+    return {film.source_slug: film for film in result.scalars().all()}
+
+
+async def list_image_candidates(
+    db: AsyncSession, *, offset: int = 0, limit: int = 100
+) -> list[Film]:
+    result = await db.execute(
+        select(Film)
+        .where(or_(Film.thumb_url.is_not(None), Film.poster_url.is_not(None)))
+        .order_by(Film.created_at.asc())
+        .offset(offset)
+        .limit(limit)
+    )
+    return list(result.scalars().all())
+
+
+async def list_local_image_urls(db: AsyncSession) -> set[str]:
+    result = await db.execute(select(Film.local_thumb_url, Film.local_poster_url))
+    return {url for row in result.all() for url in row if url}
 
 
 def _apply_filters(
@@ -130,7 +155,23 @@ async def list_films_page(
     count_stmt = select(func.count()).select_from(base.subquery())
     total = (await db.execute(count_stmt)).scalar_one()
 
-    if sort == "name":
+    if q and q.strip():
+        raw = q.strip()
+        slug_token = slugify(raw)
+        relevance = case(
+            (func.lower(Film.name) == raw.lower(), 0),
+            (func.lower(Film.original_name) == raw.lower(), 1),
+            (Film.name.ilike(f"{raw}%"), 2),
+            (Film.original_name.ilike(f"{raw}%"), 3),
+            (Film.source_slug == slug_token, 4),
+            else_=5,
+        )
+        order = (
+            relevance.asc(),
+            Film.source_modified_at.desc().nullslast(),
+            Film.name.asc(),
+        )
+    elif sort == "name":
         order = (Film.name.asc(), Film.id.asc())
     elif sort == "year":
         order = (Film.year.desc().nullslast(), Film.source_modified_at.desc().nullslast())

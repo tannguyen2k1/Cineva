@@ -1,8 +1,10 @@
-"""HTTP client for phim.nguonc.com public API."""
+"""HTTP client for public API."""
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import random
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -204,16 +206,49 @@ class NguoncClient:
         settings = get_settings()
         self.base_url = settings.nguonc_base_url.rstrip("/")
         self.timeout = settings.nguonc_timeout_seconds
+        self.max_retries = max(1, settings.nguonc_max_retries)
+        self.retry_base = max(0.1, settings.nguonc_retry_base_seconds)
+        self.request_delay = max(0.0, settings.nguonc_request_delay_seconds)
+        self._client = httpx.AsyncClient(
+            timeout=httpx.Timeout(self.timeout),
+            follow_redirects=True,
+            headers={"User-Agent": "CinevaCatalogSync/1.0"},
+        )
 
     async def _get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         url = f"{self.base_url}{path}"
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            resp = await client.get(url, params=params)
-            resp.raise_for_status()
-            data = resp.json()
-            if not isinstance(data, dict):
-                raise ValueError("Invalid nguonc response")
-            return data
+        last_error: Exception | None = None
+        for attempt in range(self.max_retries):
+            try:
+                if self.request_delay:
+                    await asyncio.sleep(self.request_delay)
+                resp = await self._client.get(url, params=params)
+                resp.raise_for_status()
+                data = resp.json()
+                if not isinstance(data, dict):
+                    raise ValueError("Invalid nguonc response")
+                return data
+            except (httpx.TimeoutException, httpx.NetworkError, httpx.HTTPStatusError) as exc:
+                last_error = exc
+                retryable = not isinstance(exc, httpx.HTTPStatusError) or (
+                    exc.response.status_code == 429 or exc.response.status_code >= 500
+                )
+                if not retryable or attempt + 1 >= self.max_retries:
+                    raise
+                delay = self.retry_base * (2**attempt) + random.uniform(0, 0.25)
+                logger.warning(
+                    "Nguonc request failed (%s), retry %s/%s in %.2fs",
+                    exc,
+                    attempt + 1,
+                    self.max_retries,
+                    delay,
+                )
+                await asyncio.sleep(delay)
+        assert last_error is not None
+        raise last_error
+
+    async def close(self) -> None:
+        await self._client.aclose()
 
     def _map_list_page(self, data: dict[str, Any]) -> NguoncListPage:
         paginate = data.get("paginate") or {}

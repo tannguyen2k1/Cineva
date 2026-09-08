@@ -93,6 +93,38 @@
   }
 }
 
+.progressPanel {
+  margin: -8px 0 20px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-color, rgba(127, 127, 127, 0.2));
+  border-radius: 12px;
+  background: var(--bg-body);
+  flex-shrink: 0;
+}
+
+.progressHeader,
+.progressStats {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.progressHeader {
+  margin-bottom: 10px;
+
+  strong {
+    color: var(--text-primary);
+  }
+}
+
+.progressStats {
+  margin-top: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
 .sectionHeader {
   margin-bottom: 12px;
   flex-shrink: 0;

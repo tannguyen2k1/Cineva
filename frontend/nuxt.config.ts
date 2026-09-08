@@ -81,6 +81,10 @@ export default defineNuxtConfig({
   nitro: {
     routeRules: {
       '/api/**': { proxy: `${apiProxy}/api/**` },
+      '/uploads/films/**': {
+        proxy: `${apiProxy}/uploads/films/**`,
+        headers: { 'cache-control': 'public, max-age=31536000, immutable' }
+      },
       '/uploads/**': { proxy: `${apiProxy}/uploads/**` }
     }
   },

@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.timeutil import utcnow
-from app.models import Banner, FeaturedFilm, Film, SyncRun
+from app.models import Banner, FeaturedFilm, SyncRun
 from app.repositories.film import film_with_taxonomy_options
 
 
@@ -123,6 +123,16 @@ async def add_sync_run(db: AsyncSession, run: SyncRun) -> SyncRun:
 
 async def get_sync_run(db: AsyncSession, *, run_id: str) -> SyncRun | None:
     result = await db.execute(select(SyncRun).where(SyncRun.id == run_id))
+    return result.scalar_one_or_none()
+
+
+async def latest_sync_by_type(db: AsyncSession, *, job_type: str) -> SyncRun | None:
+    result = await db.execute(
+        select(SyncRun)
+        .where(SyncRun.job_type == job_type)
+        .order_by(SyncRun.created_at.desc())
+        .limit(1)
+    )
     return result.scalar_one_or_none()
 
 

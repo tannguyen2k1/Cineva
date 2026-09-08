@@ -38,6 +38,14 @@ class Film(Base):
     original_name: Mapped[str | None] = mapped_column(String(512), nullable=True)
     thumb_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     poster_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    local_thumb_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    local_poster_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    thumb_source_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    poster_source_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    images_synced_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    images_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     year: Mapped[str | None] = mapped_column(String(16), nullable=True)
     quality: Mapped[str | None] = mapped_column(String(64), nullable=True)

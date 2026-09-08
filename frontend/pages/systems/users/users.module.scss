@@ -5,6 +5,12 @@
   overflow: hidden;
   min-height: 0;
   background: var(--bg-card);
+
+  @media (max-width: 768px) {
+    flex: none;
+    min-height: auto;
+    overflow: visible;
+  }
 }
 
 .premiumCard {

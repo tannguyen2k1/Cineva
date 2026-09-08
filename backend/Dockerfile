@@ -12,7 +12,7 @@ RUN pip install --no-cache-dir .
 
 COPY . .
 
-RUN mkdir -p uploads/avatars
+RUN mkdir -p uploads/avatars uploads/films
 
 ENV PYTHONUNBUFFERED=1
 ENV ENVIRONMENT=production

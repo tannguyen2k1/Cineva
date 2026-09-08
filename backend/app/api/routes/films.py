@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_optional_user, require_permission
 from app.db.session import get_db
+from app.repositories import cms as cms_repo
 from app.schemas.film import (
     BannerCreate,
     BannerUpdate,
@@ -251,6 +252,29 @@ async def admin_sync_catalog(
     return await film_sync_service.run_catalog_sync(
         db, actor_id=current.id, pages_per_source=max(1, min(pagesPerSource, 10))
     )
+
+
+@admin_films_router.post("/sync/full")
+async def admin_sync_full(
+    resume: bool = False,
+    db: AsyncSession = Depends(get_db),
+    current: CurrentUser = Depends(require_permission("create:sync")),
+):
+    return await film_sync_service.start_full_sync(
+        db, resume=resume, actor_id=current.id
+    )
+
+
+@admin_films_router.get("/sync/full/status")
+async def admin_sync_full_status(
+    db: AsyncSession = Depends(get_db),
+    current: CurrentUser = Depends(require_permission("read:sync")),
+):
+    run = await cms_repo.latest_sync_by_type(db, job_type="full")
+    return {
+        "success": True,
+        "data": film_sync_service.serialize_sync_run(run) if run else None,
+    }
 
 
 @admin_films_router.get("/sync/runs")

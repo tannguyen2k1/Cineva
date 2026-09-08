@@ -36,9 +36,47 @@
           >
             {{ t('sync.runCatalog') }}
           </el-button>
+          <el-button
+            v-if="canRun"
+            type="danger"
+            plain
+            :icon="Download"
+            :loading="runningFull"
+            :disabled="busy"
+            @click="runFull(false)"
+          >
+            {{ t('sync.runFull') }}
+          </el-button>
+          <el-button
+            v-if="canRun && canResume"
+            type="warning"
+            :loading="runningFull"
+            :disabled="busy"
+            @click="runFull(true)"
+          >
+            {{ t('sync.resumeFull') }}
+          </el-button>
           <el-button :icon="RefreshRight" :disabled="busy || pending" @click="fetchData()">
             {{ t('common.refresh') }}
           </el-button>
+        </div>
+      </section>
+
+      <section v-if="latestFull" :class="styles.progressPanel">
+        <div :class="styles.progressHeader">
+          <strong>{{ t('sync.fullProgress') }}</strong>
+          <span>
+            {{ latestFull.checkpointPage || 0 }} / {{ latestFull.totalPages || '?' }}
+          </span>
+        </div>
+        <el-progress
+          :percentage="fullProgressPercent"
+          :status="latestFull.status === 'failed' ? 'exception' : latestFull.status === 'success' ? 'success' : undefined"
+        />
+        <div :class="styles.progressStats">
+          <span>{{ t('sync.filmsProcessed') }}: {{ latestFull.itemsUpserted }}</span>
+          <span>{{ t('sync.imagesDownloaded') }}: {{ latestFull.imagesDownloaded || 0 }}</span>
+          <span>{{ t('sync.imagesFailed') }}: {{ latestFull.imagesFailed || 0 }}</span>
         </div>
       </section>
 
@@ -121,8 +159,8 @@
 
 <script setup lang="ts">
 import styles from './sync.module.scss'
-import { ref, computed, watch, onMounted, inject, type Ref } from 'vue'
-import { Refresh, RefreshRight, Collection } from '@element-plus/icons-vue'
+import { ref, computed, watch, onMounted, onUnmounted, inject, type Ref } from 'vue'
+import { Refresh, RefreshRight, Collection, Download } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAppStore } from '~/stores/app'
 import { useAuthStore } from '~/stores/auth'
@@ -135,7 +173,11 @@ interface SyncRunRow {
   status: string
   pageFrom?: number | null
   pageTo?: number | null
+  checkpointPage?: number
+  totalPages?: number | null
   itemsUpserted: number
+  imagesDownloaded?: number
+  imagesFailed?: number
   error?: string | null
   startedAt: string
   finishedAt?: string | null
@@ -160,13 +202,31 @@ const pending = ref(false)
 const error = ref<any>(null)
 const runningIncremental = ref(false)
 const runningCatalog = ref(false)
+const runningFull = ref(false)
 
 const mobileItems = ref<SyncRunRow[]>([])
 const mobilePage = ref(1)
 const hasMoreMobile = ref(true)
 const appScrollEl = inject<Ref<HTMLElement | null>>('appScrollEl', ref(null))
 
-const busy = computed(() => runningIncremental.value || runningCatalog.value)
+const busy = computed(
+  () => runningIncremental.value || runningCatalog.value || runningFull.value
+)
+const latestFull = computed(() => {
+  const rows = appStore.isMobile ? mobileItems.value : apiResponse.value?.data || []
+  return rows.find((row) => row.jobType === 'full') || null
+})
+const canResume = computed(
+  () =>
+    latestFull.value?.status === 'failed' &&
+    !!latestFull.value.totalPages &&
+    (latestFull.value.checkpointPage || 0) < latestFull.value.totalPages
+)
+const fullProgressPercent = computed(() => {
+  const run = latestFull.value
+  if (!run?.totalPages) return 0
+  return Math.min(100, Math.round(((run.checkpointPage || 0) / run.totalPages) * 100))
+})
 
 const errorMessage = computed(() => {
   const err = error.value
@@ -177,6 +237,8 @@ const errorMessage = computed(() => {
 const jobTypeLabel = (jobType: string) => {
   if (jobType === 'catalog') return t('sync.jobCatalog')
   if (jobType === 'incremental') return t('sync.jobIncremental')
+  if (jobType === 'full') return t('sync.jobFull')
+  if (jobType === 'images') return t('sync.jobImages')
   return jobType
 }
 
@@ -318,6 +380,40 @@ const runCatalog = async () => {
   }
 }
 
+const runFull = async (resume: boolean) => {
+  try {
+    await ElMessageBox.confirm(
+      t(resume ? 'sync.confirmResumeFull' : 'sync.confirmFull'),
+      t(resume ? 'sync.resumeFull' : 'sync.runFull'),
+      {
+        type: 'warning',
+        confirmButtonText: t(resume ? 'sync.resumeFull' : 'sync.runFull'),
+        cancelButtonText: t('common.cancel')
+      }
+    )
+  } catch {
+    return
+  }
+
+  runningFull.value = true
+  error.value = null
+  try {
+    await useApiFetch('/api/admin/sync/full', {
+      method: 'POST',
+      params: { resume },
+      timeout: 60_000
+    })
+    ElMessage.success(t('sync.runStarted'))
+    currentPage.value = 1
+    await fetchData()
+  } catch (err: any) {
+    error.value = err
+    ElMessage.error(err?.data?.detail || t('sync.runFailed'))
+  } finally {
+    runningFull.value = false
+  }
+}
+
 useInfiniteScroll(
   appScrollEl,
   () => {
@@ -331,6 +427,15 @@ watch([currentPage, pageSize], () => {
   if (!appStore.isMobile) fetchData()
 })
 
-onMounted(() => fetchData())
+let progressPoll: ReturnType<typeof setInterval> | undefined
+onMounted(() => {
+  fetchData()
+  progressPoll = setInterval(() => {
+    if (latestFull.value?.status === 'running' && !pending.value) fetchData()
+  }, 5000)
+})
+onUnmounted(() => {
+  if (progressPoll) clearInterval(progressPoll)
+})
 usePageRefresh(() => fetchData())
 </script>
