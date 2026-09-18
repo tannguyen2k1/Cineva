@@ -1,11 +1,21 @@
 from __future__ import annotations
 
+from sqlalchemy import inspect as sa_inspect
+
 from app.models import Film
 from app.services.kkphim_client import (
     CatalogFilmDetail,
     CatalogListItem,
     CatalogTaxonomyItem,
 )
+
+
+def _relation_or_empty(film: Film, name: str):
+    """Return a loaded relationship collection, or [] — never lazy-load in async."""
+    state = sa_inspect(film)
+    if name in state.unloaded:
+        return []
+    return getattr(film, name) or []
 
 
 def serialize_film_card(film: Film, *, include_hidden: bool = False, include_description: bool = False) -> dict:
@@ -25,7 +35,7 @@ def serialize_film_card(film: Film, *, include_hidden: bool = False, include_des
         "ratingCount": film.rating_count or 0,
         "genres": [
             {"slug": fg.genre.slug, "name": fg.genre.name}
-            for fg in (film.genres or [])
+            for fg in _relation_or_empty(film, "genres")
             if fg.genre
         ],
     }

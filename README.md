@@ -82,6 +82,16 @@ npm run dev
 App: http://localhost:3000  
 
 Nuxt proxy `/api` và `/uploads` → FastAPI (`NUXT_API_PROXY`).  
+
+### 4. Mobile (Flutter)
+
+```bash
+cd mobile
+# Flutter SDK: %LOCALAPPDATA%\flutter (đã cài local nếu cần)
+flutter run --dart-define=API_BASE=http://10.0.2.2:8000
+```
+
+Chi tiết: [`mobile/README.md`](mobile/README.md). Auth dùng OAuth2 `/api/auth/token` (Bearer), không dùng cookie.
 WebSocket nối thẳng FastAPI (`NUXT_PUBLIC_WS_BASE`, mặc định `ws://127.0.0.1:8000`).
 
 ## Docker (full stack)

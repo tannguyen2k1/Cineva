@@ -94,13 +94,20 @@ async def list_films(
                         )
                     films.append(film)
                 await db.commit()
+                # Upserted rows don't have relationships loaded; hydrate before
+                # serialize to avoid async lazy-load (MissingGreenlet).
+                slugs = [f.source_slug for f in films[:page_size] if f.source_slug]
+                hydrated = await film_repo.get_by_slugs_with_taxonomy(db, slugs=slugs)
+                by_slug = {f.source_slug: f for f in hydrated}
+                cards = [
+                    serialize_film_card(by_slug[s], include_hidden=include_hidden)
+                    for s in slugs
+                    if s in by_slug
+                ]
                 return {
                     "success": True,
-                    "data": [
-                        serialize_film_card(f, include_hidden=include_hidden)
-                        for f in films[:page_size]
-                    ],
-                    "total": listing.total_items or len(films),
+                    "data": cards,
+                    "total": listing.total_items or len(cards),
                     "page": page,
                     "pageSize": page_size,
                 }
