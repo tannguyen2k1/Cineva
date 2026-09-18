@@ -375,6 +375,7 @@
     "unfollow": "Đang theo dõi",
     "followed": "Đã theo dõi phim — sẽ báo khi có tập mới",
     "unfollowed": "Đã bỏ theo dõi",
+    "scoreVotes": "lượt đánh giá",
     "watched": "Đã xem",
     "watchedHint": "Tiếp tục từ tập bạn dừng lại gần nhất.",
     "watchedCount": "{n} phim",

@@ -15,10 +15,17 @@
           <span v-if="film.language">{{ film.language }}</span>
           <span v-if="film.currentEpisode">{{ film.currentEpisode }}</span>
         </div>
-        <div v-if="(film.ratingCount || 0) > 0 || (film.avgRating || 0) > 0" :class="styles.ratingRow">
-          <div :class="styles.rating">
-            ★ {{ film.avgRating }}
-            <small v-if="film.ratingCount">({{ film.ratingCount }})</small>
+        <div v-if="(film.ratingCount || 0) > 0 || (film.avgRating || 0) > 0" :class="styles.scoreCard">
+          <div :class="styles.scoreMain">
+            <span :class="styles.scoreStar" aria-hidden="true">★</span>
+            <div :class="styles.scoreValue">
+              <strong>{{ formattedRating }}</strong>
+              <span>/10</span>
+            </div>
+          </div>
+          <div v-if="film.ratingCount" :class="styles.scoreMeta">
+            <span :class="styles.scoreCount">{{ formattedRatingCount }}</span>
+            <span :class="styles.scoreLabel">{{ t('cineva.scoreVotes') }}</span>
           </div>
         </div>
         <div :class="styles.actions">
@@ -274,6 +281,16 @@ const { data, pending, refresh } = await useAsyncData(
 )
 
 const film = computed(() => data.value?.data || null)
+
+const formattedRating = computed(() => {
+  const value = Number(film.value?.avgRating || 0)
+  return Number.isFinite(value) ? value.toFixed(1) : '0.0'
+})
+
+const formattedRatingCount = computed(() => {
+  const count = Number(film.value?.ratingCount || 0)
+  return Number.isFinite(count) ? count.toLocaleString('vi-VN') : '0'
+})
 
 const watchLink = computed(() => {
   const f = film.value
