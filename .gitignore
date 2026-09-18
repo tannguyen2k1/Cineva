@@ -18,16 +18,16 @@ backend/**/*.pyc
 *.log
 
 # Flutter
-mobile/.dart_tool/
-mobile/.flutter-plugins-dependencies
-mobile/.packages
-mobile/build/
-mobile/.idea/
-mobile/**/*.iml
-mobile/android/.gradle/
-mobile/android/local.properties
-mobile/ios/Pods/
-mobile/ios/.symlinks/
-mobile/ios/Flutter/Flutter.podspec
-mobile/ios/Flutter/Generated.xcconfig
-mobile/ios/Flutter/ephemeral/
+app/.dart_tool/
+app/.flutter-plugins-dependencies
+app/.packages
+app/build/
+app/.idea/
+app/**/*.iml
+app/android/.gradle/
+app/android/local.properties
+app/ios/Pods/
+app/ios/.symlinks/
+app/ios/Flutter/Flutter.podspec
+app/ios/Flutter/Generated.xcconfig
+app/ios/Flutter/ephemeral/
