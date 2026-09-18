@@ -1,30 +1,38 @@
-# Cineva Mobile (Flutter)
+# Cineva App (Flutter)
 
-App Android/iOS gọi API Cineva qua luồng **OAuth2** (`POST /api/auth/token` + Bearer).
+App iOS/Android gọi API Cineva qua luồng **OAuth2** (`POST /api/auth/token` + Bearer).
 
 ## Yêu cầu
 
-- Flutter SDK (đã cài local: `%LOCALAPPDATA%\flutter`)
+- Flutter SDK
+- Xcode + CocoaPods (iOS)
 - Backend chạy tại máy host (mặc định port `8000`)
-- Emulator Android dùng `10.0.2.2` để trỏ về localhost host
 
 ## Chạy
 
-```powershell
-cd mobile
-$env:Path = "$env:LOCALAPPDATA\flutter\bin;$env:Path"
+```bash
+cd app
+flutter pub get
 
-# Windows desktop
-flutter run -d windows --dart-define=API_BASE=http://localhost:8000
+# iOS Simulator (localhost của Mac)
+flutter run --dart-define=API_BASE=http://127.0.0.1:8000
+
+# Android emulator (host = 10.0.2.2)
+flutter run -d android --dart-define=API_BASE=http://10.0.2.2:8000
 
 # Chrome (web)
-flutter run -d chrome --dart-define=API_BASE=http://localhost:8000
-
-# Android emulator
-flutter run -d android --dart-define=API_BASE=http://10.0.2.2:8000
+flutter run -d chrome --dart-define=API_BASE=http://127.0.0.1:8000
 
 # Máy thật (đổi IP LAN)
 flutter run --dart-define=API_BASE=http://192.168.1.10:8000
+```
+
+Windows desktop (nếu cần):
+
+```powershell
+cd app
+$env:Path = "$env:LOCALAPPDATA\flutter\bin;$env:Path"
+flutter run -d windows --dart-define=API_BASE=http://localhost:8000
 ```
 
 ## Cấu trúc
