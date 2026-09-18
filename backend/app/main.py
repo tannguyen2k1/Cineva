@@ -35,9 +35,9 @@ async def lifespan(_app: FastAPI):
         yield
     finally:
         await stop_sync_scheduler()
-        from app.services.nguonc_client import get_nguonc_client
+        from app.services.kkphim_client import get_kkphim_client
 
-        await get_nguonc_client().close()
+        await get_kkphim_client().close()
 
 
 app = FastAPI(

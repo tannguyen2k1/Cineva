@@ -8,7 +8,7 @@ from app.models import FilmComment, FilmFollow, WatchlistItem
 from app.repositories import engagement as eng_repo
 from app.repositories import film as film_repo
 from app.repositories import notifications as notif_repo
-from app.schemas.film import CommentCreate, ProgressUpdate, RatingUpdate
+from app.schemas.film import CommentCreate, ProgressUpdate
 from app.services.film_mapper import serialize_film_card
 from app.services.system_log import write_system_log
 
@@ -148,20 +148,7 @@ async def list_continue(db: AsyncSession, *, user_id: str) -> dict:
     }
 
 
-async def rate_film(
-    db: AsyncSession, *, user_id: str, slug: str, body: RatingUpdate
-) -> dict:
-    film = await _require_visible_film(db, slug)
-    await eng_repo.upsert_rating(
-        db, user_id=user_id, film_id=film.id, score=body.score
-    )
-    avg, count = await eng_repo.rating_stats(db, film_id=film.id)
-    await film_repo.update_rating_aggregate(db, film_id=film.id, avg=avg, count=count)
-    await db.commit()
-    return {
-        "success": True,
-        "data": {"score": body.score, "avgRating": round(avg, 1), "ratingCount": count},
-    }
+
 
 
 async def list_comments(

@@ -17,7 +17,7 @@ from app.services.film_images import (
 )
 from app.services.film_mapper import serialize_film_card
 from app.services.film_sync import serialize_sync_run
-from app.services.nguonc_client import NguoncClient
+from app.services.kkphim_client import KkphimClient
 
 
 def test_local_image_is_preferred_and_source_remains_fallback() -> None:
@@ -99,7 +99,7 @@ async def test_non_https_image_is_rejected() -> None:
 
 
 @pytest.mark.asyncio
-async def test_nguonc_retries_server_errors() -> None:
+async def test_kkphim_retries_server_errors() -> None:
     attempts = 0
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -109,13 +109,13 @@ async def test_nguonc_retries_server_errors() -> None:
             return httpx.Response(503, request=request)
         return httpx.Response(200, json={"ok": True}, request=request)
 
-    client = NguoncClient()
+    client = KkphimClient()
     await client._client.aclose()
     client._client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     client.request_delay = 0
     client.retry_base = 0.001
     try:
-        assert await client._get("/api/films/phim-moi-cap-nhat/1") == {"ok": True}
+        assert await client._get("/danh-sach/phim-moi-cap-nhat") == {"ok": True}
         assert attempts == 2
     finally:
         await client.close()

@@ -4,7 +4,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8-sig",
+        extra="ignore",
+    )
 
     database_url: str = "postgresql+asyncpg://postgres:password123@localhost:5432/cineva"
     jwt_secret: str = "change-me"
@@ -25,11 +29,11 @@ class Settings(BaseSettings):
     rate_limit_ws_ticket: int = 20
     rate_limit_api: int = 120
 
-    nguonc_base_url: str
-    nguonc_timeout_seconds: float = 20.0
-    nguonc_max_retries: int = 4
-    nguonc_retry_base_seconds: float = 0.75
-    nguonc_request_delay_seconds: float = 0.1
+    kkphim_base_url: str = "https://phimapi.com"
+    kkphim_timeout_seconds: float = 20.0
+    kkphim_max_retries: int = 4
+    kkphim_retry_base_seconds: float = 0.75
+    kkphim_request_delay_seconds: float = 0.1
     film_detail_cache_ttl_seconds: int = 600
     sync_max_pages_per_run: int = 30
     film_image_concurrency: int = 4

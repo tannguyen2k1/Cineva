@@ -163,7 +163,7 @@
             <NuxtLink to="/phim">{{ t('cineva.movies') }}</NuxtLink>
             <NuxtLink to="/phim?type=phim-le">{{ t('cineva.moviesSingle') }}</NuxtLink>
             <NuxtLink to="/phim?type=phim-bo">{{ t('cineva.moviesSeries') }}</NuxtLink>
-            <NuxtLink to="/phim?type=dang-chieu">{{ t('cineva.nowShowing') }}</NuxtLink>
+            <NuxtLink to="/phim?type=phim-chieu-rap">{{ t('cineva.nowShowing') }}</NuxtLink>
             <NuxtLink
               v-if="authStore.isLoggedIn"
               to="/da-xem"

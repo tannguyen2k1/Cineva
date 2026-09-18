@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 class FilmType(Base):
-    """Định dạng: phim-bo, phim-le, dang-chieu, …"""
+    """Định dạng: phim-bo, phim-le, phim-chieu-rap, …"""
 
     __tablename__ = "film_types"
     __table_args__ = (Index("ix_film_types_slug", "slug", unique=True),)

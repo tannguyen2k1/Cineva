@@ -19,7 +19,7 @@ from app.services.film_mapper import (
     serialize_film_card,
     split_taxonomy,
 )
-from app.services.nguonc_client import get_nguonc_client
+from app.services.kkphim_client import get_kkphim_client
 from app.services.system_log import write_system_log
 
 logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ async def list_films(
     keyword = (q or "").strip() or None
     sort_key = sort if sort in {"newest", "name", "year"} else "newest"
 
-    # Single taxonomy browse: pull a page from nguonc so filters aren't empty.
+    # Single taxonomy browse: pull a page from KKPhim so filters aren't empty.
     if (
         not include_hidden
         and not keyword
@@ -58,7 +58,7 @@ async def list_films(
                 upsert_list_item,
             )
 
-            client = get_nguonc_client()
+            client = get_kkphim_client()
             listing = None
             tag_genre = None
             tag_country = None
@@ -106,7 +106,7 @@ async def list_films(
                 }
         except Exception:
             logger.exception(
-                "Nguonc taxonomy browse failed genre=%r country=%r type=%r",
+                "KKPhim taxonomy browse failed genre=%r country=%r type=%r",
                 genre,
                 country,
                 film_type,
@@ -171,9 +171,9 @@ async def taxonomies(db: AsyncSession) -> dict:
 
 # Curated topic cards for home (RoPhim-style discovery)
 HOME_TOPICS: list[dict] = [
-    {"slug": "khoa-hoc-vien-tuong", "name": "Viễn Tưởng", "href": "/phim?genre=khoa-hoc-vien-tuong", "tone": "violet"},
+    {"slug": "vien-tuong", "name": "Viễn Tưởng", "href": "/phim?genre=vien-tuong", "tone": "violet"},
     {"slug": "hanh-dong", "name": "Hành Động", "href": "/phim?genre=hanh-dong", "tone": "rose"},
-    {"slug": "dang-chieu", "name": "Chiếu Rạp", "href": "/phim?type=dang-chieu", "tone": "amber"},
+    {"slug": "phim-chieu-rap", "name": "Chiếu Rạp", "href": "/phim?type=phim-chieu-rap", "tone": "amber"},
     {"slug": "kinh-di", "name": "Kinh Dị", "href": "/phim?genre=kinh-di", "tone": "crimson"},
     {"slug": "co-trang", "name": "Cổ Trang", "href": "/phim?genre=co-trang", "tone": "gold"},
     {"slug": "chien-tranh", "name": "Chiến Tranh", "href": "/phim?genre=chien-tranh", "tone": "slate"},
@@ -188,7 +188,7 @@ HOME_SECTIONS: list[tuple[str, str, str, str]] = [
     ("genre", "hanh-dong", "Hành Động", "/phim?genre=hanh-dong"),
     ("genre", "tinh-cam", "Tình Cảm", "/phim?genre=tinh-cam"),
     ("country", "han-quoc", "Hàn Quốc", "/phim?country=han-quoc"),
-    ("type", "dang-chieu", "Đang Chiếu", "/phim?type=dang-chieu"),
+    ("type", "phim-chieu-rap", "Chiếu Rạp", "/phim?type=phim-chieu-rap"),
 ]
 
 # Skip sparse rails that look empty on the home page
@@ -311,7 +311,7 @@ async def get_detail(
         detail_meta = cached[1]
         episodes_payload = detail_meta.get("episodes") or []
     else:
-        client = get_nguonc_client()
+        client = get_kkphim_client()
         try:
             detail = await client.fetch_detail(slug)
         except LookupError as exc:
@@ -370,10 +370,8 @@ async def get_detail(
     )
 
     if user_id:
-        rating = await eng_repo.get_rating(db, user_id=user_id, film_id=film.id)
         watch = await eng_repo.get_watchlist_item(db, user_id=user_id, film_id=film.id)
         follow = await eng_repo.get_follow(db, user_id=user_id, film_id=film.id)
-        payload["userScore"] = rating.score if rating else None
         payload["inWatchlist"] = watch is not None
         payload["isFollowing"] = follow is not None
 

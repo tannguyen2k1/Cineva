@@ -14,7 +14,7 @@ backend/    FastAPI · SQLAlchemy 2 · Alembic · PostgreSQL · Scalar
 **Công khai**
 - Trang chủ, danh mục / tìm kiếm phim, trang chi tiết, xem tập
 - Đăng ký / đăng nhập (Cloudflare Turnstile)
-- Tủ phim, lịch sử đã xem, theo dõi / đánh giá / bình luận (khi đã đăng nhập)
+- Tủ phim, lịch sử đã xem, theo dõi / bình luận (khi đã đăng nhập)
 
 **Quản trị**
 - Kho phim, đồng bộ catalog (thủ công + lịch 00:00 Asia/Ho_Chi_Minh)

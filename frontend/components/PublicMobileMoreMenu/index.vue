@@ -76,7 +76,7 @@
           </div>
         </NuxtLink>
 
-        <NuxtLink to="/phim?type=dang-chieu" :class="styles.gridCard" @click="close">
+        <NuxtLink to="/phim?type=phim-chieu-rap" :class="styles.gridCard" @click="close">
           <div :class="[styles.iconWrapper, styles.pink]">
             <el-icon><VideoPlay /></el-icon>
           </div>

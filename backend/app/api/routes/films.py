@@ -11,7 +11,6 @@ from app.schemas.film import (
     FeaturedCreate,
     FilmHideUpdate,
     ProgressUpdate,
-    RatingUpdate,
     RegisterRequest,
 )
 from app.services import auth as auth_service
@@ -220,18 +219,6 @@ async def me_notification_read(
 ):
     return await notifications_service.mark_one_read(
         db, user_id=current.id, notification_id=notification_id
-    )
-
-
-@me_router.put("/ratings/{slug}")
-async def me_rate(
-    slug: str,
-    body: RatingUpdate,
-    db: AsyncSession = Depends(get_db),
-    current: CurrentUser = Depends(get_current_user),
-):
-    return await engagement_service.rate_film(
-        db, user_id=current.id, slug=slug, body=body
     )
 
 

@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.timeutil import utcnow
-from app.models import Film, FilmComment, FilmFollow, FilmRating, WatchProgress, WatchlistItem
+from app.models import Film, FilmComment, FilmFollow, WatchProgress, WatchlistItem
 from app.repositories.film import film_with_taxonomy_options
 
 
@@ -137,44 +137,7 @@ async def list_continue(
     ]
 
 
-async def get_rating(
-    db: AsyncSession, *, user_id: str, film_id: str
-) -> FilmRating | None:
-    return (
-        await db.execute(
-            select(FilmRating).where(
-                FilmRating.user_id == user_id,
-                FilmRating.film_id == film_id,
-            )
-        )
-    ).scalar_one_or_none()
 
-
-async def upsert_rating(
-    db: AsyncSession, *, user_id: str, film_id: str, score: int
-) -> FilmRating:
-    existing = await get_rating(db, user_id=user_id, film_id=film_id)
-    if existing:
-        existing.score = score
-        await db.flush()
-        return existing
-    rating = FilmRating(user_id=user_id, film_id=film_id, score=score)
-    db.add(rating)
-    await db.flush()
-    return rating
-
-
-async def rating_stats(db: AsyncSession, *, film_id: str) -> tuple[float, int]:
-    row = (
-        await db.execute(
-            select(func.avg(FilmRating.score), func.count(FilmRating.id)).where(
-                FilmRating.film_id == film_id
-            )
-        )
-    ).one()
-    avg = float(row[0] or 0)
-    count = int(row[1] or 0)
-    return avg, count
 
 
 async def list_comments(

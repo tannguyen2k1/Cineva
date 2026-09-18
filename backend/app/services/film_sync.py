@@ -18,43 +18,45 @@ from app.repositories import film as film_repo
 from app.repositories import cms as cms_repo
 from app.services.film_mapper import apply_list_item_to_film
 from app.services.film_images import mirror_film_images
-from app.services.nguonc_client import get_nguonc_client
+from app.services.kkphim_client import get_kkphim_client
 from app.services.system_log import write_system_log
 
 logger = logging.getLogger(__name__)
 FULL_SYNC_LOCK_KEY = 0x43494E455641
 
-# Curated seeds so home rails / filters have real rows (nguonc has many more).
+# Curated seeds aligned with KKPhim /phimapi.com taxonomy slugs.
 CATALOG_LISTS: list[tuple[str, str]] = [
     ("phim-le", "Phim Lẻ"),
     ("phim-bo", "Phim Bộ"),
     ("hoat-hinh", "Hoạt Hình"),
-    ("dang-chieu", "Đang Chiếu"),
+    ("phim-chieu-rap", "Chiếu Rạp"),
     ("tv-shows", "TV Shows"),
 ]
 
-# Full genre set matching mega-menu (slugs verified).
+# Genre set matching KKPhim /the-loai.
 CATALOG_GENRES: list[tuple[str, str]] = [
     ("hanh-dong", "Hành Động"),
     ("phieu-luu", "Phiêu Lưu"),
-    ("hoat-hinh", "Hoạt Hình"),
-    ("phim-hai", "Hài"),
-    ("hinh-su", "Hình Sự"),
-    ("tai-lieu", "Tài Liệu"),
-    ("chinh-kich", "Chính Kịch"),
-    ("gia-dinh", "Gia Đình"),
-    ("gia-tuong", "Giả Tưởng"),
-    ("lich-su", "Lịch Sử"),
-    ("kinh-di", "Kinh Dị"),
-    ("phim-nhac", "Nhạc"),
-    ("bi-an", "Bí Ẩn"),
-    ("lang-man", "Lãng Mạn"),
-    ("khoa-hoc-vien-tuong", "Khoa Học Viễn Tưởng"),
-    ("gay-can", "Gây Cấn"),
-    ("chien-tranh", "Chiến Tranh"),
-    ("tam-ly", "Tâm Lý"),
+    ("hai-huoc", "Hài Hước"),
     ("tinh-cam", "Tình Cảm"),
+    ("tam-ly", "Tâm Lý"),
+    ("kinh-di", "Kinh Dị"),
+    ("chinh-kich", "Chính Kịch"),
+    ("hinh-su", "Hình Sự"),
     ("co-trang", "Cổ Trang"),
+    ("vien-tuong", "Viễn Tưởng"),
+    ("khoa-hoc", "Khoa Học"),
+    ("chien-tranh", "Chiến Tranh"),
+    ("vo-thuat", "Võ Thuật"),
+    ("bi-an", "Bí Ẩn"),
+    ("gia-dinh", "Gia Đình"),
+    ("hoc-duong", "Học Đường"),
+    ("tai-lieu", "Tài Liệu"),
+    ("lich-su", "Lịch Sử"),
+    ("am-nhac", "Âm Nhạc"),
+    ("the-thao", "Thể Thao"),
+    ("tre-em", "Trẻ Em"),
+    ("than-thoai", "Thần Thoại"),
     ("mien-tay", "Miền Tây"),
     ("phim-18", "Phim 18+"),
 ]
@@ -94,6 +96,14 @@ async def upsert_list_item(
         apply_list_item_to_film(film, item)
         film.synced_at = now
         await db.flush()
+
+    if getattr(item, "film_type_slug", None) and getattr(item, "film_type_name", None):
+        await film_repo.ensure_film_type(
+            db,
+            film=film,
+            slug=item.film_type_slug,
+            name=item.film_type_name,
+        )
 
     new_episode = (item.current_episode or "").strip()
     if (
@@ -209,7 +219,7 @@ async def _run_incremental_sync_unlocked(
         raise HTTPException(status_code=409, detail="Đang có tiến trình đồng bộ khác chạy")
     settings = get_settings()
     pages = max_pages or settings.sync_max_pages_per_run
-    client = get_nguonc_client()
+    client = get_kkphim_client()
     run = SyncRun(job_type="incremental", status="running", page_from=1)
     await cms_repo.add_sync_run(db, run)
     await db.commit()
@@ -347,7 +357,7 @@ async def _execute_catalog_sync_unlocked(
 ) -> None:
     from app.db.session import AsyncSessionLocal
 
-    client = get_nguonc_client()
+    client = get_kkphim_client()
     upserted = 0
     async with AsyncSessionLocal() as db:
         run = await cms_repo.get_sync_run(db, run_id=run_id)
@@ -571,7 +581,7 @@ async def _execute_full_sync(run_id: str, *, actor_id: str | None) -> None:
             run = await cms_repo.get_sync_run(db, run_id=run_id)
             if not run:
                 return
-            client = get_nguonc_client()
+            client = get_kkphim_client()
             start_page = max(1, run.checkpoint_page + 1)
             try:
                 page = start_page

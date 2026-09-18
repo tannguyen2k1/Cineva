@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from slugify import slugify
-from sqlalchemy import Select, case, func, or_, select, update
+from sqlalchemy import Select, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -212,16 +212,6 @@ async def set_hidden(db: AsyncSession, *, film: Film, is_hidden: bool) -> Film:
     film.is_hidden = is_hidden
     await db.flush()
     return film
-
-
-async def update_rating_aggregate(
-    db: AsyncSession, *, film_id: str, avg: float, count: int
-) -> None:
-    await db.execute(
-        update(Film)
-        .where(Film.id == film_id)
-        .values(avg_rating=avg, rating_count=count)
-    )
 
 
 async def get_or_create_genre(db: AsyncSession, *, slug: str, name: str) -> Genre:

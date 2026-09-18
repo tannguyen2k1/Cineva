@@ -15,26 +15,11 @@
           <span v-if="film.language">{{ film.language }}</span>
           <span v-if="film.currentEpisode">{{ film.currentEpisode }}</span>
         </div>
-        <div :class="styles.ratingRow">
-          <div v-if="(film.ratingCount || 0) > 0" :class="styles.rating">
+        <div v-if="(film.ratingCount || 0) > 0 || (film.avgRating || 0) > 0" :class="styles.ratingRow">
+          <div :class="styles.rating">
             ★ {{ film.avgRating }}
-            <small>({{ film.ratingCount }})</small>
+            <small v-if="film.ratingCount">({{ film.ratingCount }})</small>
           </div>
-          <div v-if="authStore.isLoggedIn" :class="styles.rateBox">
-            <span>{{ t('cineva.yourRating') }}</span>
-            <el-rate
-              v-model="userScore"
-              :max="10"
-              :clearable="false"
-              :colors="['#ffd66b', '#ffd66b', '#ffd66b']"
-              void-color="rgba(255,255,255,0.2)"
-              disabled-void-color="rgba(255,255,255,0.15)"
-              @change="onRate"
-            />
-          </div>
-          <NuxtLink v-else to="/login" :class="styles.rateHint">
-            {{ t('cineva.loginToRate') }}
-          </NuxtLink>
         </div>
         <div :class="styles.actions">
           <NuxtLink :to="watchLink" :class="styles.primaryBtn">{{ t('cineva.watchNow') }}</NuxtLink>
@@ -230,7 +215,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useSiteUrl } from '~/composables/useSiteUrl'
 import { seoPlainText } from '~/utils/seo'
@@ -253,7 +238,6 @@ type FilmDetail = {
   totalEpisodes?: string | number | null
   avgRating?: number
   ratingCount?: number
-  userScore?: number | null
   director?: string | null
   casts?: string | null
   description?: string | null
@@ -290,15 +274,6 @@ const { data, pending, refresh } = await useAsyncData(
 )
 
 const film = computed(() => data.value?.data || null)
-const userScore = ref(0)
-
-watch(
-  film,
-  (f) => {
-    userScore.value = f?.userScore || 0
-  },
-  { immediate: true }
-)
 
 const watchLink = computed(() => {
   const f = film.value
@@ -369,28 +344,6 @@ async function toggleWatchlist() {
     }
     await refresh()
   } catch (err: any) {
-    ElMessage.error(err?.data?.statusMessage || t('common.actionFailed'))
-  }
-}
-
-async function onRate(score: number) {
-  const value = Math.round(Number(score))
-  if (value < 1 || value > 10) return
-  try {
-    const res = await useApiFetch(`/api/me/ratings/${slug.value}`, {
-      method: 'PUT',
-      body: { score: value }
-    })
-    const payload = res?.data
-    if (data.value?.data && payload) {
-      data.value.data.avgRating = payload.avgRating
-      data.value.data.ratingCount = payload.ratingCount
-      data.value.data.userScore = payload.score
-    }
-    userScore.value = value
-    ElMessage.success(t('cineva.ratedOk'))
-  } catch (err: any) {
-    userScore.value = film.value?.userScore || 0
     ElMessage.error(err?.data?.statusMessage || t('common.actionFailed'))
   }
 }

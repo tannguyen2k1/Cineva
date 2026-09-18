@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from app.models import Film
-from app.services.nguonc_client import NguoncFilmDetail, NguoncListItem, NguoncTaxonomyItem
+from app.services.kkphim_client import (
+    CatalogFilmDetail,
+    CatalogListItem,
+    CatalogTaxonomyItem,
+)
 
 
 def serialize_film_card(film: Film, *, include_hidden: bool = False, include_description: bool = False) -> dict:
@@ -32,29 +36,51 @@ def serialize_film_card(film: Film, *, include_hidden: bool = False, include_des
     return data
 
 
-def apply_list_item_to_film(film: Film, item: NguoncListItem) -> None:
+def _apply_scores(film: Film, *, avg_rating: float | None, rating_count: int | None) -> None:
+    if avg_rating is None:
+        return
+    film.avg_rating = float(avg_rating)
+    film.rating_count = int(rating_count or 0)
+
+
+def apply_list_item_to_film(film: Film, item: CatalogListItem) -> None:
     film.name = item.name or film.name
-    film.original_name = item.original_name
-    film.thumb_url = item.thumb_url
-    film.poster_url = item.poster_url
-    film.description = item.description
-    film.total_episodes = item.total_episodes
-    film.current_episode = item.current_episode
-    film.time = item.time
-    film.quality = item.quality
-    film.language = item.language
-    film.director = item.director
-    film.casts = item.casts
-    film.year = item.year
-    film.source_modified_at = item.modified
-    film.synced_at = film.synced_at  # set by caller
+    if item.original_name is not None:
+        film.original_name = item.original_name
+    if item.thumb_url:
+        film.thumb_url = item.thumb_url
+    if item.poster_url:
+        film.poster_url = item.poster_url
+    if item.description:
+        film.description = item.description
+    if item.total_episodes is not None:
+        film.total_episodes = item.total_episodes
+    if item.current_episode is not None:
+        film.current_episode = item.current_episode
+    if item.time is not None:
+        film.time = item.time
+    if item.quality is not None:
+        film.quality = item.quality
+    if item.language is not None:
+        film.language = item.language
+    if item.director is not None:
+        film.director = item.director
+    if item.casts is not None:
+        film.casts = item.casts
+    if item.year is not None:
+        film.year = item.year
+    if item.modified is not None:
+        film.source_modified_at = item.modified
+    _apply_scores(film, avg_rating=item.avg_rating, rating_count=item.rating_count)
 
 
-def apply_detail_to_film(film: Film, detail: NguoncFilmDetail) -> None:
+def apply_detail_to_film(film: Film, detail: CatalogFilmDetail) -> None:
     film.name = detail.name or film.name
     film.original_name = detail.original_name
-    film.thumb_url = detail.thumb_url
-    film.poster_url = detail.poster_url
+    if detail.thumb_url:
+        film.thumb_url = detail.thumb_url
+    if detail.poster_url:
+        film.poster_url = detail.poster_url
     film.description = detail.description
     film.total_episodes = detail.total_episodes
     film.current_episode = detail.current_episode
@@ -65,10 +91,11 @@ def apply_detail_to_film(film: Film, detail: NguoncFilmDetail) -> None:
     film.casts = detail.casts
     film.year = detail.year
     film.source_modified_at = detail.modified
+    _apply_scores(film, avg_rating=detail.avg_rating, rating_count=detail.rating_count)
 
 
 def split_taxonomy(
-    items: list[NguoncTaxonomyItem],
+    items: list[CatalogTaxonomyItem],
 ) -> tuple[list[tuple[str, str]], list[tuple[str, str]], list[tuple[str, str]]]:
     genres: list[tuple[str, str]] = []
     countries: list[tuple[str, str]] = []

@@ -17,7 +17,8 @@ target_metadata = Base.metadata
 settings = get_settings()
 # Alembic uses sync driver
 sync_url = settings.database_url.replace("+asyncpg", "")
-config.set_main_option("sqlalchemy.url", sync_url)
+# ConfigParser treats % as interpolation — escape for passwords / URL-encoding
+config.set_main_option("sqlalchemy.url", sync_url.replace("%", "%%"))
 
 
 def run_migrations_offline() -> None:

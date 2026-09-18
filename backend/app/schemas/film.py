@@ -49,7 +49,6 @@ class FilmDetailOut(FilmCardOut):
     countries: list[TaxonomyOut] = []
     types: list[TaxonomyOut] = []
     episodes: list[EpisodeServerOut] = []
-    user_score: int | None = Field(default=None, alias="userScore")
     in_watchlist: bool | None = Field(default=None, alias="inWatchlist")
     is_following: bool | None = Field(default=None, alias="isFollowing")
 
@@ -115,10 +114,6 @@ class ProgressOut(ORMModel):
     position_sec: int | None = Field(default=None, alias="positionSec")
     updated_at: datetime = Field(alias="updatedAt")
     film: FilmCardOut | None = None
-
-
-class RatingUpdate(ORMModel):
-    score: int = Field(ge=1, le=10)
 
 
 class CommentCreate(ORMModel):

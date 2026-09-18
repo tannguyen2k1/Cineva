@@ -5,7 +5,6 @@ from app.models.film import Film
 from app.models.film_comment import FilmComment
 from app.models.film_country import FilmCountry
 from app.models.film_genre import FilmGenre
-from app.models.film_rating import FilmRating
 from app.models.film_type import FilmType
 from app.models.film_type_link import FilmTypeLink
 from app.models.genre import Genre
@@ -45,7 +44,6 @@ __all__ = [
     "WatchlistItem",
     "FilmFollow",
     "WatchProgress",
-    "FilmRating",
     "FilmComment",
     "Notification",
     "SyncRun",

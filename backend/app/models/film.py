@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     from app.models.film_comment import FilmComment
     from app.models.film_country import FilmCountry
     from app.models.film_genre import FilmGenre
-    from app.models.film_rating import FilmRating
     from app.models.film_type_link import FilmTypeLink
     from app.models.featured_film import FeaturedFilm
     from app.models.film_follow import FilmFollow
@@ -88,9 +87,6 @@ class Film(Base):
         back_populates="film", cascade="all, delete-orphan"
     )
     watch_progress_items: Mapped[list[WatchProgress]] = relationship(
-        back_populates="film", cascade="all, delete-orphan"
-    )
-    ratings: Mapped[list[FilmRating]] = relationship(
         back_populates="film", cascade="all, delete-orphan"
     )
     comments: Mapped[list[FilmComment]] = relationship(
