@@ -562,6 +562,21 @@ class ApiClient {
     );
   }
 
+  Future<Map<String, dynamic>> adminRunFullSync({bool resume = false}) async {
+    return postJson(
+      '/api/admin/sync/full',
+      query: {'resume': '$resume'},
+    );
+  }
+
+  Future<Map<String, dynamic>?> adminFullSyncStatus() async {
+    final data = await getJson('/api/admin/sync/full/status');
+    final payload = data['data'];
+    if (payload is Map<String, dynamic>) return payload;
+    if (payload is Map) return Map<String, dynamic>.from(payload);
+    return null;
+  }
+
   Future<AdminPageResult> adminListComments({int page = 1}) async {
     final data = await getJson(
       '/api/admin/comments',
