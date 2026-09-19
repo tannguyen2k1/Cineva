@@ -32,7 +32,8 @@ class _HomeHeroDeckState extends State<HomeHeroDeck> {
 
   static const _arcDrop = 42.0;
   static const _arcPeak = 14.0;
-  static const _infoHPortrait = 168.0;
+  static const _infoHPortrait = 152.0;
+  static const _posterAspect = 1.32;
 
   @override
   void didChangeDependencies() {
@@ -112,12 +113,13 @@ class _HomeHeroDeckState extends State<HomeHeroDeck> {
       );
     }
 
-    // Portrait phone/tablet: tall poster + info stack.
-    final cardW = (screenW * 0.54).clamp(160.0, 340.0);
-    final posterH = cardW * 1.42;
+    // Portrait phone/tablet: compact poster + info stack (tighter on small screens).
+    final cardW = (screenW * 0.50).clamp(150.0, 300.0);
+    final posterH = cardW * _posterAspect;
     final cardH = posterH + _infoHPortrait;
-    final heroH = cardH + _arcDrop + _arcPeak + 36;
-    final fraction = (cardW / screenW * 1.08).clamp(0.48, 0.62);
+    // Lean top pad — cards sit bottom-aligned; only need room for arc peak.
+    final heroH = cardH + _arcDrop + _arcPeak + 2;
+    final fraction = (cardW / screenW * 1.08).clamp(0.46, 0.58);
     return (
       cardW: cardW,
       cardH: cardH,
@@ -218,7 +220,7 @@ class _HomeHeroDeckState extends State<HomeHeroDeck> {
                                 : _PortraitDeckCard(
                                     film: film,
                                     active: abs < 0.4,
-                                    posterHeight: m.cardW * 1.42,
+                                    posterHeight: m.cardW * _posterAspect,
                                     onOpen: () => widget.onOpen(film.slug),
                                     onSelect: () {
                                       if (abs < 0.4) {
@@ -570,7 +572,7 @@ class _PortraitDeckCard extends StatelessWidget {
                 ),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                    padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -592,7 +594,7 @@ class _PortraitDeckCard extends StatelessWidget {
                                     color: Color(0xFFF4F4F5),
                                   ),
                                 ),
-                                const SizedBox(height: 6),
+                                const SizedBox(height: 4),
                                 Wrap(
                                   spacing: 5,
                                   runSpacing: 4,
@@ -605,7 +607,7 @@ class _PortraitDeckCard extends StatelessWidget {
                                   ],
                                 ),
                                 if (film.releaseStatusLabel != null) ...[
-                                  const SizedBox(height: 6),
+                                  const SizedBox(height: 4),
                                   Text(
                                     film.releaseStatusLabel!,
                                     maxLines: 1,
@@ -625,10 +627,10 @@ class _PortraitDeckCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         SizedBox(
                           width: double.infinity,
-                          height: 36,
+                          height: 34,
                           child: FilledButton.icon(
                             onPressed: onOpen,
                             icon: const Icon(
@@ -637,8 +639,8 @@ class _PortraitDeckCard extends StatelessWidget {
                             ),
                             label: const Text('Xem ngay'),
                             style: FilledButton.styleFrom(
-                              minimumSize: const Size(0, 36),
-                              maximumSize: const Size(double.infinity, 36),
+                              minimumSize: const Size(0, 34),
+                              maximumSize: const Size(double.infinity, 34),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
                               ),
