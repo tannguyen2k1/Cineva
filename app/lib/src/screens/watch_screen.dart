@@ -10,6 +10,7 @@ import '../services/api_client.dart';
 import '../state/auth_state.dart';
 import '../theme/cineva_theme.dart';
 import '../utils/phone_orientation.dart';
+import '../widgets/left_edge_swipe_back.dart';
 
 /// Watch via JW / phimapi embed in a WebView.
 /// Rotation unlocked on this screen; rest of app stays portrait-locked.
@@ -280,12 +281,76 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     } catch (_) {}
   }
 
+  static const _stopPlaybackJs = r'''
+(function(){
+  try {
+    document.querySelectorAll('video,audio').forEach(function(m){
+      try {
+        m.pause();
+        m.muted = true;
+        m.removeAttribute('src');
+        while (m.firstChild) m.removeChild(m.firstChild);
+        m.load();
+      } catch (e) {}
+    });
+    try {
+      if (window.jwplayer) {
+        var p = jwplayer();
+        if (p) {
+          if (p.pause) p.pause(true);
+          if (p.stop) p.stop();
+          if (p.remove) p.remove();
+        }
+      }
+    } catch (e) {}
+  } catch (e) {}
+})();
+''';
+
+  bool _stopping = false;
+
+  Future<void> _stopPlayer() async {
+    if (_stopping) return;
+    _stopping = true;
+    final web = _web;
+    _web = null;
+    if (mounted) setState(() {});
+    if (web == null) return;
+    try {
+      await web.runJavaScript(_stopPlaybackJs);
+    } catch (_) {}
+    try {
+      await web.loadRequest(Uri.parse('about:blank'));
+    } catch (_) {}
+  }
+
+  Future<void> _leaveWatch() async {
+    await _pollAndSave();
+    await _stopPlayer();
+    await PhoneOrientation.lockPortrait();
+    if (!mounted) return;
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _saveTimer?.cancel();
     _loadingTimeout?.cancel();
+    final web = _web;
     _web = null;
+    if (web != null) {
+      unawaited(() async {
+        try {
+          await web.runJavaScript(_stopPlaybackJs);
+        } catch (_) {}
+        try {
+          await web.loadRequest(Uri.parse('about:blank'));
+        } catch (_) {}
+      }());
+    }
     unawaited(_saveProgress(force: true));
     unawaited(PhoneOrientation.lockPortrait());
     super.dispose();
@@ -299,71 +364,98 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
         _cinema ? MediaQuery.paddingOf(context).top + 52 : 56.0;
 
     return PopScope(
-      canPop: !_cinema,
+      canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && _cinema) {
+        if (didPop) return;
+        if (_cinema) {
           unawaited(_exitCinema());
           return;
         }
-        if (didPop) unawaited(_pollAndSave());
+        unawaited(_leaveWatch());
       },
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        appBar: _cinema
-            ? null
-            : AppBar(
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
-                title: Text(
-                  [
-                    widget.title,
-                    if (widget.episodeName != null) widget.episodeName,
-                  ].join(' · '),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-        body: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (_error != null)
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    _error!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: CinevaColors.muted),
+      child: LeftEdgeSwipeBack(
+        onBack: () {
+          if (_cinema) {
+            unawaited(_exitCinema());
+          } else {
+            unawaited(_leaveWatch());
+          }
+        },
+        child: Scaffold(
+          backgroundColor: Colors.black,
+          appBar: _cinema
+              ? null
+              : AppBar(
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () => unawaited(_leaveWatch()),
+                  ),
+                  title: Text(
+                    [
+                      widget.title,
+                      if (widget.episodeName != null) widget.episodeName,
+                    ].join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
-              )
-            else if (web != null)
-              Padding(
-                padding: EdgeInsets.only(bottom: bottomInset),
-                child: WebViewWidget(controller: web),
-              )
-            else
-              const SizedBox.shrink(),
-            if (web != null && _error == null)
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                height: topMask,
-                child: const IgnorePointer(
-                  child: ColoredBox(color: Colors.black),
+          body: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (_error != null)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: CinevaColors.muted),
+                    ),
+                  ),
+                )
+              else if (web != null)
+                Padding(
+                  padding: EdgeInsets.only(bottom: bottomInset),
+                  child: WebViewWidget(controller: web),
+                )
+              else
+                const SizedBox.shrink(),
+              if (web != null && _error == null)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: topMask,
+                  child: const IgnorePointer(
+                    child: ColoredBox(color: Colors.black),
+                  ),
                 ),
-              ),
-            if (_loading && _error == null)
-              const ColoredBox(
-                color: Colors.black,
-                child: Center(
-                  child: CircularProgressIndicator(color: CinevaColors.accent),
+              if (_loading && _error == null)
+                const ColoredBox(
+                  color: Colors.black,
+                  child: Center(
+                    child: CircularProgressIndicator(color: CinevaColors.accent),
+                  ),
                 ),
-              ),
-
-          ],
+              if (_cinema)
+                Positioned(
+                  top: MediaQuery.paddingOf(context).top + 8,
+                  left: 8,
+                  child: Material(
+                    color: Colors.black54,
+                    shape: const CircleBorder(),
+                    child: IconButton(
+                      tooltip: 'Thoát',
+                      onPressed: () => unawaited(_leaveWatch()),
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -50,11 +52,16 @@ class _HomeScreenState extends State<HomeScreen> {
   String _catalogTitle = 'Phim';
   Future<List<FilmCard>>? _watchlistFuture;
   Future<List<ContinueItem>>? _continueFuture;
+  AuthState? _auth;
+  bool _wasLoggedIn = false;
 
   @override
   void initState() {
     super.initState();
     final api = context.read<ApiClient>();
+    _auth = context.read<AuthState>();
+    _wasLoggedIn = _auth!.isLoggedIn;
+    _auth!.addListener(_onAuthChanged);
     _homeFuture = api.home();
     _taxonomiesFuture = api.taxonomies().then((t) {
       _taxonomies = t;
@@ -65,8 +72,36 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _auth?.removeListener(_onAuthChanged);
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  void _onAuthChanged() {
+    final auth = _auth;
+    if (auth == null || !mounted) return;
+    final now = auth.isLoggedIn;
+    final becameLoggedIn = now && !_wasLoggedIn;
+    final becameLoggedOut = !now && _wasLoggedIn;
+    _wasLoggedIn = now;
+    if (!becameLoggedIn && !becameLoggedOut) return;
+
+    // Defer off the notifyListeners stack so GoRouter redirect can run.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (becameLoggedIn) {
+        if (_tab == 2) {
+          unawaited(_reloadWatchlist());
+        } else if (_tab == 3) {
+          unawaited(_reloadContinue());
+        }
+      } else if (becameLoggedOut) {
+        setState(() {
+          _watchlistFuture = null;
+          _continueFuture = null;
+        });
+      }
+    });
   }
 
   Future<void> _reloadHome() async {
@@ -84,28 +119,28 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _reloadWatchlist() async {
+    final future = context.read<ApiClient>().listWatchlist();
+    if (mounted) {
+      setState(() {
+        _watchlistFuture = future;
+      });
+    }
     try {
-      final future = context.read<ApiClient>().listWatchlist();
-      final data = await future;
-      if (mounted) {
-        setState(() {
-          _watchlistFuture = Future.value(data);
-        });
-      }
+      await future;
     } catch (e) {
       if (mounted) showCinevaToast(context, e.toString(), error: true);
     }
   }
 
   Future<void> _reloadContinue() async {
+    final future = context.read<ApiClient>().listContinue();
+    if (mounted) {
+      setState(() {
+        _continueFuture = future;
+      });
+    }
     try {
-      final future = context.read<ApiClient>().listContinue();
-      final data = await future;
-      if (mounted) {
-        setState(() {
-          _continueFuture = Future.value(data);
-        });
-      }
+      await future;
     } catch (e) {
       if (mounted) showCinevaToast(context, e.toString(), error: true);
     }
@@ -330,6 +365,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loggedIn = context.watch<AuthState>().isLoggedIn;
+    if (loggedIn && _tab == 3 && _continueFuture == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted &&
+            context.read<AuthState>().isLoggedIn &&
+            _continueFuture == null) {
+          unawaited(_reloadContinue());
+        }
+      });
+    }
+    if (loggedIn && _tab == 2 && _watchlistFuture == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted &&
+            context.read<AuthState>().isLoggedIn &&
+            _watchlistFuture == null) {
+          unawaited(_reloadWatchlist());
+        }
+      });
+    }
+
     return Scaffold(
       backgroundColor: CinevaColors.bg,
       body: Column(
@@ -403,9 +458,9 @@ class _HomeScreenState extends State<HomeScreen> {
             _tab = i;
             if (!context.read<AuthState>().isLoggedIn) return;
             if (i == 2) {
-              _watchlistFuture = context.read<ApiClient>().listWatchlist();
+              unawaited(_reloadWatchlist());
             } else if (i == 3) {
-              _continueFuture = context.read<ApiClient>().listContinue();
+              unawaited(_reloadContinue());
             }
           });
         },

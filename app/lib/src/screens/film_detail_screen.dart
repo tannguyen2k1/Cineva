@@ -160,26 +160,31 @@ class _FilmDetailScreenState extends State<FilmDetailScreen> {
                               children: [
                                 Text(
                                   film.name,
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w800,
-                                    height: 1.15,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.25,
                                   ),
                                 ),
                                 if (film.originalName != null) ...[
-                                  const SizedBox(height: 6),
+                                  const SizedBox(height: 4),
                                   Text(
                                     film.originalName!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                       color: CinevaColors.muted,
-                                      fontSize: 14,
+                                      fontSize: 12,
+                                      height: 1.3,
                                     ),
                                   ),
                                 ],
-                                const SizedBox(height: 12),
+                                const SizedBox(height: 8),
                                 Wrap(
-                                  spacing: 6,
-                                  runSpacing: 6,
+                                  spacing: 5,
+                                  runSpacing: 5,
                                   children: [
                                     if (film.year != null)
                                       _MetaChip(film.year!),
@@ -191,7 +196,7 @@ class _FilmDetailScreenState extends State<FilmDetailScreen> {
                                       _MetaChip(film.currentEpisode!),
                                   ],
                                 ),
-                                const SizedBox(height: 12),
+                                const SizedBox(height: 8),
                                 ScoreCard(
                                   score: film.avgRating,
                                   count: film.ratingCount,
@@ -464,14 +469,18 @@ class _MetaChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
       ),
       child: Text(
         label,
-        style: const TextStyle(color: Color(0xFFE4E4E7), fontSize: 12),
+        style: const TextStyle(
+          color: Color(0xFFE4E4E7),
+          fontSize: 11,
+          height: 1.2,
+        ),
       ),
     );
   }

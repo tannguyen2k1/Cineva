@@ -16,6 +16,7 @@ import 'screens/profile_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/watch_screen.dart';
 import 'state/auth_state.dart';
+import 'utils/cineva_page.dart';
 
 const _publicExact = {'/', '/login', '/register'};
 const _publicPrefixes = ['/phim', '/xem'];
@@ -42,75 +43,99 @@ GoRouter createRouter(AuthState auth) {
       return null;
     },
     routes: [
-      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(
+        path: '/login',
+        pageBuilder: (context, state) =>
+            cinevaPage(state: state, child: const LoginScreen()),
+      ),
       GoRoute(
         path: '/register',
-        builder: (context, state) => const RegisterScreen(),
+        pageBuilder: (context, state) =>
+            cinevaPage(state: state, child: const RegisterScreen()),
       ),
-      GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+      GoRoute(
+        path: '/',
+        pageBuilder: (context, state) =>
+            cinevaPage(state: state, child: const HomeScreen()),
+      ),
       GoRoute(
         path: '/profile',
-        builder: (context, state) => const ProfileScreen(),
+        pageBuilder: (context, state) =>
+            cinevaPage(state: state, child: const ProfileScreen()),
       ),
       GoRoute(
         path: '/admin',
-        builder: (context, state) => const AdminHomeScreen(),
+        pageBuilder: (context, state) =>
+            cinevaPage(state: state, child: const AdminHomeScreen()),
       ),
       GoRoute(
         path: '/admin/films',
-        builder: (context, state) => const AdminFilmsScreen(),
+        pageBuilder: (context, state) =>
+            cinevaPage(state: state, child: const AdminFilmsScreen()),
       ),
       GoRoute(
         path: '/admin/sync',
-        builder: (context, state) => const AdminSyncScreen(),
+        pageBuilder: (context, state) =>
+            cinevaPage(state: state, child: const AdminSyncScreen()),
       ),
       GoRoute(
         path: '/admin/banners',
-        builder: (context, state) => const AdminBannersScreen(),
+        pageBuilder: (context, state) =>
+            cinevaPage(state: state, child: const AdminBannersScreen()),
       ),
       GoRoute(
         path: '/admin/featured',
-        builder: (context, state) => const AdminFeaturedScreen(),
+        pageBuilder: (context, state) =>
+            cinevaPage(state: state, child: const AdminFeaturedScreen()),
       ),
       GoRoute(
         path: '/admin/comments',
-        builder: (context, state) => const AdminCommentsScreen(),
+        pageBuilder: (context, state) =>
+            cinevaPage(state: state, child: const AdminCommentsScreen()),
       ),
       GoRoute(
         path: '/admin/users',
-        builder: (context, state) => const AdminUsersScreen(),
+        pageBuilder: (context, state) =>
+            cinevaPage(state: state, child: const AdminUsersScreen()),
       ),
       GoRoute(
         path: '/admin/roles',
-        builder: (context, state) => const AdminRolesScreen(),
+        pageBuilder: (context, state) =>
+            cinevaPage(state: state, child: const AdminRolesScreen()),
       ),
       GoRoute(
         path: '/admin/logs',
-        builder: (context, state) => const AdminLogsScreen(),
+        pageBuilder: (context, state) =>
+            cinevaPage(state: state, child: const AdminLogsScreen()),
       ),
       GoRoute(
         path: '/phim/:slug',
-        builder: (context, state) =>
-            FilmDetailScreen(slug: state.pathParameters['slug']!),
+        pageBuilder: (context, state) => cinevaPage(
+          state: state,
+          child: FilmDetailScreen(slug: state.pathParameters['slug']!),
+        ),
       ),
       GoRoute(
         path: '/xem/:slug',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final extra = state.extra;
           final map = extra is Map
               ? Map<String, dynamic>.from(extra)
               : <String, dynamic>{};
-          return WatchScreen(
-            slug: state.pathParameters['slug']!,
-            title: map['title']?.toString() ?? state.pathParameters['slug']!,
-            playUrl: map['playUrl']?.toString() ?? '',
-            embedUrl: map['embedUrl']?.toString(),
-            episodeSlug: map['episodeSlug']?.toString(),
-            episodeName: map['episodeName']?.toString(),
-            serverName: map['serverName']?.toString(),
-            startPositionSec: (map['positionSec'] is num)
-                ? (map['positionSec'] as num).toInt()
-                : int.tryParse('${map['positionSec'] ?? ''}'),
+          return cinevaPage(
+            state: state,
+            child: WatchScreen(
+              slug: state.pathParameters['slug']!,
+              title: map['title']?.toString() ?? state.pathParameters['slug']!,
+              playUrl: map['playUrl']?.toString() ?? '',
+              embedUrl: map['embedUrl']?.toString(),
+              episodeSlug: map['episodeSlug']?.toString(),
+              episodeName: map['episodeName']?.toString(),
+              serverName: map['serverName']?.toString(),
+              startPositionSec: (map['positionSec'] is num)
+                  ? (map['positionSec'] as num).toInt()
+                  : int.tryParse('${map['positionSec'] ?? ''}'),
+            ),
           );
         },
       ),
