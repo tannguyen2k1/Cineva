@@ -26,6 +26,21 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsArbitraryLoadsInWebContent</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Cineva cần camera để chụp ảnh đại diện.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Cineva có thể lưu ảnh đại diện vào thư viện.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Cineva cần truy cập thư viện ảnh để đổi ảnh đại diện.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -66,20 +81,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Cineva cần truy cập thư viện ảnh để đổi ảnh đại diện.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>Cineva cần camera để chụp ảnh đại diện.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Cineva có thể lưu ảnh đại diện vào thư viện.</string>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-		<key>NSAllowsArbitraryLoadsInWebContent</key>
-		<true/>
-	</dict>
 </dict>
 </plist>
