@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../config/app_config.dart';
 import '../state/auth_state.dart';
 import '../theme/cineva_theme.dart';
 import '../widgets/auth_page_shell.dart';
@@ -167,15 +166,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 foregroundColor: CinevaColors.mutedSoft,
               ),
               child: const Text('← Về trang chủ'),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'API: ${AppConfig.apiBase}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: CinevaColors.mutedSoft,
-                fontSize: 12,
-              ),
             ),
           ],
         ),
