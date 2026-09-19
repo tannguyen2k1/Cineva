@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../config/app_config.dart';
+import '../services/cineva_image_cache.dart';
 import '../theme/cineva_theme.dart';
 
 /// Resolves `/uploads/...` against [AppConfig.apiBase] and loads network images.
@@ -90,6 +91,7 @@ class CinevaNetworkImage extends StatelessWidget {
 
     return CachedNetworkImage(
       imageUrl: resolved,
+      cacheManager: CinevaImageCache.instance,
       fit: fit,
       alignment: alignment,
       width: width,

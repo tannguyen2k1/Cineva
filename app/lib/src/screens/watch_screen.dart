@@ -12,7 +12,7 @@ import '../theme/cineva_theme.dart';
 import '../utils/phone_orientation.dart';
 
 /// Watch via JW / phimapi embed in a WebView.
-/// Portrait locked; landscape only after the fullscreen button.
+/// Portrait locked; landscape via the player's own fullscreen control.
 class WatchScreen extends StatefulWidget {
   const WatchScreen({
     super.key,
@@ -39,7 +39,7 @@ class WatchScreen extends StatefulWidget {
   State<WatchScreen> createState() => _WatchScreenState();
 }
 
-class _WatchScreenState extends State<WatchScreen> {
+class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
   WebViewController? _web;
   String? _error;
   bool _loading = true;
@@ -65,31 +65,6 @@ class _WatchScreenState extends State<WatchScreen> {
       }
     }
   } catch(e) {}
-  if (window.__cinevaFsHook) return;
-  window.__cinevaFsHook = true;
-  function notify(on){
-    try {
-      if (window.CinevaPlayer && CinevaPlayer.postMessage)
-        CinevaPlayer.postMessage(on ? 'fs-on' : 'fs-off');
-    } catch(e) {}
-  }
-  function isFs(){
-    return !!(document.fullscreenElement
-      || document.webkitFullscreenElement
-      || document.msFullscreenElement);
-  }
-  document.addEventListener('fullscreenchange', function(){ notify(isFs()); });
-  document.addEventListener('webkitfullscreenchange', function(){ notify(isFs()); });
-  function bindVideo(v){
-    if (!v || v.__cinevaFs) return;
-    v.__cinevaFs = true;
-    v.addEventListener('webkitbeginfullscreen', function(){ notify(true); });
-    v.addEventListener('webkitendfullscreen', function(){ notify(false); });
-  }
-  document.querySelectorAll('video').forEach(bindVideo);
-  new MutationObserver(function(){
-    document.querySelectorAll('video').forEach(bindVideo);
-  }).observe(document.documentElement, {childList:true, subtree:true});
 })();
 ''';
 
@@ -137,13 +112,21 @@ class _WatchScreenState extends State<WatchScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _init();
   }
 
-  Future<void> _enterCinema() async {
-    if (_cinema) return;
-    setState(() => _cinema = true);
-    await PhoneOrientation.forceLandscape();
+  @override
+  void didChangeMetrics() {
+    // When native video fullscreen rotates the device, sync cinema chrome.
+    final size = WidgetsBinding.instance.platformDispatcher.views.first.physicalSize;
+    final isLandscape = size.width > size.height;
+    if (isLandscape && !_cinema) {
+      setState(() => _cinema = true);
+    } else if (!isLandscape && _cinema) {
+      setState(() => _cinema = false);
+      unawaited(PhoneOrientation.lockPortrait());
+    }
   }
 
   Future<void> _exitCinema() async {
@@ -153,16 +136,6 @@ class _WatchScreenState extends State<WatchScreen> {
     }
     setState(() => _cinema = false);
     await PhoneOrientation.lockPortrait();
-  }
-
-  void _onPlayerMessage(JavaScriptMessage message) {
-    if (!mounted) return;
-    final msg = message.message.trim();
-    if (msg == 'fs-on') {
-      unawaited(_enterCinema());
-    } else if (msg == 'fs-off') {
-      unawaited(_exitCinema());
-    }
   }
 
   PlatformWebViewControllerCreationParams _platformParams() {
@@ -200,11 +173,6 @@ class _WatchScreenState extends State<WatchScreen> {
     );
     await _configurePlatform(controller);
 
-    await controller.addJavaScriptChannel(
-      'CinevaPlayer',
-      onMessageReceived: _onPlayerMessage,
-    );
-
     controller
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.black)
@@ -217,9 +185,11 @@ class _WatchScreenState extends State<WatchScreen> {
             _loadingTimeout?.cancel();
             if (!mounted) return;
             final bottom = MediaQuery.viewPaddingOf(context).bottom;
+            final js = '$_bootJs${_safeAreaJs(bottom)}';
             unawaited((() async {
               try {
-                await controller.runJavaScript('$_bootJs${_safeAreaJs(bottom)}');
+                if (!mounted) return;
+                await controller.runJavaScript(js);
               } catch (_) {}
             })());
             setState(() => _loading = false);
@@ -262,7 +232,7 @@ class _WatchScreenState extends State<WatchScreen> {
 
   Future<void> _pollAndSave() async {
     final web = _web;
-    if (web == null) {
+    if (web == null || !mounted) {
       await _saveProgress();
       return;
     }
@@ -311,8 +281,10 @@ class _WatchScreenState extends State<WatchScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _saveTimer?.cancel();
     _loadingTimeout?.cancel();
+    _web = null;
     unawaited(_saveProgress(force: true));
     unawaited(PhoneOrientation.lockPortrait());
     super.dispose();
@@ -322,9 +294,8 @@ class _WatchScreenState extends State<WatchScreen> {
   Widget build(BuildContext context) {
     final web = _web;
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
-    final topMask = _cinema
-        ? MediaQuery.paddingOf(context).top + 52
-        : 56.0;
+    final topMask =
+        _cinema ? MediaQuery.paddingOf(context).top + 52 : 56.0;
 
     return PopScope(
       canPop: !_cinema,
@@ -373,7 +344,6 @@ class _WatchScreenState extends State<WatchScreen> {
               )
             else
               const SizedBox.shrink(),
-            // Cover embed's own title permanently (no flash / no JS race).
             if (web != null && _error == null)
               Positioned(
                 top: 0,

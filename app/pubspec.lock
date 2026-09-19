@@ -191,7 +191,7 @@ packages:
     source: sdk
     version: "0.0.0"
   flutter_cache_manager:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: flutter_cache_manager
       sha256: c83155858f880f731d1bde683bfedb0f1dabb3da0a0f3cd0b900bab5c961c21d
