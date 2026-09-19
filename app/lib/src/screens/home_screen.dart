@@ -69,20 +69,46 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  void _reloadHome() {
-    setState(() => _homeFuture = context.read<ApiClient>().home());
+  Future<void> _reloadHome() async {
+    try {
+      final future = context.read<ApiClient>().home();
+      final data = await future;
+      if (mounted) {
+        setState(() {
+          _homeFuture = Future.value(data);
+        });
+      }
+    } catch (e) {
+      if (mounted) showCinevaToast(context, e.toString(), error: true);
+    }
   }
 
-  void _reloadWatchlist() {
-    setState(() {
-      _watchlistFuture = context.read<ApiClient>().listWatchlist();
-    });
+  Future<void> _reloadWatchlist() async {
+    try {
+      final future = context.read<ApiClient>().listWatchlist();
+      final data = await future;
+      if (mounted) {
+        setState(() {
+          _watchlistFuture = Future.value(data);
+        });
+      }
+    } catch (e) {
+      if (mounted) showCinevaToast(context, e.toString(), error: true);
+    }
   }
 
-  void _reloadContinue() {
-    setState(() {
-      _continueFuture = context.read<ApiClient>().listContinue();
-    });
+  Future<void> _reloadContinue() async {
+    try {
+      final future = context.read<ApiClient>().listContinue();
+      final data = await future;
+      if (mounted) {
+        setState(() {
+          _continueFuture = Future.value(data);
+        });
+      }
+    } catch (e) {
+      if (mounted) showCinevaToast(context, e.toString(), error: true);
+    }
   }
 
   Future<void> _openContinue(ContinueItem item) async {

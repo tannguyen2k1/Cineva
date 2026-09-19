@@ -12,7 +12,7 @@ import '../theme/cineva_theme.dart';
 import '../utils/phone_orientation.dart';
 
 /// Watch via JW / phimapi embed in a WebView.
-/// Portrait locked; landscape via the player's own fullscreen control.
+/// Rotation unlocked on this screen; rest of app stays portrait-locked.
 class WatchScreen extends StatefulWidget {
   const WatchScreen({
     super.key,
@@ -113,29 +113,30 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    unawaited(PhoneOrientation.unlockForPlayer());
     _init();
   }
 
   @override
   void didChangeMetrics() {
-    // When native video fullscreen rotates the device, sync cinema chrome.
-    final size = WidgetsBinding.instance.platformDispatcher.views.first.physicalSize;
+    final view = WidgetsBinding.instance.platformDispatcher.views.first;
+    final size = view.physicalSize;
     final isLandscape = size.width > size.height;
     if (isLandscape && !_cinema) {
       setState(() => _cinema = true);
+      unawaited(PhoneOrientation.enterImmersive());
     } else if (!isLandscape && _cinema) {
       setState(() => _cinema = false);
-      unawaited(PhoneOrientation.lockPortrait());
+      unawaited(PhoneOrientation.exitImmersive());
+      // Stay unlocked so the user can rotate back into landscape.
     }
   }
 
   Future<void> _exitCinema() async {
-    if (!_cinema) {
-      await PhoneOrientation.lockPortrait();
-      return;
-    }
+    if (!_cinema) return;
     setState(() => _cinema = false);
-    await PhoneOrientation.lockPortrait();
+    await PhoneOrientation.exitImmersive();
+    await PhoneOrientation.snapToPortraitThenUnlock();
   }
 
   PlatformWebViewControllerCreationParams _platformParams() {
@@ -361,23 +362,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
                   child: CircularProgressIndicator(color: CinevaColors.accent),
                 ),
               ),
-            if (_cinema)
-              Positioned(
-                top: MediaQuery.paddingOf(context).top + 8,
-                right: 8,
-                child: Material(
-                  color: Colors.black54,
-                  shape: const CircleBorder(),
-                  child: IconButton(
-                    tooltip: 'Thu nhỏ',
-                    onPressed: () => unawaited(_exitCinema()),
-                    icon: const Icon(
-                      Icons.fullscreen_exit,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
+
           ],
         ),
       ),

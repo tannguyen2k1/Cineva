@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
 import '../models/continue_item.dart';
@@ -122,27 +123,39 @@ class ApiClient {
     };
   }
 
+  Future<T> _withNetworkHandling<T>(Future<T> Function() action) async {
+    try {
+      return await action();
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      throw ApiException('Không có kết nối mạng. Vui lòng kiểm tra lại đường truyền.');
+    }
+  }
+
   Future<Map<String, dynamic>> login({
     required String username,
     required String password,
   }) async {
-    final res = await _client.post(
-      _uri('/api/auth/token'),
-      headers: _headers(auth: false, form: true),
-      body: {
-        'grant_type': 'password',
-        'username': username,
-        'password': password,
-      },
-    );
-    final body = _decode(res);
-    final access = body['access_token']?.toString();
-    final refresh = body['refresh_token']?.toString();
-    if (access == null || refresh == null) {
-      throw ApiException('Đăng nhập thất bại: thiếu token');
-    }
-    await _persistTokens(access: access, refresh: refresh);
-    return body;
+    return _withNetworkHandling(() async {
+      final res = await _client.post(
+        _uri('/api/auth/token'),
+        headers: _headers(auth: false, form: true),
+        body: {
+          'grant_type': 'password',
+          'username': username,
+          'password': password,
+        },
+      ).timeout(const Duration(seconds: 15));
+      final body = _decode(res);
+      final access = body['access_token']?.toString();
+      final refresh = body['refresh_token']?.toString();
+      if (access == null || refresh == null) {
+        throw ApiException('Đăng nhập thất bại: thiếu token');
+      }
+      await _persistTokens(access: access, refresh: refresh);
+      return body;
+    });
   }
 
   /// Creates a member account. Cookie session from the API is ignored;
@@ -170,27 +183,31 @@ class ApiClient {
 
   Future<bool> refreshSession() async {
     if (_refreshToken == null || _refreshToken!.isEmpty) return false;
-    final res = await _client.post(
-      _uri('/api/auth/token'),
-      headers: _headers(auth: false, form: true),
-      body: {
-        'grant_type': 'refresh_token',
-        'refresh_token': _refreshToken!,
-      },
-    );
-    if (res.statusCode >= 400) {
-      await clearTokens();
-      return false;
+    try {
+      final res = await _client.post(
+        _uri('/api/auth/token'),
+        headers: _headers(auth: false, form: true),
+        body: {
+          'grant_type': 'refresh_token',
+          'refresh_token': _refreshToken!,
+        },
+      ).timeout(const Duration(seconds: 15));
+      if (res.statusCode >= 400) {
+        await clearTokens();
+        return false;
+      }
+      final body = _decode(res);
+      final access = body['access_token']?.toString();
+      final refresh = body['refresh_token']?.toString();
+      if (access == null || refresh == null) {
+        await clearTokens();
+        return false;
+      }
+      await _persistTokens(access: access, refresh: refresh);
+      return true;
+    } catch (_) {
+      return false; // If network fails during refresh, just return false for now
     }
-    final body = _decode(res);
-    final access = body['access_token']?.toString();
-    final refresh = body['refresh_token']?.toString();
-    if (access == null || refresh == null) {
-      await clearTokens();
-      return false;
-    }
-    await _persistTokens(access: access, refresh: refresh);
-    return true;
   }
 
   Future<UserSession> me() async {
@@ -347,20 +364,38 @@ class ApiClient {
     Map<String, String>? query,
     bool auth = true,
   }) async {
-    var res = await _client.get(
-      _uri(path, query),
-      headers: _headers(auth: auth),
-    );
-    if (res.statusCode == 401 && auth) {
-      final ok = await refreshSession();
-      if (ok) {
-        res = await _client.get(
-          _uri(path, query),
-          headers: _headers(auth: true),
-        );
+    final uri = _uri(path, query);
+    try {
+      var res = await _client.get(
+        uri,
+        headers: _headers(auth: auth),
+      ).timeout(const Duration(seconds: 15));
+      if (res.statusCode == 401 && auth) {
+        final ok = await refreshSession();
+        if (ok) {
+          res = await _client.get(
+            uri,
+            headers: _headers(auth: true),
+          ).timeout(const Duration(seconds: 15));
+        }
       }
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cache_GET_$uri', res.body);
+      }
+      return _decode(res);
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      final prefs = await SharedPreferences.getInstance();
+      final cached = prefs.getString('cache_GET_$uri');
+      if (cached != null) {
+        final decoded = jsonDecode(cached);
+        if (decoded is Map<String, dynamic>) return decoded;
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      }
+      throw ApiException('Không có kết nối mạng. Vui lòng kiểm tra lại đường truyền.');
     }
-    return _decode(res);
   }
 
   Future<Map<String, dynamic>> postJson(
@@ -369,22 +404,24 @@ class ApiClient {
     Map<String, String>? query,
     bool auth = true,
   }) async {
-    var res = await _client.post(
-      _uri(path, query),
-      headers: _headers(auth: auth),
-      body: body == null ? null : jsonEncode(body),
-    );
-    if (res.statusCode == 401 && auth) {
-      final ok = await refreshSession();
-      if (ok) {
-        res = await _client.post(
-          _uri(path, query),
-          headers: _headers(auth: true),
-          body: body == null ? null : jsonEncode(body),
-        );
+    return _withNetworkHandling(() async {
+      var res = await _client.post(
+        _uri(path, query),
+        headers: _headers(auth: auth),
+        body: body == null ? null : jsonEncode(body),
+      ).timeout(const Duration(seconds: 15));
+      if (res.statusCode == 401 && auth) {
+        final ok = await refreshSession();
+        if (ok) {
+          res = await _client.post(
+            _uri(path, query),
+            headers: _headers(auth: true),
+            body: body == null ? null : jsonEncode(body),
+          ).timeout(const Duration(seconds: 15));
+        }
       }
-    }
-    return _decode(res);
+      return _decode(res);
+    });
   }
 
   Future<Map<String, dynamic>> putJson(
@@ -392,22 +429,24 @@ class ApiClient {
     Map<String, dynamic>? body,
     bool auth = true,
   }) async {
-    var res = await _client.put(
-      _uri(path),
-      headers: _headers(auth: auth),
-      body: body == null ? null : jsonEncode(body),
-    );
-    if (res.statusCode == 401 && auth) {
-      final ok = await refreshSession();
-      if (ok) {
-        res = await _client.put(
-          _uri(path),
-          headers: _headers(auth: true),
-          body: body == null ? null : jsonEncode(body),
-        );
+    return _withNetworkHandling(() async {
+      var res = await _client.put(
+        _uri(path),
+        headers: _headers(auth: auth),
+        body: body == null ? null : jsonEncode(body),
+      ).timeout(const Duration(seconds: 15));
+      if (res.statusCode == 401 && auth) {
+        final ok = await refreshSession();
+        if (ok) {
+          res = await _client.put(
+            _uri(path),
+            headers: _headers(auth: true),
+            body: body == null ? null : jsonEncode(body),
+          ).timeout(const Duration(seconds: 15));
+        }
       }
-    }
-    return _decode(res);
+      return _decode(res);
+    });
   }
 
   Future<Map<String, dynamic>> patchJson(
@@ -416,42 +455,46 @@ class ApiClient {
     Map<String, String>? query,
     bool auth = true,
   }) async {
-    var res = await _client.patch(
-      _uri(path, query),
-      headers: _headers(auth: auth),
-      body: body == null ? null : jsonEncode(body),
-    );
-    if (res.statusCode == 401 && auth) {
-      final ok = await refreshSession();
-      if (ok) {
-        res = await _client.patch(
-          _uri(path, query),
-          headers: _headers(auth: true),
-          body: body == null ? null : jsonEncode(body),
-        );
+    return _withNetworkHandling(() async {
+      var res = await _client.patch(
+        _uri(path, query),
+        headers: _headers(auth: auth),
+        body: body == null ? null : jsonEncode(body),
+      ).timeout(const Duration(seconds: 15));
+      if (res.statusCode == 401 && auth) {
+        final ok = await refreshSession();
+        if (ok) {
+          res = await _client.patch(
+            _uri(path, query),
+            headers: _headers(auth: true),
+            body: body == null ? null : jsonEncode(body),
+          ).timeout(const Duration(seconds: 15));
+        }
       }
-    }
-    return _decode(res);
+      return _decode(res);
+    });
   }
 
   Future<Map<String, dynamic>> deleteJson(
     String path, {
     bool auth = true,
   }) async {
-    var res = await _client.delete(
-      _uri(path),
-      headers: _headers(auth: auth),
-    );
-    if (res.statusCode == 401 && auth) {
-      final ok = await refreshSession();
-      if (ok) {
-        res = await _client.delete(
-          _uri(path),
-          headers: _headers(auth: true),
-        );
+    return _withNetworkHandling(() async {
+      var res = await _client.delete(
+        _uri(path),
+        headers: _headers(auth: auth),
+      ).timeout(const Duration(seconds: 15));
+      if (res.statusCode == 401 && auth) {
+        final ok = await refreshSession();
+        if (ok) {
+          res = await _client.delete(
+            _uri(path),
+            headers: _headers(auth: true),
+          ).timeout(const Duration(seconds: 15));
+        }
       }
-    }
-    return _decode(res);
+      return _decode(res);
+    });
   }
 
   Future<List<FilmCard>> listWatchlist({int page = 1}) async {
@@ -732,41 +775,43 @@ class ApiClient {
   }
 
   Future<String> uploadAvatar(String filePath, {String? filename}) async {
-    final safeName = _avatarUploadName(filename ?? filePath);
-    final mediaType = _avatarMediaType(safeName);
+    return _withNetworkHandling(() async {
+      final safeName = _avatarUploadName(filename ?? filePath);
+      final mediaType = _avatarMediaType(safeName);
 
-    Future<http.StreamedResponse> send() async {
-      final req = http.MultipartRequest('POST', _uri('/api/users/avatar'));
-      if (_accessToken != null) {
-        req.headers['Authorization'] = 'Bearer $_accessToken';
+      Future<http.StreamedResponse> send() async {
+        final req = http.MultipartRequest('POST', _uri('/api/users/avatar'));
+        if (_accessToken != null) {
+          req.headers['Authorization'] = 'Bearer $_accessToken';
+        }
+        req.headers['Accept'] = 'application/json';
+        req.files.add(
+          await http.MultipartFile.fromPath(
+            'file',
+            filePath,
+            filename: safeName,
+            contentType: mediaType,
+          ),
+        );
+        return _client.send(req).timeout(const Duration(seconds: 30));
       }
-      req.headers['Accept'] = 'application/json';
-      req.files.add(
-        await http.MultipartFile.fromPath(
-          'file',
-          filePath,
-          filename: safeName,
-          contentType: mediaType,
-        ),
-      );
-      return _client.send(req);
-    }
 
-    var streamed = await send();
-    var res = await http.Response.fromStream(streamed);
-    if (res.statusCode == 401) {
-      final ok = await refreshSession();
-      if (ok) {
-        streamed = await send();
-        res = await http.Response.fromStream(streamed);
+      var streamed = await send();
+      var res = await http.Response.fromStream(streamed);
+      if (res.statusCode == 401) {
+        final ok = await refreshSession();
+        if (ok) {
+          streamed = await send();
+          res = await http.Response.fromStream(streamed);
+        }
       }
-    }
-    final body = _decode(res);
-    final data = body['data'];
-    if (data is Map && data['avatar'] != null) {
-      return data['avatar'].toString();
-    }
-    throw ApiException('Upload avatar thất bại');
+      final body = _decode(res);
+      final data = body['data'];
+      if (data is Map && data['avatar'] != null) {
+        return data['avatar'].toString();
+      }
+      throw ApiException('Upload avatar thất bại');
+    });
   }
 
   /// Backend only accepts jpeg/png/gif/webp — normalize HEIC / missing ext.
