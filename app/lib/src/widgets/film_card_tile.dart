@@ -29,9 +29,10 @@ class _FilmCardTileState extends State<FilmCardTile> {
     final badge = film.avgRating > 0
         ? '★ ${film.avgRating.toStringAsFixed(1)}'
         : (film.quality ?? film.year);
-    final ep = film.currentEpisode;
+    final ep = film.episodeProgressLabel;
     final hasSub = (film.year != null && film.year!.isNotEmpty) ||
-        (film.language != null && film.language!.isNotEmpty);
+        (film.language != null && film.language!.isNotEmpty) ||
+        (ep != null && ep.isNotEmpty);
 
     final poster = DecoratedBox(
       decoration: BoxDecoration(
@@ -52,16 +53,7 @@ class _FilmCardTileState extends State<FilmCardTile> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (film.imageUrl != null)
-              CinevaNetworkImage(url: film.imageUrl!)
-            else
-              const ColoredBox(
-                color: CinevaColors.surfaceElevated,
-                child: Icon(
-                  Icons.movie_outlined,
-                  color: CinevaColors.muted,
-                ),
-              ),
+            CinevaNetworkImage(url: film.imageUrl),
             if (badge != null && badge.isNotEmpty)
               Positioned(
                 top: 7,
@@ -157,7 +149,7 @@ class _FilmCardTileState extends State<FilmCardTile> {
                 if (hasSub) ...[
                   const SizedBox(height: 2),
                   Text(
-                    [film.year, film.language]
+                    [film.year, film.language, ep]
                         .whereType<String>()
                         .where((e) => e.isNotEmpty)
                         .join(' · '),

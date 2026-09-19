@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy import inspect as sa_inspect
 
 from app.models import Film
+from app.core.textutil import strip_html
 from app.services.kkphim_client import (
     CatalogFilmDetail,
     CatalogListItem,
@@ -40,7 +41,7 @@ def serialize_film_card(film: Film, *, include_hidden: bool = False, include_des
         ],
     }
     if include_description:
-        data["description"] = film.description
+        data["description"] = strip_html(film.description)
     if include_hidden:
         data["isHidden"] = film.is_hidden
     return data
@@ -62,7 +63,7 @@ def apply_list_item_to_film(film: Film, item: CatalogListItem) -> None:
     if item.poster_url:
         film.poster_url = item.poster_url
     if item.description:
-        film.description = item.description
+        film.description = strip_html(item.description)
     if item.total_episodes is not None:
         film.total_episodes = item.total_episodes
     if item.current_episode is not None:
@@ -91,7 +92,7 @@ def apply_detail_to_film(film: Film, detail: CatalogFilmDetail) -> None:
         film.thumb_url = detail.thumb_url
     if detail.poster_url:
         film.poster_url = detail.poster_url
-    film.description = detail.description
+    film.description = strip_html(detail.description)
     film.total_episodes = detail.total_episodes
     film.current_episode = detail.current_episode
     film.time = detail.time

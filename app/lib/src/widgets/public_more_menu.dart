@@ -89,7 +89,7 @@ class _PublicMoreMenuSheet extends StatelessWidget {
             _ProfileCard(
               name: user?.fullName?.isNotEmpty == true
                   ? user!.fullName!
-                  : (user?.username ?? 'Thành viên'),
+                  : (user?.username ?? 'Khách'),
               subtitle: user != null
                   ? 'Xem hồ sơ và cài đặt tài khoản'
                   : 'Đăng nhập để đồng bộ tủ phim và lịch sử',

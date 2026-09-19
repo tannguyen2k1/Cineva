@@ -9,6 +9,7 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.core.textutil import strip_html
 from app.core.timeutil import utcnow
 from app.models import Film
 from app.repositories import cms as cms_repo
@@ -200,12 +201,13 @@ HOME_SECTIONS: list[tuple[str, str, str, str]] = [
 
 # Skip sparse rails that look empty on the home page
 MIN_HOME_SECTION_ITEMS = 6
+HOME_SLIDE_COUNT = 16
 
 
 async def home(db: AsyncSession) -> dict:
     banners = await cms_repo.list_active_banners(db)
     featured = await cms_repo.list_featured(db, section="home_hot")
-    newest = await film_repo.list_newest(db, limit=24)
+    newest = await film_repo.list_newest(db, limit=max(24, HOME_SLIDE_COUNT))
 
     slides: list[dict] = []
     for b in banners:
@@ -234,8 +236,16 @@ async def home(db: AsyncSession) -> dict:
                 "genres": [],
             }
         )
-    if not slides:
-        slides = [serialize_film_card(f, include_description=True) for f in newest[:8]]
+    seen = {s.get("slug") for s in slides if s.get("slug")}
+    for f in newest:
+        if len(slides) >= HOME_SLIDE_COUNT:
+            break
+        card = serialize_film_card(f, include_description=True)
+        slug = card.get("slug")
+        if not slug or slug in seen:
+            continue
+        seen.add(slug)
+        slides.append(card)
 
     sections: list[dict] = []
     for kind, slug, title, href in HOME_SECTIONS:
@@ -358,7 +368,7 @@ async def get_detail(
     payload = serialize_film_card(film)
     payload.update(
         {
-            "description": film.description,
+            "description": strip_html(film.description),
             "time": film.time,
             "director": film.director,
             "casts": film.casts,

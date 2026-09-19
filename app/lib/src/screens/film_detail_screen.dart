@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 
 import '../models/models.dart';
 import '../services/api_client.dart';
+import '../state/auth_state.dart';
 import '../theme/cineva_theme.dart';
 import '../widgets/cineva_network_image.dart';
+import '../widgets/cineva_toast.dart';
 import '../widgets/score_card.dart';
 
 class FilmDetailScreen extends StatefulWidget {
@@ -20,11 +22,42 @@ class FilmDetailScreen extends StatefulWidget {
 class _FilmDetailScreenState extends State<FilmDetailScreen> {
   late Future<FilmDetail> _future;
   String? _serverName;
+  bool _watchBusy = false;
+  bool? _inWatchlist;
 
   @override
   void initState() {
     super.initState();
     _future = context.read<ApiClient>().filmDetail(widget.slug);
+  }
+
+  Future<void> _toggleWatchlist(FilmDetail film) async {
+    final auth = context.read<AuthState>();
+    if (!auth.isLoggedIn) {
+      context.push('/login');
+      return;
+    }
+    final api = context.read<ApiClient>();
+    final next = !(_inWatchlist ?? film.inWatchlist);
+    setState(() => _watchBusy = true);
+    try {
+      if (next) {
+        await api.addWatchlist(film.slug);
+      } else {
+        await api.removeWatchlist(film.slug);
+      }
+      if (!mounted) return;
+      setState(() => _inWatchlist = next);
+      showCinevaToast(
+        context,
+        next ? 'Đã thêm vào tủ phim' : 'Đã xóa khỏi tủ phim',
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      showCinevaToast(context, e.message, error: true);
+    } finally {
+      if (mounted) setState(() => _watchBusy = false);
+    }
   }
 
   void _play(FilmDetail film, EpisodeServer? server, EpisodeItem ep) {
@@ -33,6 +66,7 @@ class _FilmDetailScreenState extends State<FilmDetailScreen> {
       extra: {
         'title': film.name,
         'playUrl': ep.playUrl,
+        'episodeSlug': ep.slug,
         'episodeName': ep.name,
         'serverName': server?.serverName,
       },
@@ -113,11 +147,7 @@ class _FilmDetailScreenState extends State<FilmDetailScreen> {
                               width: 140,
                               child: AspectRatio(
                                 aspectRatio: 2 / 3,
-                                child: film.imageUrl == null
-                                    ? const ColoredBox(
-                                        color: CinevaColors.surfaceElevated,
-                                      )
-                                    : CinevaNetworkImage(url: film.imageUrl!),
+                                child: CinevaNetworkImage(url: film.imageUrl),
                               ),
                             ),
                           ),
@@ -159,13 +189,11 @@ class _FilmDetailScreenState extends State<FilmDetailScreen> {
                                       _MetaChip(film.currentEpisode!),
                                   ],
                                 ),
-                                if (film.avgRating > 0) ...[
-                                  const SizedBox(height: 12),
-                                  ScoreCard(
-                                    score: film.avgRating,
-                                    count: film.ratingCount,
-                                  ),
-                                ],
+                                const SizedBox(height: 12),
+                                ScoreCard(
+                                  score: film.avgRating,
+                                  count: film.ratingCount,
+                                ),
                               ],
                             ),
                           ),
@@ -179,6 +207,29 @@ class _FilmDetailScreenState extends State<FilmDetailScreen> {
                           label: Text('Xem ${firstEp.name}'),
                         ),
                       ],
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: _watchBusy
+                            ? null
+                            : () => _toggleWatchlist(film),
+                        icon: Icon(
+                          (_inWatchlist ?? film.inWatchlist)
+                              ? Icons.star_rounded
+                              : Icons.star_outline_rounded,
+                        ),
+                        label: Text(
+                          (_inWatchlist ?? film.inWatchlist)
+                              ? 'Đã lưu tủ phim'
+                              : 'Thêm vào tủ phim',
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: CinevaColors.accent,
+                          side: BorderSide(
+                            color: CinevaColors.accent.withValues(alpha: 0.45),
+                          ),
+                          minimumSize: const Size(double.infinity, 44),
+                        ),
+                      ),
                       if (film.description != null &&
                           film.description!.trim().isNotEmpty) ...[
                         const SizedBox(height: 22),
@@ -208,80 +259,12 @@ class _FilmDetailScreenState extends State<FilmDetailScreen> {
                       ],
                       if (servers.isNotEmpty) ...[
                         const SizedBox(height: 22),
-                        const Text(
-                          'Server',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            for (final s in servers)
-                              ChoiceChip(
-                                label: Text(s.serverName),
-                                selected: server?.serverName == s.serverName,
-                                selectedColor: CinevaColors.accent.withValues(
-                                  alpha: 0.2,
-                                ),
-                                labelStyle: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color:
-                                          server?.serverName == s.serverName
-                                          ? CinevaColors.accent
-                                          : const Color(0xFFE4E4E7),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                side: BorderSide(
-                                  color: server?.serverName == s.serverName
-                                      ? CinevaColors.accent.withValues(
-                                          alpha: 0.45,
-                                        )
-                                      : Colors.white.withValues(alpha: 0.12),
-                                ),
-                                onSelected: (_) =>
-                                    setState(() => _serverName = s.serverName),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 18),
-                        const Text(
-                          'Danh sách tập',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            for (final ep
-                                in server?.items ?? const <EpisodeItem>[])
-                              ActionChip(
-                                label: Text(ep.name),
-                                backgroundColor: Colors.white.withValues(
-                                  alpha: 0.06,
-                                ),
-                                side: BorderSide(
-                                  color: Colors.white.withValues(alpha: 0.12),
-                                ),
-                                labelStyle: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color: const Color(0xFFF4F4F5),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                onPressed: () => _play(film, server, ep),
-                              ),
-                          ],
+                        _EpisodeSection(
+                          servers: servers,
+                          selected: server,
+                          onSelectServer: (s) =>
+                              setState(() => _serverName = s.serverName),
+                          onPlay: (ep) => _play(film, server, ep),
                         ),
                       ],
                     ],
@@ -291,6 +274,179 @@ class _FilmDetailScreenState extends State<FilmDetailScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _EpisodeSection extends StatelessWidget {
+  const _EpisodeSection({
+    required this.servers,
+    required this.selected,
+    required this.onSelectServer,
+    required this.onPlay,
+  });
+
+  final List<EpisodeServer> servers;
+  final EpisodeServer? selected;
+  final ValueChanged<EpisodeServer> onSelectServer;
+  final ValueChanged<EpisodeItem> onPlay;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = selected?.items ?? const <EpisodeItem>[];
+    final width = MediaQuery.sizeOf(context).width;
+    final cols = ((width - 32) / 56).floor().clamp(5, 12);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Danh sách tập',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+              ),
+            ),
+            Text(
+              '${items.length} tập',
+              style: const TextStyle(
+                color: CinevaColors.muted,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        if (servers.length > 1) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 38,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: servers.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (context, i) {
+                final s = servers[i];
+                final active = selected?.serverName == s.serverName;
+                return Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => onSelectServer(s),
+                    borderRadius: BorderRadius.circular(10),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: active
+                            ? CinevaColors.accent.withValues(alpha: 0.16)
+                            : Colors.white.withValues(alpha: 0.04),
+                        border: Border.all(
+                          color: active
+                              ? CinevaColors.accent.withValues(alpha: 0.55)
+                              : Colors.white.withValues(alpha: 0.1),
+                        ),
+                      ),
+                      child: Text(
+                        s.serverName,
+                        style: TextStyle(
+                          color: active
+                              ? CinevaColors.accent
+                              : const Color(0xFFE4E4E7),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+        const SizedBox(height: 14),
+        if (items.isEmpty)
+          const Text(
+            'Chưa có tập nào',
+            style: TextStyle(color: CinevaColors.muted),
+          )
+        else
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: items.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: cols,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 1,
+            ),
+            itemBuilder: (context, i) {
+              final ep = items[i];
+              return _EpisodeTile(
+                label: _episodeLabel(ep, i),
+                onTap: () => onPlay(ep),
+              );
+            },
+          ),
+      ],
+    );
+  }
+}
+
+String _episodeLabel(EpisodeItem ep, int index) {
+  final name = ep.name.trim();
+  final tap = RegExp(
+    r'(?:tập|tap|ep(?:isode)?)\s*(\d+)',
+    caseSensitive: false,
+  ).firstMatch(name);
+  if (tap != null) return tap.group(1)!;
+  final onlyNum = RegExp(r'^\d+$').firstMatch(name);
+  if (onlyNum != null) return name;
+  if (name.length <= 4) return name;
+  return '${index + 1}';
+}
+
+class _EpisodeTile extends StatelessWidget {
+  const _EpisodeTile({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        splashColor: CinevaColors.accent.withValues(alpha: 0.18),
+        highlightColor: CinevaColors.accent.withValues(alpha: 0.08),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            color: const Color(0xFF1A1A22),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Color(0xFFF4F4F5),
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+                letterSpacing: -0.2,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

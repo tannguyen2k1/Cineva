@@ -319,7 +319,7 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
                                     width: 40,
                                     height: 56,
                                     child: CinevaNetworkImage(
-                                      url: n.filmImageUrl!,
+                                      url: n.filmImageUrl,
                                     ),
                                   ),
                                 )

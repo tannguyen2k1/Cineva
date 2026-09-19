@@ -141,6 +141,9 @@ async def list_films_page(
     include_hidden: bool = False,
     sort: str = "newest",
 ) -> tuple[list[Film], int]:
+    # Joins on taxonomy can duplicate rows; DISTINCT is only needed then.
+    needs_distinct = bool(genre or country or film_type)
+
     base = select(Film)
     base = _apply_filters(
         base,
@@ -150,11 +153,9 @@ async def list_films_page(
         year=year,
         film_type=film_type,
         include_hidden=include_hidden,
-    ).distinct()
+    )
 
-    count_stmt = select(func.count()).select_from(base.subquery())
-    total = (await db.execute(count_stmt)).scalar_one()
-
+    relevance = None
     if q and q.strip():
         raw = q.strip()
         slug_token = slugify(raw)
@@ -165,7 +166,18 @@ async def list_films_page(
             (Film.original_name.ilike(f"{raw}%"), 3),
             (Film.source_slug == slug_token, 4),
             else_=5,
-        )
+        ).label("_search_rank")
+        # Postgres: DISTINCT + ORDER BY requires expressions in the select list.
+        if needs_distinct:
+            base = base.add_columns(relevance)
+
+    if needs_distinct:
+        base = base.distinct()
+
+    count_stmt = select(func.count()).select_from(base.subquery())
+    total = (await db.execute(count_stmt)).scalar_one()
+
+    if relevance is not None:
         order = (
             relevance.asc(),
             Film.source_modified_at.desc().nullslast(),
@@ -188,7 +200,11 @@ async def list_films_page(
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
-    return list(result.scalars().unique().all()), total
+    if relevance is not None and needs_distinct:
+        films = [row[0] for row in result.unique().all()]
+    else:
+        films = list(result.scalars().unique().all())
+    return films, total
 
 
 async def list_newest(db: AsyncSession, *, limit: int = 20) -> list[Film]:

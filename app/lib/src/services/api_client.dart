@@ -4,9 +4,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 import '../config/app_config.dart';
+import '../models/continue_item.dart';
 import '../models/home_payload.dart';
 import '../models/models.dart';
 import '../models/notification.dart';
+import '../models/taxonomies.dart';
 
 class ApiException implements Exception {
   ApiException(this.message, {this.statusCode});
@@ -16,6 +18,22 @@ class ApiException implements Exception {
 
   @override
   String toString() => message;
+}
+
+class FilmListResult {
+  const FilmListResult({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
+
+  final List<FilmCard> items;
+  final int total;
+  final int page;
+  final int pageSize;
+
+  bool get hasMore => items.length < total || page * pageSize < total;
 }
 
 class ApiClient {
@@ -94,6 +112,29 @@ class ApiClient {
     return body;
   }
 
+  /// Creates a member account. Cookie session from the API is ignored;
+  /// call [login] afterward for Bearer tokens.
+  Future<void> register({
+    required String username,
+    required String password,
+    String? fullName,
+    String? email,
+    String turnstileToken = 'XXXX.DUMMY.TOKEN.XXXX',
+  }) async {
+    await postJson(
+      '/api/auth/register',
+      auth: false,
+      body: {
+        'username': username.trim(),
+        'password': password,
+        'turnstileToken': turnstileToken,
+        if (fullName != null && fullName.trim().isNotEmpty)
+          'fullName': fullName.trim(),
+        if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
+      },
+    );
+  }
+
   Future<bool> refreshSession() async {
     if (_refreshToken == null || _refreshToken!.isEmpty) return false;
     final res = await _client.post(
@@ -137,28 +178,49 @@ class ApiClient {
     return UserSession.fromJson(map);
   }
 
-  Future<List<FilmCard>> listFilms({
+  Future<FilmListResult> listFilms({
     int page = 1,
     String? q,
     String? type,
     String? genre,
+    String? country,
+    String? year,
+    String sort = 'newest',
   }) async {
     final data = await getJson(
       '/api/public/films',
       query: {
         'page': '$page',
         'pageSize': '24',
+        'sort': sort,
         if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
         if (type != null && type.trim().isNotEmpty) 'type': type.trim(),
         if (genre != null && genre.trim().isNotEmpty) 'genre': genre.trim(),
+        if (country != null && country.trim().isNotEmpty)
+          'country': country.trim(),
+        if (year != null && year.trim().isNotEmpty) 'year': year.trim(),
       },
     );
     final items = data['data'];
-    if (items is! List) return const [];
-    return items
-        .whereType<Map>()
-        .map((e) => FilmCard.fromJson(Map<String, dynamic>.from(e)))
-        .toList();
+    final list = items is List
+        ? items
+              .whereType<Map>()
+              .map((e) => FilmCard.fromJson(Map<String, dynamic>.from(e)))
+              .toList()
+        : const <FilmCard>[];
+    return FilmListResult(
+      items: list,
+      total: (data['total'] as num?)?.toInt() ?? list.length,
+      page: (data['page'] as num?)?.toInt() ?? page,
+      pageSize: (data['pageSize'] as num?)?.toInt() ?? 24,
+    );
+  }
+
+  Future<Taxonomies> taxonomies() async {
+    final data = await getJson('/api/public/taxonomies');
+    final block = data['data'];
+    if (block is! Map) return const Taxonomies();
+    return Taxonomies.fromJson(Map<String, dynamic>.from(block));
   }
 
   Future<HomePayload> home() async {
@@ -285,6 +347,76 @@ class ApiClient {
       }
     }
     return _decode(res);
+  }
+
+  Future<Map<String, dynamic>> deleteJson(
+    String path, {
+    bool auth = true,
+  }) async {
+    var res = await _client.delete(
+      _uri(path),
+      headers: _headers(auth: auth),
+    );
+    if (res.statusCode == 401 && auth) {
+      final ok = await refreshSession();
+      if (ok) {
+        res = await _client.delete(
+          _uri(path),
+          headers: _headers(auth: true),
+        );
+      }
+    }
+    return _decode(res);
+  }
+
+  Future<List<FilmCard>> listWatchlist({int page = 1}) async {
+    final data = await getJson(
+      '/api/me/watchlist',
+      query: {'page': '$page', 'pageSize': '48'},
+    );
+    final items = data['data'];
+    if (items is! List) return const [];
+    return items
+        .whereType<Map>()
+        .map((e) => FilmCard.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  Future<void> addWatchlist(String slug) async {
+    await postJson('/api/me/watchlist/$slug');
+  }
+
+  Future<void> removeWatchlist(String slug) async {
+    await deleteJson('/api/me/watchlist/$slug');
+  }
+
+  Future<List<ContinueItem>> listContinue() async {
+    final data = await getJson('/api/me/continue');
+    final items = data['data'];
+    if (items is! List) return const [];
+    return items
+        .whereType<Map>()
+        .map((e) => ContinueItem.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  Future<void> saveProgress({
+    required String slug,
+    required String episodeSlug,
+    String? episodeName,
+    String? serverName,
+    int? positionSec,
+  }) async {
+    await putJson(
+      '/api/me/progress',
+      body: {
+        'slug': slug,
+        'episodeSlug': episodeSlug,
+        if (episodeName != null) 'episodeName': episodeName,
+        if (serverName != null) 'serverName': serverName,
+        if (positionSec != null) 'positionSec': positionSec,
+      },
+    );
   }
 
   Map<String, dynamic> _decode(http.Response res) {

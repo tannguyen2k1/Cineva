@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
@@ -6,7 +7,7 @@ import '../models/models.dart';
 import '../theme/cineva_theme.dart';
 import 'cineva_network_image.dart';
 
-/// Compact 3D deck along a rainbow-like arc.
+/// Compact 3D deck: portrait posters upright, landscape → wide banner cards.
 class HomeHeroDeck extends StatefulWidget {
   const HomeHeroDeck({
     super.key,
@@ -26,30 +27,36 @@ class HomeHeroDeck extends StatefulWidget {
 }
 
 class _HomeHeroDeckState extends State<HomeHeroDeck> {
-  late final PageController _pageCtrl;
+  PageController? _pageCtrl;
+  bool _booted = false;
 
-  /// How strongly side cards drop along the arc (px at |delta|=1).
   static const _arcDrop = 42.0;
-
-  /// How much the center card lifts (px).
   static const _arcPeak = 14.0;
+  static const _infoHPortrait = 168.0;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Create once with the correct viewportFraction. Orientation changes remount
+    // this State via ValueKey — never swap controllers mid-build.
+    if (_booted) return;
+    _booted = true;
+    final m = _metrics(MediaQuery.sizeOf(context));
     _pageCtrl = PageController(
-      initialPage: widget.index,
-      viewportFraction: 0.58,
+      initialPage: widget.index.clamp(0, math.max(0, widget.slides.length - 1)),
+      viewportFraction: m.fraction,
     );
   }
 
   @override
   void didUpdateWidget(covariant HomeHeroDeck oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final ctrl = _pageCtrl;
+    if (ctrl == null) return;
     if (oldWidget.index != widget.index &&
-        _pageCtrl.hasClients &&
-        (_pageCtrl.page?.round() ?? widget.index) != widget.index) {
-      _pageCtrl.animateToPage(
+        ctrl.hasClients &&
+        (ctrl.page?.round() ?? widget.index) != widget.index) {
+      ctrl.animateToPage(
         widget.index,
         duration: const Duration(milliseconds: 320),
         curve: Curves.easeOutCubic,
@@ -59,15 +66,65 @@ class _HomeHeroDeckState extends State<HomeHeroDeck> {
 
   @override
   void dispose() {
-    _pageCtrl.dispose();
+    _pageCtrl?.dispose();
     super.dispose();
   }
 
   double get _page {
-    if (_pageCtrl.hasClients && _pageCtrl.position.haveDimensions) {
-      return _pageCtrl.page ?? widget.index.toDouble();
+    final ctrl = _pageCtrl;
+    if (ctrl != null && ctrl.hasClients && ctrl.position.haveDimensions) {
+      return ctrl.page ?? widget.index.toDouble();
     }
     return widget.index.toDouble();
+  }
+
+  ({
+    double cardW,
+    double cardH,
+    double heroH,
+    double fraction,
+    bool landscape,
+  })
+  _metrics(Size size) {
+    final screenW = size.width;
+    final screenH = size.height;
+    final landscape = screenW > screenH * 1.05;
+
+    if (landscape) {
+      // Wide cinematic banner — fills most of the content height.
+      final maxHero = (screenH - 120).clamp(360.0, 640.0);
+      final arcPad = _arcDrop + _arcPeak + 20;
+      var cardH = (maxHero - arcPad).clamp(280.0, 520.0);
+      var cardW = cardH * 1.78; // ~16:9
+      final maxCardW = (screenW * 0.78).clamp(520.0, 920.0);
+      if (cardW > maxCardW) {
+        cardW = maxCardW;
+        cardH = cardW / 1.78;
+      }
+      final heroH = cardH + arcPad;
+      final fraction = (cardW / screenW * 1.02).clamp(0.55, 0.86);
+      return (
+        cardW: cardW,
+        cardH: cardH,
+        heroH: heroH,
+        fraction: fraction,
+        landscape: true,
+      );
+    }
+
+    // Portrait phone/tablet: tall poster + info stack.
+    final cardW = (screenW * 0.54).clamp(160.0, 340.0);
+    final posterH = cardW * 1.42;
+    final cardH = posterH + _infoHPortrait;
+    final heroH = cardH + _arcDrop + _arcPeak + 36;
+    final fraction = (cardW / screenW * 1.08).clamp(0.48, 0.62);
+    return (
+      cardW: cardW,
+      cardH: cardH,
+      heroH: heroH,
+      fraction: fraction,
+      landscape: false,
+    );
   }
 
   @override
@@ -75,77 +132,109 @@ class _HomeHeroDeckState extends State<HomeHeroDeck> {
     final slides = widget.slides;
     if (slides.isEmpty) return const SizedBox.shrink();
 
-    final screenW = MediaQuery.sizeOf(context).width;
-    final cardW = screenW * 0.54;
-    final posterH = cardW * 1.42;
-    const infoH = 118.0;
-    // Extra vertical room so the arc can rise/drop without clipping.
-    final heroH = posterH + infoH + _arcDrop + _arcPeak + 36;
+    final ctrl = _pageCtrl;
+    if (ctrl == null) return const SizedBox.shrink();
+
+    final m = _metrics(MediaQuery.sizeOf(context));
 
     return SizedBox(
-      height: heroH,
+      height: m.heroH,
       width: double.infinity,
-      child: ColoredBox(
-        color: CinevaColors.bg,
-        child: AnimatedBuilder(
-          animation: _pageCtrl,
-          builder: (context, _) {
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          // Rebuild transforms while dragging — safe outside build phase.
+          if (notification is ScrollUpdateNotification ||
+              notification is ScrollEndNotification) {
+            setState(() {});
+          }
+          return false;
+        },
+        child: Builder(
+          builder: (context) {
             final page = _page;
-            return PageView.builder(
-              controller: _pageCtrl,
-              itemCount: slides.length,
-              onPageChanged: widget.onChanged,
-              padEnds: true,
-              itemBuilder: (context, i) {
-                final film = slides[i];
-                final delta = page - i;
-                final abs = delta.abs().clamp(0.0, 2.0);
+            final activeIndex = page.round().clamp(0, slides.length - 1);
+            final active = slides[activeIndex];
 
-                // Rainbow arc: center high, sides low (y grows downward).
-                final arcY = (abs * abs) * _arcDrop - _arcPeak;
-
-                // Cylinder-ish facing: fan out left/right.
-                final rotateY = delta * 0.55;
-                final rotateZ = delta * 0.12;
-                final scale = (1 - abs * 0.14).clamp(0.82, 1.0);
-                final opacity = (1 - abs * 0.28).clamp(0.5, 1.0);
-
-                // Pull sides slightly toward the arc center.
-                final arcX = math.sin(delta * 0.55) * 6;
-
-                return Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Opacity(
-                    opacity: opacity,
-                    child: Transform(
-                      alignment: Alignment.center,
-                      transform: Matrix4.identity()
-                        ..setEntry(3, 2, 0.00115)
-                        ..translateByDouble(arcX, arcY, 0.0, 1.0)
-                        ..rotateY(rotateY)
-                        ..rotateZ(rotateZ)
-                        ..scaleByDouble(scale, scale, scale, 1.0),
-                      child: SizedBox(
-                        width: cardW,
-                        height: posterH + infoH,
-                        child: _DeckCard(
-                          film: film,
-                          active: abs < 0.4,
-                          posterHeight: posterH,
-                          onOpen: () => widget.onOpen(film.slug),
-                          onSelect: () {
-                            if (abs < 0.4) {
-                              widget.onOpen(film.slug);
-                            } else {
-                              widget.onChanged(i);
-                            }
-                          },
-                        ),
-                      ),
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                Positioned.fill(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 480),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    child: _AmbientBackdrop(
+                      key: ValueKey(active.imageUrl ?? active.slug),
+                      imageUrl: active.imageUrl,
                     ),
                   ),
-                );
-              },
+                ),
+                PageView.builder(
+                  controller: ctrl,
+                  itemCount: slides.length,
+                  onPageChanged: widget.onChanged,
+                  padEnds: true,
+                  itemBuilder: (context, i) {
+                    final film = slides[i];
+                    final delta = page - i;
+                    final abs = delta.abs().clamp(0.0, 2.0);
+
+                    final arcY = (abs * abs) * _arcDrop - _arcPeak;
+                    final rotateY = delta * (m.landscape ? 0.32 : 0.55);
+                    final rotateZ = delta * (m.landscape ? 0.06 : 0.12);
+                    final scale = (1 - abs * 0.12).clamp(0.86, 1.0);
+                    final opacity = (1 - abs * 0.28).clamp(0.5, 1.0);
+                    final arcX =
+                        math.sin(delta * 0.55) * (m.landscape ? 10 : 6);
+
+                    return Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Opacity(
+                        opacity: opacity,
+                        child: Transform(
+                          alignment: Alignment.center,
+                          transform: Matrix4.identity()
+                            ..setEntry(3, 2, 0.00115)
+                            ..translateByDouble(arcX, arcY, 0.0, 1.0)
+                            ..rotateY(rotateY)
+                            ..rotateZ(rotateZ)
+                            ..scaleByDouble(scale, scale, scale, 1.0),
+                          child: SizedBox(
+                            width: m.cardW,
+                            height: m.cardH,
+                            child: m.landscape
+                                ? _LandscapeBannerCard(
+                                    film: film,
+                                    active: abs < 0.4,
+                                    onOpen: () => widget.onOpen(film.slug),
+                                    onSelect: () {
+                                      if (abs < 0.4) {
+                                        widget.onOpen(film.slug);
+                                      } else {
+                                        widget.onChanged(i);
+                                      }
+                                    },
+                                  )
+                                : _PortraitDeckCard(
+                                    film: film,
+                                    active: abs < 0.4,
+                                    posterHeight: m.cardW * 1.42,
+                                    onOpen: () => widget.onOpen(film.slug),
+                                    onSelect: () {
+                                      if (abs < 0.4) {
+                                        widget.onOpen(film.slug);
+                                      } else {
+                                        widget.onChanged(i);
+                                      }
+                                    },
+                                  ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
             );
           },
         ),
@@ -154,8 +243,257 @@ class _HomeHeroDeckState extends State<HomeHeroDeck> {
   }
 }
 
-class _DeckCard extends StatelessWidget {
-  const _DeckCard({
+/// Soft blurred poster wash behind the deck — not flat black.
+class _AmbientBackdrop extends StatelessWidget {
+  const _AmbientBackdrop({super.key, this.imageUrl});
+
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const ColoredBox(color: CinevaColors.bg),
+        if (imageUrl != null && imageUrl!.isNotEmpty)
+          ImageFiltered(
+            imageFilter: ImageFilter.blur(sigmaX: 36, sigmaY: 36),
+            child: Transform.scale(
+              scale: 1.22,
+              child: ColorFiltered(
+                colorFilter: ColorFilter.mode(
+                  Colors.black.withValues(alpha: 0.28),
+                  BlendMode.darken,
+                ),
+                child: CinevaNetworkImage(
+                  url: imageUrl!,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.center,
+                ),
+              ),
+            ),
+          ),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                CinevaColors.bg.withValues(alpha: 0.35),
+                Colors.transparent,
+                CinevaColors.bg.withValues(alpha: 0.55),
+                CinevaColors.bg.withValues(alpha: 0.92),
+              ],
+              stops: const [0, 0.28, 0.72, 1],
+            ),
+          ),
+        ),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: const Alignment(0, -0.15),
+              radius: 1.05,
+              colors: [
+                CinevaColors.accent.withValues(alpha: 0.10),
+                Colors.transparent,
+              ],
+            ),
+          ),
+        ),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [
+                CinevaColors.bg.withValues(alpha: 0.55),
+                Colors.transparent,
+                Colors.transparent,
+                CinevaColors.bg.withValues(alpha: 0.55),
+              ],
+              stops: const [0, 0.22, 0.78, 1],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Wide landscape banner: image full-bleed + text/CTA overlay.
+class _LandscapeBannerCard extends StatelessWidget {
+  const _LandscapeBannerCard({
+    required this.film,
+    required this.active,
+    required this.onOpen,
+    required this.onSelect,
+  });
+
+  final FilmCard film;
+  final bool active;
+  final VoidCallback onOpen;
+  final VoidCallback onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(18);
+    final borderColor = active
+        ? CinevaColors.accent
+        : CinevaColors.accent.withValues(alpha: 0.4);
+
+    return GestureDetector(
+      onTap: onSelect,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          border: Border.all(color: borderColor, width: active ? 2.2 : 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: active ? 0.5 : 0.3),
+              blurRadius: active ? 22 : 12,
+              offset: Offset(0, active ? 12 : 6),
+            ),
+            if (active)
+              BoxShadow(
+                color: CinevaColors.accent.withValues(alpha: 0.16),
+                blurRadius: 18,
+              ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: radius,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              CinevaNetworkImage(
+                url: film.imageUrl,
+                fit: BoxFit.cover,
+                alignment: const Alignment(0, -0.15),
+              ),
+              // Left + bottom wash for readable copy.
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerRight,
+                    end: Alignment.centerLeft,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.15),
+                      Colors.black.withValues(alpha: 0.72),
+                      Colors.black.withValues(alpha: 0.88),
+                    ],
+                    stops: const [0.35, 0.52, 0.78, 1],
+                  ),
+                ),
+              ),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.55),
+                    ],
+                    stops: const [0.45, 1],
+                  ),
+                ),
+              ),
+              if (film.avgRating > 0)
+                Positioned(
+                  top: 14,
+                  right: 14,
+                  child: _RatingBadge(
+                    text: '★ ${film.avgRating.toStringAsFixed(1)}',
+                    accent: true,
+                  ),
+                )
+              else
+                const Positioned(
+                  top: 14,
+                  right: 14,
+                  child: _RatingBadge(text: 'Chưa có đánh giá'),
+                ),
+              Positioned(
+                left: 22,
+                right: 22,
+                bottom: 18,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            film.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w800,
+                              height: 1.15,
+                              color: Color(0xFFF4F4F5),
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              if (film.year != null) _Chip(film.year!),
+                              if (film.quality != null) _Chip(film.quality!),
+                              if (film.language != null) _Chip(film.language!),
+                            ],
+                          ),
+                          if (film.releaseStatusLabel != null) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              film.releaseStatusLabel!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: film.isOngoing
+                                    ? CinevaColors.accent.withValues(alpha: 0.95)
+                                    : const Color(0xFF4ADE80),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    FilledButton.icon(
+                      onPressed: onOpen,
+                      icon: const Icon(Icons.play_arrow_rounded, size: 22),
+                      label: const Text('Xem ngay'),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(148, 46),
+                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                        textStyle: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PortraitDeckCard extends StatelessWidget {
+  const _PortraitDeckCard({
     required this.film,
     required this.active,
     required this.posterHeight,
@@ -182,10 +520,7 @@ class _DeckCard extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
           borderRadius: radius,
-          border: Border.all(
-            color: borderColor,
-            width: active ? 2.2 : 1.5,
-          ),
+          border: Border.all(color: borderColor, width: active ? 2.2 : 1.5),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: active ? 0.5 : 0.3),
@@ -199,7 +534,6 @@ class _DeckCard extends StatelessWidget {
               ),
           ],
         ),
-        // Border lives outside clip — otherwise the stroke gets shaved off.
         child: ClipRRect(
           borderRadius: radius,
           child: ColoredBox(
@@ -212,70 +546,89 @@ class _DeckCard extends StatelessWidget {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      if (film.imageUrl != null)
-                        CinevaNetworkImage(
-                          url: film.imageUrl!,
-                          alignment: Alignment.topCenter,
-                        )
-                      else
-                        const ColoredBox(color: CinevaColors.surfaceElevated),
+                      CinevaNetworkImage(
+                        url: film.imageUrl,
+                        alignment: Alignment.topCenter,
+                      ),
                       if (film.avgRating > 0)
                         Positioned(
                           top: 10,
                           left: 10,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.75),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              '★ ${film.avgRating.toStringAsFixed(1)}',
-                              style: const TextStyle(
-                                color: CinevaColors.accent,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
+                          child: _RatingBadge(
+                            text: '★ ${film.avgRating.toStringAsFixed(1)}',
+                            accent: true,
                           ),
+                        )
+                      else
+                        const Positioned(
+                          top: 10,
+                          left: 10,
+                          child: _RatingBadge(text: 'Chưa có đánh giá'),
                         ),
                     ],
                   ),
                 ),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          film.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            height: 1.25,
-                            color: Color(0xFFF4F4F5),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            physics: const NeverScrollableScrollPhysics(),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  film.name,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.2,
+                                    color: Color(0xFFF4F4F5),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 5,
+                                  runSpacing: 4,
+                                  children: [
+                                    if (film.year != null) _Chip(film.year!),
+                                    if (film.quality != null)
+                                      _Chip(film.quality!),
+                                    if (film.language != null)
+                                      _Chip(film.language!),
+                                  ],
+                                ),
+                                if (film.releaseStatusLabel != null) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    film.releaseStatusLabel!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: film.isOngoing
+                                          ? CinevaColors.accent.withValues(
+                                              alpha: 0.9,
+                                            )
+                                          : const Color(0xFF4ADE80),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 5,
-                          runSpacing: 4,
-                          children: [
-                            if (film.year != null) _Chip(film.year!),
-                            if (film.quality != null) _Chip(film.quality!),
-                            if (film.currentEpisode != null)
-                              _Chip(film.currentEpisode!),
-                          ],
-                        ),
-                        const Spacer(),
+                        const SizedBox(height: 8),
                         SizedBox(
                           width: double.infinity,
+                          height: 36,
                           child: FilledButton.icon(
                             onPressed: onOpen,
                             icon: const Icon(
@@ -285,9 +638,12 @@ class _DeckCard extends StatelessWidget {
                             label: const Text('Xem ngay'),
                             style: FilledButton.styleFrom(
                               minimumSize: const Size(0, 36),
+                              maximumSize: const Size(double.infinity, 36),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
                               ),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: VisualDensity.compact,
                               textStyle: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
@@ -308,10 +664,37 @@ class _DeckCard extends StatelessWidget {
   }
 }
 
+class _RatingBadge extends StatelessWidget {
+  const _RatingBadge({required this.text, this.accent = false});
+
+  final String text;
+  final bool accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.75),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: accent ? CinevaColors.accent : const Color(0xFFD4D4D8),
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
 class _Chip extends StatelessWidget {
-  const _Chip(this.label);
+  const _Chip(this.label, {this.accent = false});
 
   final String label;
+  final bool accent;
 
   @override
   Widget build(BuildContext context) {
@@ -319,12 +702,14 @@ class _Chip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(5),
-        color: Colors.white.withValues(alpha: 0.08),
+        color: accent
+            ? CinevaColors.accent.withValues(alpha: 0.16)
+            : Colors.white.withValues(alpha: 0.08),
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          color: Color(0xFFD4D4D8),
+        style: TextStyle(
+          color: accent ? CinevaColors.accent : const Color(0xFFD4D4D8),
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),

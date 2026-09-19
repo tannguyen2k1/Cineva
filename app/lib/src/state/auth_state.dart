@@ -56,6 +56,39 @@ class AuthState extends ChangeNotifier {
     }
   }
 
+  Future<bool> register({
+    required String username,
+    required String password,
+    String? fullName,
+    String? email,
+  }) async {
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      await _api.register(
+        username: username,
+        password: password,
+        fullName: fullName,
+        email: email,
+      );
+      await _api.login(username: username.trim(), password: password);
+      user = await _api.me();
+      return true;
+    } on ApiException catch (e) {
+      error = e.message;
+      user = null;
+      return false;
+    } catch (e) {
+      error = e.toString();
+      user = null;
+      return false;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> logout() async {
     user = null;
     await _api.clearTokens();

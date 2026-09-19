@@ -35,6 +35,7 @@ class FilmCard {
     this.quality,
     this.language,
     this.currentEpisode,
+    this.totalEpisodes,
     this.avgRating = 0,
     this.ratingCount = 0,
     this.description,
@@ -49,11 +50,63 @@ class FilmCard {
   final String? quality;
   final String? language;
   final String? currentEpisode;
+  final int? totalEpisodes;
   final double avgRating;
   final int ratingCount;
   final String? description;
 
   String? get imageUrl => posterUrl ?? thumbUrl;
+
+  /// True when series looks unfinished (not "Full" / "Hoàn tất").
+  bool get isOngoing {
+    final cur = (currentEpisode ?? '').trim().toLowerCase();
+    if (cur.contains('hoàn') || cur.contains('full') || cur == 'end') {
+      return false;
+    }
+    final total = totalEpisodes;
+    final n = _episodeNumber;
+    if (total != null && total > 0 && n != null) return n < total;
+    return cur.isNotEmpty && total != null && total > 1;
+  }
+
+  /// Single status for UI: ongoing vs completed (no duplicate 8/24 chip).
+  String? get releaseStatusLabel {
+    if (isOngoing) return 'Đang cập nhật';
+    final cur = (currentEpisode ?? '').trim().toLowerCase();
+    final total = totalEpisodes;
+    if (cur.contains('hoàn') || cur.contains('full') || cur == 'end') {
+      return 'Đã full';
+    }
+    // Finished series with a known total.
+    if (total != null && total > 1) return 'Đã full';
+    return null;
+  }
+
+  int? get _episodeNumber {
+    final cur = currentEpisode?.trim();
+    if (cur == null || cur.isEmpty) return null;
+    final matches = RegExp(r'\d+').allMatches(cur).toList();
+    if (matches.isEmpty) return null;
+    // Prefer last number in strings like "Hoàn Tất (12/24)" → 24 is total;
+    // for "Tập 12" single number is current.
+    if (matches.length == 1) return int.tryParse(matches.first.group(0)!);
+    // "8/24" or "Hoàn Tất (8/24)" → first is current
+    return int.tryParse(matches.first.group(0)!);
+  }
+
+  /// Compact progress for list badges, e.g. `8/24` or raw `currentEpisode`.
+  String? get episodeProgressLabel {
+    final cur = currentEpisode?.trim();
+    final total = totalEpisodes;
+    final n = _episodeNumber;
+    if (total != null && total > 0) {
+      if (n != null) return '$n/$total';
+      if (cur != null && cur.isNotEmpty && cur.contains('/')) return cur;
+      return '/$total';
+    }
+    if (cur != null && cur.isNotEmpty) return cur;
+    return null;
+  }
 
   factory FilmCard.fromJson(Map<String, dynamic> json) {
     return FilmCard(
@@ -66,6 +119,7 @@ class FilmCard {
       quality: json['quality'] as String?,
       language: json['language'] as String?,
       currentEpisode: json['currentEpisode']?.toString(),
+      totalEpisodes: (json['totalEpisodes'] as num?)?.toInt(),
       avgRating: (json['avgRating'] as num?)?.toDouble() ?? 0,
       ratingCount: (json['ratingCount'] as num?)?.toInt() ?? 0,
       description: json['description'] as String?,
@@ -133,17 +187,42 @@ class FilmDetail extends FilmCard {
     super.quality,
     super.language,
     super.currentEpisode,
+    super.totalEpisodes,
     super.avgRating,
     super.ratingCount,
     super.description,
     this.director,
     this.casts,
     this.episodes = const [],
+    this.inWatchlist = false,
   });
 
   final String? director;
   final String? casts;
   final List<EpisodeServer> episodes;
+  final bool inWatchlist;
+
+  FilmDetail copyWith({bool? inWatchlist}) {
+    return FilmDetail(
+      slug: slug,
+      name: name,
+      originalName: originalName,
+      thumbUrl: thumbUrl,
+      posterUrl: posterUrl,
+      year: year,
+      quality: quality,
+      language: language,
+      currentEpisode: currentEpisode,
+      totalEpisodes: totalEpisodes,
+      avgRating: avgRating,
+      ratingCount: ratingCount,
+      description: description,
+      director: director,
+      casts: casts,
+      episodes: episodes,
+      inWatchlist: inWatchlist ?? this.inWatchlist,
+    );
+  }
 
   factory FilmDetail.fromJson(Map<String, dynamic> json) {
     final rawEps = json['episodes'];
@@ -157,6 +236,7 @@ class FilmDetail extends FilmCard {
       quality: json['quality'] as String?,
       language: json['language'] as String?,
       currentEpisode: json['currentEpisode']?.toString(),
+      totalEpisodes: (json['totalEpisodes'] as num?)?.toInt(),
       avgRating: (json['avgRating'] as num?)?.toDouble() ?? 0,
       ratingCount: (json['ratingCount'] as num?)?.toInt() ?? 0,
       description: json['description'] as String?,
@@ -170,6 +250,7 @@ class FilmDetail extends FilmCard {
                 )
                 .toList()
           : const [],
+      inWatchlist: json['inWatchlist'] == true,
     );
   }
 }

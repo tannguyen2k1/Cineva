@@ -10,7 +10,37 @@ class ScoreCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (score <= 0) return const SizedBox.shrink();
+    if (score <= 0) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFF27272A)),
+          color: const Color(0xFF141416),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '★',
+              style: TextStyle(
+                color: CinevaColors.muted,
+                fontSize: 16,
+              ),
+            ),
+            SizedBox(width: 8),
+            Text(
+              'Chưa có đánh giá',
+              style: TextStyle(
+                color: Color(0xFFD4D4D8),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Container(
       decoration: BoxDecoration(

@@ -7,12 +7,15 @@ import '../theme/cineva_theme.dart';
 
 /// Resolves `/uploads/...` against [AppConfig.apiBase] and loads network images.
 ///
+/// Missing / failed images show the branded Cineva poster. While loading, a
+/// calm solid surface is used so grids don't flash the mascot on every tile.
+///
 /// On Flutter web, CDN hosts like phimimg.com often lack CORS headers, so byte
 /// fetch fails. Prefer HTML `<img>` (same as Nuxt) which can display them.
 class CinevaNetworkImage extends StatelessWidget {
   const CinevaNetworkImage({
     super.key,
-    required this.url,
+    this.url,
     this.fit = BoxFit.cover,
     this.alignment = Alignment.center,
     this.width,
@@ -21,7 +24,10 @@ class CinevaNetworkImage extends StatelessWidget {
     this.error,
   });
 
-  final String url;
+  static const posterPlaceholderAsset =
+      'assets/brand/film-poster-placeholder.png';
+
+  final String? url;
   final BoxFit fit;
   final Alignment alignment;
   final double? width;
@@ -40,21 +46,29 @@ class CinevaNetworkImage extends StatelessWidget {
     return '$base$path';
   }
 
-  Widget get _placeholder =>
-      placeholder ??
-      const ColoredBox(color: CinevaColors.surfaceElevated);
-
-  Widget get _error =>
+  /// No poster / broken URL — branded art.
+  Widget get _missingPoster =>
       error ??
-      const ColoredBox(
+      Image.asset(
+        posterPlaceholderAsset,
+        fit: fit,
+        alignment: alignment,
+        width: width,
+        height: height,
+      );
+
+  /// In-flight load — quiet so infinite scroll does not strobe mascots.
+  Widget get _loading =>
+      placeholder ??
+      ColoredBox(
         color: CinevaColors.surfaceElevated,
-        child: Icon(Icons.broken_image_outlined, color: CinevaColors.muted),
+        child: SizedBox(width: width, height: height),
       );
 
   @override
   Widget build(BuildContext context) {
-    final resolved = resolve(url);
-    if (resolved.isEmpty) return _error;
+    final resolved = resolve(url ?? '');
+    if (resolved.isEmpty) return _missingPoster;
 
     if (kIsWeb) {
       return Image.network(
@@ -66,10 +80,10 @@ class CinevaNetworkImage extends StatelessWidget {
         gaplessPlayback: true,
         // Prefer HTML for CORS CDNs; deck cards still clip via parent Clip.
         webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-        errorBuilder: (_, _, _) => _error,
+        errorBuilder: (_, _, _) => _missingPoster,
         loadingBuilder: (context, child, progress) {
           if (progress == null) return child;
-          return _placeholder;
+          return _loading;
         },
       );
     }
@@ -80,8 +94,10 @@ class CinevaNetworkImage extends StatelessWidget {
       alignment: alignment,
       width: width,
       height: height,
-      placeholder: (_, _) => _placeholder,
-      errorWidget: (_, _, _) => _error,
+      fadeInDuration: const Duration(milliseconds: 180),
+      fadeOutDuration: Duration.zero,
+      placeholder: (_, _) => _loading,
+      errorWidget: (_, _, _) => _missingPoster,
     );
   }
 }

@@ -17,14 +17,16 @@ abstract final class CinevaColors {
 }
 
 ThemeData buildCinevaTheme() {
+  // Be Vietnam Pro: designed for Vietnamese diacritics.
+  // Outfit (and many Latin display fonts) misplace tone marks (e.g. ủ).
   // Use fontFamily on ThemeData so default TextStyles keep inherit:true.
   // Mixing GoogleFonts TextTheme (inherit:false) with const TextStyle
   // (inherit:true) breaks Material text animations.
-  final outfit = GoogleFonts.outfit();
+  final bodyFont = GoogleFonts.beVietnamPro();
   final base = ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
-    fontFamily: outfit.fontFamily,
+    fontFamily: bodyFont.fontFamily,
     scaffoldBackgroundColor: CinevaColors.bg,
     colorScheme: const ColorScheme.dark(
       brightness: Brightness.dark,
@@ -42,7 +44,7 @@ ThemeData buildCinevaTheme() {
   final textTheme = base.textTheme.apply(
     bodyColor: CinevaColors.text,
     displayColor: CinevaColors.text,
-    fontFamily: outfit.fontFamily,
+    fontFamily: bodyFont.fontFamily,
   );
 
   return base.copyWith(

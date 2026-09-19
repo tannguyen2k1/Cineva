@@ -2,16 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../models/continue_item.dart';
 import '../models/home_payload.dart';
 import '../models/models.dart';
+import '../models/taxonomies.dart';
 import '../services/api_client.dart';
 import '../state/auth_state.dart';
 import '../theme/cineva_theme.dart';
+import '../widgets/catalog_filter_sheet.dart';
 import '../widgets/cineva_bottom_nav.dart';
 import '../widgets/cineva_header.dart';
+import '../widgets/cineva_network_image.dart';
+import '../widgets/cineva_toast.dart';
 import '../widgets/film_card_tile.dart';
 import '../widgets/home_hero_deck.dart';
 import '../widgets/public_more_menu.dart';
+
+/// Keep catalog tiles ~140–160px wide so landscape doesn't blow them up.
+int _catalogCrossAxisCount(BuildContext context) {
+  final w = MediaQuery.sizeOf(context).width;
+  return ((w - 32) / 148).floor().clamp(3, 8);
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,22 +33,34 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Future<HomePayload> _homeFuture;
-  late Future<List<FilmCard>> _catalogFuture;
+  List<FilmCard> _catalogItems = [];
+  int _catalogPage = 0;
+  int _catalogTotal = 0;
+  bool _catalogLoading = true;
+  bool _catalogLoadingMore = false;
+  String? _catalogError;
+  Future<Taxonomies>? _taxonomiesFuture;
+  Taxonomies _taxonomies = const Taxonomies();
+  CatalogFilters _filters = CatalogFilters.empty;
   final _searchCtrl = TextEditingController();
   int _tab = 0;
   int _slide = 0;
   bool _searchOpen = false;
   String? _query;
-  String? _filmType;
-  String? _genre;
   String _catalogTitle = 'Phim';
+  Future<List<FilmCard>>? _watchlistFuture;
+  Future<List<ContinueItem>>? _continueFuture;
 
   @override
   void initState() {
     super.initState();
     final api = context.read<ApiClient>();
     _homeFuture = api.home();
-    _catalogFuture = api.listFilms();
+    _taxonomiesFuture = api.taxonomies().then((t) {
+      _taxonomies = t;
+      return t;
+    });
+    _loadCatalog(reset: true);
   }
 
   @override
@@ -50,50 +73,194 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _homeFuture = context.read<ApiClient>().home());
   }
 
-  void _reloadCatalog({
-    String? q,
-    String? type,
-    String? genre,
-    bool clearFilters = false,
-  }) {
+  void _reloadWatchlist() {
     setState(() {
-      _query = q?.trim().isEmpty == true ? null : q?.trim();
-      if (clearFilters) {
-        _filmType = null;
-        _genre = null;
-      } else {
-        if (type != null) {
-          _filmType = type.trim().isEmpty ? null : type.trim();
-          if (_filmType != null) _genre = null;
-        }
-        if (genre != null) {
-          _genre = genre.trim().isEmpty ? null : genre.trim();
-          if (_genre != null) _filmType = null;
-        }
-      }
-      _catalogFuture = context.read<ApiClient>().listFilms(
-        q: _query,
-        type: _filmType,
-        genre: _genre,
-      );
+      _watchlistFuture = context.read<ApiClient>().listWatchlist();
     });
   }
 
-  void _openCatalog({
-    required String title,
-    String? type,
-    String? genre,
-  }) {
+  void _reloadContinue() {
     setState(() {
-      _tab = 1;
-      _catalogTitle = title;
-      _searchOpen = false;
-      _searchCtrl.clear();
+      _continueFuture = context.read<ApiClient>().listContinue();
     });
-    if (type == null && genre == null) {
-      _reloadCatalog(clearFilters: true, q: '');
+  }
+
+  Future<void> _openContinue(ContinueItem item) async {
+    final api = context.read<ApiClient>();
+    try {
+      final detail = await api.filmDetail(item.slug);
+      EpisodeServer? server;
+      EpisodeItem? ep;
+      for (final s in detail.episodes) {
+        if (item.serverName != null &&
+            item.serverName!.isNotEmpty &&
+            s.serverName != item.serverName) {
+          continue;
+        }
+        for (final e in s.items) {
+          if (item.episodeSlug != null && e.slug == item.episodeSlug) {
+            server = s;
+            ep = e;
+            break;
+          }
+        }
+        if (ep != null) break;
+      }
+      if (ep == null) {
+        for (final s in detail.episodes) {
+          if (s.items.isEmpty) continue;
+          if (item.serverName != null &&
+              item.serverName!.isNotEmpty &&
+              s.serverName != item.serverName) {
+            continue;
+          }
+          server = s;
+          ep = s.items.first;
+          break;
+        }
+      }
+      if (ep == null && detail.episodes.isNotEmpty) {
+        server = detail.episodes.first;
+        if (server.items.isNotEmpty) ep = server.items.first;
+      }
+      if (!mounted) return;
+      if (ep == null || ep.playUrl.isEmpty) {
+        context.push('/phim/${item.slug}');
+        return;
+      }
+      context.push(
+        '/xem/${item.slug}',
+        extra: {
+          'title': detail.name,
+          'playUrl': ep.playUrl,
+          'episodeSlug': ep.slug,
+          'episodeName': ep.name,
+          'serverName': server?.serverName,
+          'positionSec': item.positionSec,
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      showCinevaToast(context, 'Không mở được tập: $e', error: true);
+    }
+  }
+
+  void _reloadCatalog({String? q, bool clearQuery = false}) {
+    if (clearQuery) {
+      _query = null;
+    } else if (q != null) {
+      _query = q.trim().isEmpty ? null : q.trim();
+    }
+    _loadCatalog(reset: true);
+  }
+
+  Future<void> _loadCatalog({required bool reset}) async {
+    if (reset) {
+      if (_catalogLoadingMore) return;
+      setState(() {
+        _catalogLoading = true;
+        _catalogLoadingMore = false;
+        _catalogError = null;
+        _catalogPage = 0;
+      });
     } else {
-      _reloadCatalog(type: type ?? '', genre: genre ?? '', q: '');
+      if (_catalogLoading ||
+          _catalogLoadingMore ||
+          _catalogItems.length >= _catalogTotal) {
+        return;
+      }
+      setState(() => _catalogLoadingMore = true);
+    }
+
+    final nextPage = reset ? 1 : _catalogPage + 1;
+    try {
+      final result = await context.read<ApiClient>().listFilms(
+            page: nextPage,
+            q: _query,
+            type: _filters.type,
+            genre: _filters.genre,
+            country: _filters.country,
+            year: _filters.year,
+            sort: _filters.sort,
+          );
+      if (!mounted) return;
+      setState(() {
+        _catalogPage = result.page;
+        _catalogTotal = result.total;
+        _catalogItems = reset
+            ? result.items
+            : [..._catalogItems, ...result.items];
+        _catalogLoading = false;
+        _catalogLoadingMore = false;
+        _catalogError = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _catalogLoading = false;
+        _catalogLoadingMore = false;
+        if (reset) {
+          _catalogError = e.toString();
+          _catalogItems = [];
+          _catalogTotal = 0;
+        }
+      });
+    }
+  }
+
+  void _applyFilters(CatalogFilters filters, {String? title}) {
+    setState(() {
+      _filters = filters;
+      _catalogTitle = title ?? _titleForFilters(filters);
+      _tab = 1;
+    });
+    _reloadCatalog();
+  }
+
+  String _titleForFilters(CatalogFilters f) {
+    if (f.genre != null) {
+      final hit = _taxonomies.genres.where((e) => e.slug == f.genre);
+      if (hit.isNotEmpty) return hit.first.name;
+    }
+    if (f.country != null) {
+      final hit = _taxonomies.countries.where((e) => e.slug == f.country);
+      if (hit.isNotEmpty) return hit.first.name;
+    }
+    if (f.type != null) {
+      final hit = _taxonomies.types.where((e) => e.slug == f.type);
+      if (hit.isNotEmpty) return hit.first.name;
+    }
+    if (f.year != null) return 'Năm ${f.year}';
+    return 'Phim';
+  }
+
+  void _openCatalog({String? title, String? type, String? genre}) {
+    _searchCtrl.clear();
+    _query = null;
+    _applyFilters(
+      CatalogFilters(type: type, genre: genre),
+      title: title,
+    );
+  }
+
+  Future<void> _showFilters() async {
+    _taxonomiesFuture ??= context.read<ApiClient>().taxonomies().then((t) {
+      _taxonomies = t;
+      return t;
+    });
+    try {
+      final tax = await _taxonomiesFuture!;
+      if (!mounted) return;
+      final next = await showCatalogFilterSheet(
+        context,
+        current: _filters,
+        taxonomies: tax,
+      );
+      if (next == null || !mounted) return;
+      _applyFilters(next);
+    } catch (e) {
+      if (!mounted) return;
+      showCinevaToast(context, 'Không tải được bộ lọc: $e', error: true);
     }
   }
 
@@ -103,9 +270,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
     switch (action) {
       case MoreMenuAction.profile:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Hồ sơ sẽ sớm có trên app.')),
-        );
+        if (!context.read<AuthState>().isLoggedIn) {
+          context.push('/login');
+          return;
+        }
+        showCinevaToast(context, 'Hồ sơ sẽ sớm có trên app.');
       case MoreMenuAction.phimLe:
         _openCatalog(title: 'Phim Lẻ', type: 'phim-le');
       case MoreMenuAction.phimBo:
@@ -115,9 +284,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case MoreMenuAction.catalog:
         _openCatalog(title: 'Phim');
       case MoreMenuAction.admin:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Admin chỉ dùng trên web quản trị.')),
-        );
+        showCinevaToast(context, 'Admin chỉ dùng trên web quản trị.');
       case MoreMenuAction.logout:
         await context.read<AuthState>().logout();
     }
@@ -160,28 +327,39 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               1 => _CatalogFeed(
                 title: _catalogTitle,
-                future: _catalogFuture,
+                items: _catalogItems,
+                loading: _catalogLoading,
+                loadingMore: _catalogLoadingMore,
+                error: _catalogError,
+                hasMore: _catalogItems.length < _catalogTotal,
                 searchOpen: _searchOpen,
                 searchCtrl: _searchCtrl,
-                onCloseSearch: () => setState(() => _searchOpen = false),
-                onSearch: (q) => _reloadCatalog(q: q),
-                onClear: () {
+                filtersActive: _filters.hasActive,
+                onOpenFilters: _showFilters,
+                onCloseSearch: () {
+                  final hadQuery = _searchCtrl.text.trim().isNotEmpty;
                   _searchCtrl.clear();
-                  _reloadCatalog(q: '');
+                  setState(() => _searchOpen = false);
+                  if (hadQuery) _reloadCatalog(clearQuery: true);
                 },
-                onRefresh: () async =>
-                    _reloadCatalog(q: _searchCtrl.text),
+                onSearch: (q) => _reloadCatalog(q: q),
+                onRefresh: () async => _reloadCatalog(q: _searchCtrl.text),
+                onLoadMore: () => _loadCatalog(reset: false),
                 onOpenFilm: (slug) => context.push('/phim/$slug'),
               ),
-              2 => const _PlaceholderPane(
-                icon: Icons.star_rounded,
-                title: 'Tủ phim',
-                subtitle: 'Danh sách yêu thích sẽ sớm có trên app.',
+              2 => _WatchlistFeed(
+                loggedIn: context.watch<AuthState>().isLoggedIn,
+                future: _watchlistFuture,
+                onLogin: () => context.push('/login'),
+                onRefresh: () async => _reloadWatchlist(),
+                onOpenFilm: (slug) => context.push('/phim/$slug'),
               ),
-              _ => const _PlaceholderPane(
-                icon: Icons.history_rounded,
-                title: 'Đã xem',
-                subtitle: 'Lịch sử xem sẽ sớm có trên app.',
+              _ => _ContinueFeed(
+                loggedIn: context.watch<AuthState>().isLoggedIn,
+                future: _continueFuture,
+                onLogin: () => context.push('/login'),
+                onRefresh: () async => _reloadContinue(),
+                onOpen: _openContinue,
               ),
             },
           ),
@@ -194,7 +372,15 @@ class _HomeScreenState extends State<HomeScreen> {
             _showMenu();
             return;
           }
-          setState(() => _tab = i);
+          setState(() {
+            _tab = i;
+            if (!context.read<AuthState>().isLoggedIn) return;
+            if (i == 2) {
+              _watchlistFuture = context.read<ApiClient>().listWatchlist();
+            } else if (i == 3) {
+              _continueFuture = context.read<ApiClient>().listContinue();
+            }
+          });
         },
       ),
     );
@@ -234,7 +420,7 @@ class _HomeFeed extends StatelessWidget {
         }
         final data = snap.data ?? const HomePayload();
         final slides =
-            data.slides.isNotEmpty ? data.slides : data.newest.take(8).toList();
+            data.slides.isNotEmpty ? data.slides : data.newest.take(16).toList();
 
         return RefreshIndicator(
           color: CinevaColors.accent,
@@ -244,6 +430,7 @@ class _HomeFeed extends StatelessWidget {
             children: [
               if (slides.isNotEmpty)
                 HomeHeroDeck(
+                  key: ValueKey(MediaQuery.orientationOf(context)),
                   slides: slides,
                   index: slide.clamp(0, slides.length - 1),
                   onChanged: onSlide,
@@ -290,119 +477,171 @@ class _HomeFeed extends StatelessWidget {
   }
 }
 
-class _CatalogFeed extends StatelessWidget {
+class _CatalogFeed extends StatefulWidget {
   const _CatalogFeed({
     required this.title,
-    required this.future,
+    required this.items,
+    required this.loading,
+    required this.loadingMore,
+    required this.error,
+    required this.hasMore,
     required this.searchOpen,
     required this.searchCtrl,
+    required this.filtersActive,
+    required this.onOpenFilters,
     required this.onCloseSearch,
     required this.onSearch,
-    required this.onClear,
     required this.onRefresh,
+    required this.onLoadMore,
     required this.onOpenFilm,
   });
 
   final String title;
-  final Future<List<FilmCard>> future;
+  final List<FilmCard> items;
+  final bool loading;
+  final bool loadingMore;
+  final String? error;
+  final bool hasMore;
   final bool searchOpen;
   final TextEditingController searchCtrl;
+  final bool filtersActive;
+  final VoidCallback onOpenFilters;
   final VoidCallback onCloseSearch;
   final ValueChanged<String> onSearch;
-  final VoidCallback onClear;
   final Future<void> Function() onRefresh;
+  final VoidCallback onLoadMore;
   final ValueChanged<String> onOpenFilm;
+
+  @override
+  State<_CatalogFeed> createState() => _CatalogFeedState();
+}
+
+class _CatalogFeedState extends State<_CatalogFeed> {
+  final _scrollCtrl = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollCtrl.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollCtrl
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollCtrl.hasClients) return;
+    final pos = _scrollCtrl.position;
+    if (pos.pixels >= pos.maxScrollExtent - 480) {
+      widget.onLoadMore();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        if (searchOpen)
+        if (widget.searchOpen)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: TextField(
-              controller: searchCtrl,
+              controller: widget.searchCtrl,
               autofocus: true,
               textInputAction: TextInputAction.search,
-              onSubmitted: onSearch,
+              onSubmitted: widget.onSearch,
               decoration: InputDecoration(
                 hintText: 'Tìm phim…',
                 prefixIcon: const Icon(Icons.search, color: CinevaColors.muted),
-                suffixIcon: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.clear, color: CinevaColors.muted),
-                      onPressed: onClear,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: CinevaColors.muted),
-                      onPressed: onCloseSearch,
-                    ),
-                  ],
+                suffixIcon: IconButton(
+                  tooltip: 'Đóng tìm kiếm',
+                  icon: const Icon(Icons.close, color: CinevaColors.muted),
+                  onPressed: widget.onCloseSearch,
                 ),
               ),
             ),
           )
         else
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
+            padding: const EdgeInsets.fromLTRB(16, 14, 8, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.title,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
-              ),
+                IconButton(
+                  tooltip: 'Bộ lọc',
+                  onPressed: widget.onOpenFilters,
+                  icon: Badge(
+                    isLabelVisible: widget.filtersActive,
+                    smallSize: 8,
+                    backgroundColor: CinevaColors.accent,
+                    child: Icon(
+                      Icons.tune_rounded,
+                      color: widget.filtersActive
+                          ? CinevaColors.accent
+                          : CinevaColors.muted,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         Expanded(
-          child: FutureBuilder<List<FilmCard>>(
-            future: future,
-            builder: (context, snap) {
-              if (snap.connectionState != ConnectionState.done) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snap.hasError) {
-                return _ErrorPane(
-                  message: snap.error.toString(),
-                  onRetry: () => onRefresh(),
-                );
-              }
-              final films = snap.data ?? const [];
-              if (films.isEmpty) {
-                return const Center(
+          child: widget.loading && widget.items.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : widget.error != null && widget.items.isEmpty
+              ? _ErrorPane(
+                  message: widget.error!,
+                  onRetry: () => widget.onRefresh(),
+                )
+              : widget.items.isEmpty
+              ? const Center(
                   child: Text(
                     'Chưa có phim',
                     style: TextStyle(color: CinevaColors.muted),
                   ),
-                );
-              }
-              return RefreshIndicator(
-                color: CinevaColors.accent,
-                onRefresh: onRefresh,
-                child: GridView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    mainAxisSpacing: 14,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 0.46,
-                  ),
-                  itemCount: films.length,
-                  itemBuilder: (context, i) {
-                    final film = films[i];
-                    return FilmCardTile(
-                      film: film,
-                      onTap: () => onOpenFilm(film.slug),
-                    );
-                  },
+                )
+              : Column(
+                  children: [
+                    if (widget.loadingMore)
+                      const LinearProgressIndicator(minHeight: 2),
+                    Expanded(
+                      child: RefreshIndicator(
+                        color: CinevaColors.accent,
+                        onRefresh: widget.onRefresh,
+                        child: GridView.builder(
+                          controller: _scrollCtrl,
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: _catalogCrossAxisCount(context),
+                            mainAxisSpacing: 14,
+                            crossAxisSpacing: 10,
+                            childAspectRatio: 0.48,
+                          ),
+                          itemCount: widget.items.length,
+                          itemBuilder: (context, i) {
+                            final film = widget.items[i];
+                            return FilmCardTile(
+                              film: film,
+                              onTap: () => widget.onOpenFilm(film.slug),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              );
-            },
-          ),
         ),
       ],
     );
@@ -520,6 +759,308 @@ class _TopicCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ContinueFeed extends StatelessWidget {
+  const _ContinueFeed({
+    required this.loggedIn,
+    required this.future,
+    required this.onLogin,
+    required this.onRefresh,
+    required this.onOpen,
+  });
+
+  final bool loggedIn;
+  final Future<List<ContinueItem>>? future;
+  final VoidCallback onLogin;
+  final Future<void> Function() onRefresh;
+  final ValueChanged<ContinueItem> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!loggedIn) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.history_rounded,
+                size: 48,
+                color: CinevaColors.accent.withValues(alpha: 0.7),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Đã xem',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Đăng nhập để tiếp tục đúng đoạn bạn dừng lại.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: CinevaColors.muted, height: 1.45),
+              ),
+              const SizedBox(height: 18),
+              FilledButton(onPressed: onLogin, child: const Text('Đăng nhập')),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 14, 16, 2),
+          child: Text(
+            'Đã xem',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+          ),
+        ),
+        Expanded(
+          child: FutureBuilder<List<ContinueItem>>(
+            future: future,
+            builder: (context, snap) {
+              if (future == null ||
+                  snap.connectionState != ConnectionState.done) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snap.hasError) {
+                return _ErrorPane(
+                  message: snap.error.toString(),
+                  onRetry: () => onRefresh(),
+                );
+              }
+              final items = snap.data ?? const [];
+              if (items.isEmpty) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Text(
+                      'Chưa có lịch sử xem.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: CinevaColors.muted,
+                        height: 1.45,
+                      ),
+                    ),
+                  ),
+                );
+              }
+              return RefreshIndicator(
+                color: CinevaColors.accent,
+                onRefresh: onRefresh,
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, i) {
+                    final item = items[i];
+                    final film = item.film;
+                    return Material(
+                      color: const Color(0xFF141416),
+                      borderRadius: BorderRadius.circular(14),
+                      child: InkWell(
+                        onTap: () => onOpen(item),
+                        borderRadius: BorderRadius.circular(14),
+                        child: Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: Row(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: SizedBox(
+                                  width: 72,
+                                  child: AspectRatio(
+                                    aspectRatio: 2 / 3,
+                                    child: CinevaNetworkImage(
+                                      url: film.imageUrl,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      film.name,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      [
+                                        'Tiếp tục',
+                                        if (item.episodeLabel.isNotEmpty)
+                                          item.episodeLabel,
+                                        if (item.positionLabel.isNotEmpty)
+                                          item.positionLabel,
+                                      ].join(' · '),
+                                      style: const TextStyle(
+                                        color: CinevaColors.accent,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    if (film.year != null ||
+                                        film.quality != null) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        [
+                                          if (film.year != null) film.year!,
+                                          if (film.quality != null)
+                                            film.quality!,
+                                        ].join(' · '),
+                                        style: const TextStyle(
+                                          color: CinevaColors.muted,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              const Icon(
+                                Icons.play_circle_fill_rounded,
+                                color: CinevaColors.accent,
+                                size: 32,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _WatchlistFeed extends StatelessWidget {
+  const _WatchlistFeed({
+    required this.loggedIn,
+    required this.future,
+    required this.onLogin,
+    required this.onRefresh,
+    required this.onOpenFilm,
+  });
+
+  final bool loggedIn;
+  final Future<List<FilmCard>>? future;
+  final VoidCallback onLogin;
+  final Future<void> Function() onRefresh;
+  final ValueChanged<String> onOpenFilm;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!loggedIn) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.star_rounded,
+                size: 48,
+                color: CinevaColors.accent.withValues(alpha: 0.7),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Tủ phim',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Đăng nhập để đồng bộ và xem phim đã lưu.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: CinevaColors.muted, height: 1.45),
+              ),
+              const SizedBox(height: 18),
+              FilledButton(onPressed: onLogin, child: const Text('Đăng nhập')),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 14, 16, 4),
+          child: Text(
+            'Tủ phim',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+          ),
+        ),
+        Expanded(
+          child: FutureBuilder<List<FilmCard>>(
+            future: future,
+            builder: (context, snap) {
+              if (future == null ||
+                  snap.connectionState != ConnectionState.done) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snap.hasError) {
+                return _ErrorPane(
+                  message: snap.error.toString(),
+                  onRetry: () => onRefresh(),
+                );
+              }
+              final films = snap.data ?? const [];
+              if (films.isEmpty) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Text(
+                      'Bạn chưa thêm phim nào vào tủ. Hãy thêm phim vào tủ ở chi tiết phim.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: CinevaColors.muted, height: 1.45),
+                    ),
+                  ),
+                );
+              }
+              return RefreshIndicator(
+                color: CinevaColors.accent,
+                onRefresh: onRefresh,
+                child: GridView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: _catalogCrossAxisCount(context),
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 0.48,
+                  ),
+                  itemCount: films.length,
+                  itemBuilder: (context, i) {
+                    final film = films[i];
+                    return FilmCardTile(
+                      film: film,
+                      onTap: () => onOpenFilm(film.slug),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
