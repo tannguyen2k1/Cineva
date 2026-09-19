@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import '../config/app_config.dart';
 import '../models/continue_item.dart';
@@ -34,6 +35,38 @@ class FilmListResult {
   final int pageSize;
 
   bool get hasMore => items.length < total || page * pageSize < total;
+}
+
+class AdminPageResult {
+  const AdminPageResult({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
+
+  final List<Map<String, dynamic>> items;
+  final int total;
+  final int page;
+  final int pageSize;
+
+  bool get hasMore => items.length < total;
+
+  factory AdminPageResult.fromJson(Map<String, dynamic> data) {
+    final raw = data['data'];
+    final list = raw is List
+        ? raw
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList()
+        : const <Map<String, dynamic>>[];
+    return AdminPageResult(
+      items: list,
+      total: (data['total'] as num?)?.toInt() ?? list.length,
+      page: (data['page'] as num?)?.toInt() ?? 1,
+      pageSize: (data['pageSize'] as num?)?.toInt() ?? list.length,
+    );
+  }
 }
 
 class ApiClient {
@@ -244,6 +277,33 @@ class ApiClient {
     return FilmDetail.fromJson(Map<String, dynamic>.from(film));
   }
 
+  Future<AdminPageResult> listFilmComments(String slug, {int page = 1}) async {
+    final data = await getJson(
+      '/api/public/films/$slug/comments',
+      query: {'page': '$page', 'pageSize': '20'},
+      auth: false,
+    );
+    return AdminPageResult.fromJson(data);
+  }
+
+  Future<Map<String, dynamic>> addFilmComment(
+    String slug, {
+    required String body,
+    String? parentId,
+  }) async {
+    final data = await postJson(
+      '/api/public/films/$slug/comments',
+      body: {
+        'body': body,
+        if (parentId != null && parentId.isNotEmpty) 'parentId': parentId,
+      },
+    );
+    final payload = data['data'];
+    if (payload is Map<String, dynamic>) return payload;
+    if (payload is Map) return Map<String, dynamic>.from(payload);
+    return const {};
+  }
+
   Future<int> notificationsUnreadCount() async {
     final data = await getJson('/api/me/notifications/unread-count');
     final block = data['data'];
@@ -306,10 +366,11 @@ class ApiClient {
   Future<Map<String, dynamic>> postJson(
     String path, {
     Map<String, dynamic>? body,
+    Map<String, String>? query,
     bool auth = true,
   }) async {
     var res = await _client.post(
-      _uri(path),
+      _uri(path, query),
       headers: _headers(auth: auth),
       body: body == null ? null : jsonEncode(body),
     );
@@ -317,7 +378,7 @@ class ApiClient {
       final ok = await refreshSession();
       if (ok) {
         res = await _client.post(
-          _uri(path),
+          _uri(path, query),
           headers: _headers(auth: true),
           body: body == null ? null : jsonEncode(body),
         );
@@ -341,6 +402,30 @@ class ApiClient {
       if (ok) {
         res = await _client.put(
           _uri(path),
+          headers: _headers(auth: true),
+          body: body == null ? null : jsonEncode(body),
+        );
+      }
+    }
+    return _decode(res);
+  }
+
+  Future<Map<String, dynamic>> patchJson(
+    String path, {
+    Map<String, dynamic>? body,
+    Map<String, String>? query,
+    bool auth = true,
+  }) async {
+    var res = await _client.patch(
+      _uri(path, query),
+      headers: _headers(auth: auth),
+      body: body == null ? null : jsonEncode(body),
+    );
+    if (res.statusCode == 401 && auth) {
+      final ok = await refreshSession();
+      if (ok) {
+        res = await _client.patch(
+          _uri(path, query),
           headers: _headers(auth: true),
           body: body == null ? null : jsonEncode(body),
         );
@@ -417,6 +502,288 @@ class ApiClient {
         if (positionSec != null) 'positionSec': positionSec,
       },
     );
+  }
+
+  Future<FilmListResult> adminListFilms({int page = 1, String? q}) async {
+    final data = await getJson(
+      '/api/admin/films',
+      query: {
+        'page': '$page',
+        'pageSize': '24',
+        if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
+      },
+    );
+    final items = data['data'];
+    final list = items is List
+        ? items
+              .whereType<Map>()
+              .map((e) => FilmCard.fromJson(Map<String, dynamic>.from(e)))
+              .toList()
+        : const <FilmCard>[];
+    return FilmListResult(
+      items: list,
+      total: (data['total'] as num?)?.toInt() ?? list.length,
+      page: (data['page'] as num?)?.toInt() ?? page,
+      pageSize: (data['pageSize'] as num?)?.toInt() ?? 24,
+    );
+  }
+
+  Future<void> adminSetFilmHidden(String slug, {required bool isHidden}) async {
+    await patchJson(
+      '/api/admin/films/$slug',
+      body: {'isHidden': isHidden},
+    );
+  }
+
+  Future<Map<String, dynamic>> dashboardStats() async {
+    final data = await getJson('/api/dashboard/stats');
+    final payload = data['data'];
+    if (payload is Map<String, dynamic>) return payload;
+    if (payload is Map) return Map<String, dynamic>.from(payload);
+    return const {};
+  }
+
+  Future<AdminPageResult> adminListSyncRuns({int page = 1}) async {
+    final data = await getJson(
+      '/api/admin/sync/runs',
+      query: {'page': '$page', 'pageSize': '20'},
+    );
+    return AdminPageResult.fromJson(data);
+  }
+
+  Future<Map<String, dynamic>> adminRunIncrementalSync() async {
+    return postJson('/api/admin/sync/run');
+  }
+
+  Future<Map<String, dynamic>> adminRunCatalogSync({int pagesPerSource = 5}) async {
+    return postJson(
+      '/api/admin/sync/catalog',
+      query: {'pagesPerSource': '$pagesPerSource'},
+    );
+  }
+
+  Future<AdminPageResult> adminListComments({int page = 1}) async {
+    final data = await getJson(
+      '/api/admin/comments',
+      query: {'page': '$page', 'pageSize': '20'},
+    );
+    return AdminPageResult.fromJson(data);
+  }
+
+  Future<void> adminSetCommentHidden(String id, {required bool isHidden}) async {
+    await patchJson(
+      '/api/admin/comments/$id',
+      query: {'isHidden': '$isHidden'},
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> adminListBanners() async {
+    final data = await getJson('/api/admin/banners');
+    return _mapList(data['data']);
+  }
+
+  Future<void> adminSetBannerActive(String id, {required bool isActive}) async {
+    await patchJson(
+      '/api/admin/banners/$id',
+      body: {'isActive': isActive},
+    );
+  }
+
+  Future<void> adminCreateBanner({
+    required String title,
+    required String imageUrl,
+    String? filmSlug,
+    String? linkUrl,
+    int sortOrder = 0,
+    bool isActive = true,
+  }) async {
+    await postJson(
+      '/api/admin/banners',
+      body: {
+        'title': title,
+        'imageUrl': imageUrl,
+        if (filmSlug != null && filmSlug.isNotEmpty) 'filmSlug': filmSlug,
+        if (linkUrl != null && linkUrl.isNotEmpty) 'linkUrl': linkUrl,
+        'sortOrder': sortOrder,
+        'isActive': isActive,
+      },
+    );
+  }
+
+  Future<void> adminUpdateBanner(
+    String id, {
+    String? title,
+    String? imageUrl,
+    String? filmSlug,
+    String? linkUrl,
+    int? sortOrder,
+    bool? isActive,
+  }) async {
+    await patchJson(
+      '/api/admin/banners/$id',
+      body: {
+        if (title != null) 'title': title,
+        if (imageUrl != null) 'imageUrl': imageUrl,
+        'filmSlug': filmSlug,
+        'linkUrl': linkUrl,
+        if (sortOrder != null) 'sortOrder': sortOrder,
+        if (isActive != null) 'isActive': isActive,
+      },
+    );
+  }
+
+  Future<void> adminDeleteBanner(String id) async {
+    await deleteJson('/api/admin/banners/$id');
+  }
+
+  Future<List<Map<String, dynamic>>> adminListFeatured({
+    String section = 'home_hot',
+  }) async {
+    final data = await getJson(
+      '/api/admin/featured',
+      query: {'section': section},
+    );
+    return _mapList(data['data']);
+  }
+
+  Future<void> adminCreateFeatured({
+    required String filmSlug,
+    String section = 'home_hot',
+    int sortOrder = 0,
+  }) async {
+    await postJson(
+      '/api/admin/featured',
+      body: {
+        'filmSlug': filmSlug,
+        'section': section,
+        'sortOrder': sortOrder,
+      },
+    );
+  }
+
+  Future<void> adminDeleteFeatured(String id) async {
+    await deleteJson('/api/admin/featured/$id');
+  }
+
+  Future<AdminPageResult> adminListUsers({int page = 1, String? search}) async {
+    final data = await getJson(
+      '/api/users',
+      query: {
+        'page': '$page',
+        'pageSize': '20',
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+      },
+    );
+    return AdminPageResult.fromJson(data);
+  }
+
+  Future<AdminPageResult> adminListRoles({int page = 1}) async {
+    final data = await getJson(
+      '/api/roles',
+      query: {'page': '$page', 'pageSize': '50'},
+    );
+    return AdminPageResult.fromJson(data);
+  }
+
+  Future<AdminPageResult> adminListLogs({int page = 1, String? search}) async {
+    final data = await getJson(
+      '/api/logs',
+      query: {
+        'page': '$page',
+        'pageSize': '20',
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+      },
+    );
+    return AdminPageResult.fromJson(data);
+  }
+
+  Future<Map<String, dynamic>> updateProfile({
+    String? fullName,
+    String? email,
+    String? password,
+  }) async {
+    final data = await putJson(
+      '/api/users/profile',
+      body: {
+        if (fullName != null) 'fullName': fullName,
+        if (email != null) 'email': email,
+        if (password != null && password.isNotEmpty) 'password': password,
+      },
+    );
+    final payload = data['data'];
+    if (payload is Map<String, dynamic>) return payload;
+    if (payload is Map) return Map<String, dynamic>.from(payload);
+    return const {};
+  }
+
+  Future<String> uploadAvatar(String filePath, {String? filename}) async {
+    final safeName = _avatarUploadName(filename ?? filePath);
+    final mediaType = _avatarMediaType(safeName);
+
+    Future<http.StreamedResponse> send() async {
+      final req = http.MultipartRequest('POST', _uri('/api/users/avatar'));
+      if (_accessToken != null) {
+        req.headers['Authorization'] = 'Bearer $_accessToken';
+      }
+      req.headers['Accept'] = 'application/json';
+      req.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          filePath,
+          filename: safeName,
+          contentType: mediaType,
+        ),
+      );
+      return _client.send(req);
+    }
+
+    var streamed = await send();
+    var res = await http.Response.fromStream(streamed);
+    if (res.statusCode == 401) {
+      final ok = await refreshSession();
+      if (ok) {
+        streamed = await send();
+        res = await http.Response.fromStream(streamed);
+      }
+    }
+    final body = _decode(res);
+    final data = body['data'];
+    if (data is Map && data['avatar'] != null) {
+      return data['avatar'].toString();
+    }
+    throw ApiException('Upload avatar thất bại');
+  }
+
+  /// Backend only accepts jpeg/png/gif/webp — normalize HEIC / missing ext.
+  static String _avatarUploadName(String raw) {
+    final name = raw.split('/').last.split('\\').last;
+    final lower = name.toLowerCase();
+    if (lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.png') ||
+        lower.endsWith('.gif') ||
+        lower.endsWith('.webp')) {
+      return name;
+    }
+    final dot = name.lastIndexOf('.');
+    final base = dot > 0 ? name.substring(0, dot) : (name.isEmpty ? 'avatar' : name);
+    return '$base.jpg';
+  }
+
+  static MediaType _avatarMediaType(String filename) {
+    final lower = filename.toLowerCase();
+    if (lower.endsWith('.png')) return MediaType('image', 'png');
+    if (lower.endsWith('.gif')) return MediaType('image', 'gif');
+    if (lower.endsWith('.webp')) return MediaType('image', 'webp');
+    return MediaType('image', 'jpeg');
+  }
+
+  List<Map<String, dynamic>> _mapList(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
   }
 
   Map<String, dynamic> _decode(http.Response res) {

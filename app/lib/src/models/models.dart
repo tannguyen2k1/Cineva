@@ -3,13 +3,33 @@ class UserSession {
     required this.id,
     required this.username,
     this.fullName,
+    this.email,
+    this.avatar,
     this.permissions = const [],
   });
 
   final String id;
   final String username;
   final String? fullName;
+  final String? email;
+  final String? avatar;
   final List<String> permissions;
+
+  UserSession copyWith({
+    String? fullName,
+    String? email,
+    String? avatar,
+    List<String>? permissions,
+  }) {
+    return UserSession(
+      id: id,
+      username: username,
+      fullName: fullName ?? this.fullName,
+      email: email ?? this.email,
+      avatar: avatar ?? this.avatar,
+      permissions: permissions ?? this.permissions,
+    );
+  }
 
   factory UserSession.fromJson(Map<String, dynamic> json) {
     final perms = json['permissions'];
@@ -17,6 +37,8 @@ class UserSession {
       id: (json['id'] ?? json['userId'] ?? '').toString(),
       username: (json['username'] ?? '').toString(),
       fullName: json['fullName'] as String? ?? json['full_name'] as String?,
+      email: json['email'] as String?,
+      avatar: json['avatar'] as String?,
       permissions: perms is List
           ? perms.map((e) => e.toString()).toList()
           : const [],
@@ -39,6 +61,7 @@ class FilmCard {
     this.avgRating = 0,
     this.ratingCount = 0,
     this.description,
+    this.isHidden = false,
   });
 
   final String slug;
@@ -54,6 +77,7 @@ class FilmCard {
   final double avgRating;
   final int ratingCount;
   final String? description;
+  final bool isHidden;
 
   String? get imageUrl => posterUrl ?? thumbUrl;
 
@@ -123,6 +147,26 @@ class FilmCard {
       avgRating: (json['avgRating'] as num?)?.toDouble() ?? 0,
       ratingCount: (json['ratingCount'] as num?)?.toInt() ?? 0,
       description: json['description'] as String?,
+      isHidden: json['isHidden'] == true,
+    );
+  }
+
+  FilmCard copyWith({bool? isHidden}) {
+    return FilmCard(
+      slug: slug,
+      name: name,
+      originalName: originalName,
+      thumbUrl: thumbUrl,
+      posterUrl: posterUrl,
+      year: year,
+      quality: quality,
+      language: language,
+      currentEpisode: currentEpisode,
+      totalEpisodes: totalEpisodes,
+      avgRating: avgRating,
+      ratingCount: ratingCount,
+      description: description,
+      isHidden: isHidden ?? this.isHidden,
     );
   }
 }
@@ -191,6 +235,7 @@ class FilmDetail extends FilmCard {
     super.avgRating,
     super.ratingCount,
     super.description,
+    super.isHidden,
     this.director,
     this.casts,
     this.episodes = const [],
@@ -202,7 +247,7 @@ class FilmDetail extends FilmCard {
   final List<EpisodeServer> episodes;
   final bool inWatchlist;
 
-  FilmDetail copyWith({bool? inWatchlist}) {
+  FilmDetail copyWith({bool? inWatchlist, bool? isHidden}) {
     return FilmDetail(
       slug: slug,
       name: name,
@@ -217,6 +262,7 @@ class FilmDetail extends FilmCard {
       avgRating: avgRating,
       ratingCount: ratingCount,
       description: description,
+      isHidden: isHidden ?? this.isHidden,
       director: director,
       casts: casts,
       episodes: episodes,
@@ -240,6 +286,7 @@ class FilmDetail extends FilmCard {
       avgRating: (json['avgRating'] as num?)?.toDouble() ?? 0,
       ratingCount: (json['ratingCount'] as num?)?.toInt() ?? 0,
       description: json['description'] as String?,
+      isHidden: json['isHidden'] == true,
       director: json['director'] as String?,
       casts: json['casts'] as String?,
       episodes: rawEps is List

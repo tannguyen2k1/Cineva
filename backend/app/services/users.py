@@ -197,14 +197,25 @@ async def update_profile(
 async def upload_avatar(
     db: AsyncSession, user_id: str, file: UploadFile
 ) -> dict:
-    if not file.content_type or file.content_type not in ALLOWED_MIME:
+    suffix = Path(file.filename or "").suffix.lower()
+    content_type = (file.content_type or "").split(";")[0].strip().lower()
+    # Some clients (mobile multipart) omit Content-Type or send octet-stream.
+    if content_type in {"", "application/octet-stream"}:
+        content_type = {
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".gif": "image/gif",
+            ".webp": "image/webp",
+        }.get(suffix, content_type)
+
+    if content_type not in ALLOWED_MIME:
         raise HTTPException(status_code=400, detail="Định dạng ảnh không hợp lệ")
 
     content = await file.read()
     if len(content) > MAX_AVATAR_BYTES:
         raise HTTPException(status_code=400, detail="Ảnh tối đa 5MB")
 
-    suffix = Path(file.filename or "").suffix.lower()
     if suffix not in ALLOWED_EXT:
         raise HTTPException(status_code=400, detail="Phần mở rộng không hợp lệ")
 

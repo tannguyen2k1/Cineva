@@ -124,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (server.items.isNotEmpty) ep = server.items.first;
       }
       if (!mounted) return;
-      if (ep == null || ep.playUrl.isEmpty) {
+      if (ep == null || (ep.embed.isEmpty && ep.playUrl.isEmpty)) {
         context.push('/phim/${item.slug}');
         return;
       }
@@ -133,6 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
         extra: {
           'title': detail.name,
           'playUrl': ep.playUrl,
+          'embedUrl': ep.embed,
           'episodeSlug': ep.slug,
           'episodeName': ep.name,
           'serverName': server?.serverName,
@@ -274,7 +275,7 @@ class _HomeScreenState extends State<HomeScreen> {
           context.push('/login');
           return;
         }
-        showCinevaToast(context, 'Hồ sơ sẽ sớm có trên app.');
+        context.push('/profile');
       case MoreMenuAction.phimLe:
         _openCatalog(title: 'Phim Lẻ', type: 'phim-le');
       case MoreMenuAction.phimBo:
@@ -284,7 +285,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case MoreMenuAction.catalog:
         _openCatalog(title: 'Phim');
       case MoreMenuAction.admin:
-        showCinevaToast(context, 'Admin chỉ dùng trên web quản trị.');
+        context.push('/admin');
       case MoreMenuAction.logout:
         await context.read<AuthState>().logout();
     }

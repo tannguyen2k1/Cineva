@@ -15,10 +15,15 @@ dependencies:
   go_router: ^18.0.1
   google_fonts: ^8.2.1
   http: ^1.6.0
+  http_parser: ^4.1.2
+  image_picker: ^1.2.3
   intl: ^0.20.3
   provider: ^6.1.5+1
   shared_preferences: ^2.5.5
   video_player: ^2.14.0
+  webview_flutter: ^4.14.1
+  webview_flutter_android: ^4.14.1
+  webview_flutter_wkwebview: ^3.26.1
 
 dev_dependencies:
   flutter_test:

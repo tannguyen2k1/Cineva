@@ -8,6 +8,7 @@ import '../state/auth_state.dart';
 import '../theme/cineva_theme.dart';
 import '../widgets/cineva_network_image.dart';
 import '../widgets/cineva_toast.dart';
+import '../widgets/film_comments_section.dart';
 import '../widgets/score_card.dart';
 
 class FilmDetailScreen extends StatefulWidget {
@@ -66,6 +67,7 @@ class _FilmDetailScreenState extends State<FilmDetailScreen> {
       extra: {
         'title': film.name,
         'playUrl': ep.playUrl,
+        'embedUrl': ep.embed,
         'episodeSlug': ep.slug,
         'episodeName': ep.name,
         'serverName': server?.serverName,
@@ -267,6 +269,8 @@ class _FilmDetailScreenState extends State<FilmDetailScreen> {
                           onPlay: (ep) => _play(film, server, ep),
                         ),
                       ],
+                      const SizedBox(height: 28),
+                      FilmCommentsSection(slug: film.slug),
                     ],
                   ),
                 ),

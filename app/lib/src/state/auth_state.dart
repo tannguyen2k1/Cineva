@@ -15,6 +15,9 @@ class AuthState extends ChangeNotifier {
 
   bool get isLoggedIn => user != null;
 
+  /// Matches web admin entry: dashboard readers (typically Admin role).
+  bool get isAdmin => hasPermission('read:dashboard');
+
   bool hasPermission(String code) =>
       user?.permissions.contains(code) ?? false;
 
@@ -92,6 +95,23 @@ class AuthState extends ChangeNotifier {
   Future<void> logout() async {
     user = null;
     await _api.clearTokens();
+    notifyListeners();
+  }
+
+  Future<void> refreshUser() async {
+    try {
+      user = await _api.me();
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  void patchUser({String? fullName, String? email, String? avatar}) {
+    if (user == null) return;
+    user = user!.copyWith(
+      fullName: fullName,
+      email: email,
+      avatar: avatar,
+    );
     notifyListeners();
   }
 }

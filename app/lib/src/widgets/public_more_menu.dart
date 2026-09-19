@@ -35,7 +35,7 @@ class _PublicMoreMenuSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthState>();
     final user = auth.user;
-    final isAdmin = auth.hasPermission('read:dashboard');
+    final isAdmin = auth.isAdmin;
 
     return SafeArea(
       top: false,
