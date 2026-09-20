@@ -1,4 +1,4 @@
-from app.schemas.auth import AuthDataOut, AuthUserOut, LoginRequest, OAuth2TokenOut
+from app.schemas.auth import AuthDataOut, AuthUserOut, LoginRequest, OAuth2TokenOut, RegisterApiRequest
 from app.schemas.common import MessageResponse, ORMModel, PaginatedResponse, SuccessResponse
 from app.schemas.dashboard import (
     DashboardDataOut,
@@ -24,6 +24,7 @@ __all__ = [
     "MessageResponse",
     "PaginatedResponse",
     "LoginRequest",
+    "RegisterApiRequest",
     "AuthUserOut",
     "AuthDataOut",
     "OAuth2TokenOut",

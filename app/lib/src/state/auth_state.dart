@@ -75,7 +75,6 @@ class AuthState extends ChangeNotifier {
         fullName: fullName,
         email: email,
       );
-      await _api.login(username: username.trim(), password: password);
       user = await _api.me();
       return true;
     } on ApiException catch (e) {

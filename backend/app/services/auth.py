@@ -344,23 +344,18 @@ def issue_ws_ticket(user_id: str) -> dict:
     return {"ticket": create_ws_ticket(user_id=user_id)}
 
 
-async def register(db: AsyncSession, body, response: Response) -> dict:
-    """Public member registration — assigns Member role, issues cookie session."""
+async def _create_member_user(
+    db: AsyncSession,
+    *,
+    username: str,
+    password: str,
+    email: str | None,
+    full_name: str | None,
+) -> User:
     from app.core.security import hash_password
     from app.repositories import role as role_repo
-    from app.schemas.film import RegisterRequest
 
-    if not isinstance(body, RegisterRequest):
-        body = RegisterRequest.model_validate(body)
-
-    if not body.turnstile_token:
-        raise HTTPException(status_code=400, detail="Vui lòng xác minh Cloudflare Turnstile")
-
-    turnstile = await verify_login_turnstile(body.turnstile_token)
-    if not turnstile.get("success"):
-        raise HTTPException(status_code=403, detail="Xác minh Turnstile thất bại")
-
-    username = body.username.strip()
+    username = username.strip()
     if await user_repo.find_active_username(db, username=username):
         raise HTTPException(status_code=409, detail="Username đã tồn tại")
 
@@ -376,17 +371,41 @@ async def register(db: AsyncSession, body, response: Response) -> dict:
         db,
         User(
             username=username,
-            password=hash_password(body.password),
-            email=body.email,
-            full_name=body.full_name,
+            password=hash_password(password),
+            email=email,
+            full_name=full_name,
             is_active=True,
         ),
     )
     await user_repo.add_user_roles(db, user_id=user.id, role_ids=[member.id])
     await db.commit()
 
-    user = await user_repo.get_by_id(db, user_id=user.id, with_permissions=True)
-    assert user is not None
+    loaded = await user_repo.get_by_id(db, user_id=user.id, with_permissions=True)
+    assert loaded is not None
+    return loaded
+
+
+async def register(db: AsyncSession, body, response: Response) -> dict:
+    """Browser registration — Turnstile + HttpOnly cookie session."""
+    from app.schemas.film import RegisterRequest
+
+    if not isinstance(body, RegisterRequest):
+        body = RegisterRequest.model_validate(body)
+
+    if not body.turnstile_token:
+        raise HTTPException(status_code=400, detail="Vui lòng xác minh Cloudflare Turnstile")
+
+    turnstile = await verify_login_turnstile(body.turnstile_token)
+    if not turnstile.get("success"):
+        raise HTTPException(status_code=403, detail="Xác minh Turnstile thất bại")
+
+    user = await _create_member_user(
+        db,
+        username=body.username,
+        password=body.password,
+        email=body.email,
+        full_name=body.full_name,
+    )
     permissions = await _issue_cookie_session(db, response, user=user)
 
     await write_system_log(
@@ -394,6 +413,32 @@ async def register(db: AsyncSession, body, response: Response) -> dict:
         user_id=user.id,
         action="REGISTER",
         resource="Auth",
-        details={"username": user.username},
+        details={"username": user.username, "channel": "cookie"},
     )
     return _auth_data(user, permissions)
+
+
+async def register_token(db: AsyncSession, body) -> OAuth2TokenOut:
+    """API / mobile registration — no Turnstile; returns Bearer tokens."""
+    from app.schemas.auth import RegisterApiRequest
+
+    if not isinstance(body, RegisterApiRequest):
+        body = RegisterApiRequest.model_validate(body)
+
+    user = await _create_member_user(
+        db,
+        username=body.username,
+        password=body.password,
+        email=body.email,
+        full_name=body.full_name,
+    )
+    _permissions, access, refresh = await _create_token_pair(db, user=user)
+
+    await write_system_log(
+        db,
+        user_id=user.id,
+        action="REGISTER",
+        resource="Auth",
+        details={"username": user.username, "channel": "oauth2"},
+    )
+    return _token_response(access=access, refresh=refresh)

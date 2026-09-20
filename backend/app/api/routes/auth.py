@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user
 from app.db.session import get_db
-from app.schemas import LoginRequest, OAuth2TokenOut
+from app.schemas import LoginRequest, OAuth2TokenOut, RegisterApiRequest
 from app.services import auth as auth_service
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -42,6 +42,18 @@ async def token(
         password=password,
         refresh_token=refresh_token,
     )
+
+
+@router.post(
+    "/register-token",
+    summary="API / mobile registration (no Turnstile) → Bearer tokens",
+    response_model=OAuth2TokenOut,
+)
+async def register_token(
+    body: RegisterApiRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    return await auth_service.register_token(db, body)
 
 
 @router.post("/logout", summary="Revoke access jti + refresh session and clear cookies")

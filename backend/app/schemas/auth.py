@@ -9,6 +9,15 @@ class LoginRequest(BaseModel):
     turnstileToken: str
 
 
+class RegisterApiRequest(ORMModel):
+    """Mobile / API registration — no Turnstile (bots gated elsewhere)."""
+
+    username: str = Field(min_length=3, max_length=64)
+    password: str = Field(min_length=6, max_length=128)
+    email: str | None = None
+    full_name: str | None = Field(default=None, alias="fullName")
+
+
 class AuthUserOut(ORMModel):
     id: str
     username: str

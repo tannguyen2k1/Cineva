@@ -158,27 +158,34 @@ class ApiClient {
     });
   }
 
-  /// Creates a member account. Cookie session from the API is ignored;
-  /// call [login] afterward for Bearer tokens.
-  Future<void> register({
+  /// Creates a member account and stores Bearer tokens (no Turnstile).
+  Future<Map<String, dynamic>> register({
     required String username,
     required String password,
     String? fullName,
     String? email,
-    String turnstileToken = 'XXXX.DUMMY.TOKEN.XXXX',
   }) async {
-    await postJson(
-      '/api/auth/register',
-      auth: false,
-      body: {
-        'username': username.trim(),
-        'password': password,
-        'turnstileToken': turnstileToken,
-        if (fullName != null && fullName.trim().isNotEmpty)
-          'fullName': fullName.trim(),
-        if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
-      },
-    );
+    return _withNetworkHandling(() async {
+      final res = await _client.post(
+        _uri('/api/auth/register-token'),
+        headers: _headers(auth: false),
+        body: jsonEncode({
+          'username': username.trim(),
+          'password': password,
+          if (fullName != null && fullName.trim().isNotEmpty)
+            'fullName': fullName.trim(),
+          if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
+        }),
+      ).timeout(const Duration(seconds: 15));
+      final body = _decode(res);
+      final access = body['access_token']?.toString();
+      final refresh = body['refresh_token']?.toString();
+      if (access == null || refresh == null) {
+        throw ApiException('Đăng ký thất bại: thiếu token');
+      }
+      await _persistTokens(access: access, refresh: refresh);
+      return body;
+    });
   }
 
   Future<bool> refreshSession() async {

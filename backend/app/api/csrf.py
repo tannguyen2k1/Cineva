@@ -22,6 +22,7 @@ CSRF_EXEMPT_PREFIXES = (
     "/api/auth/refresh",
     "/api/auth/token",  # OAuth2 clients / Scalar — no cookie session
     "/api/auth/register",
+    "/api/auth/register-token",
     "/api/docs",
     "/api/openapi.json",
     "/health",
