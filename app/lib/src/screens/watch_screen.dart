@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
@@ -56,6 +58,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
   ApiClient? _api;
   bool _loggedIn = false;
   int _lastSavedSec = -1;
+  int _currentStartSec = 0;
 
   late String _playUrl;
   late String? _embedUrl;
@@ -67,22 +70,90 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
   EpisodeItem? _nextEpisode;
   String? _nextServerName;
 
-  static const _bootJs = r'''
+  String _bootJs(int startSec) {
+    return '''
 (function(){
   try {
     var ld=document.getElementById('loading');
     if(ld) ld.classList.add('hide');
     var v=document.querySelector('video');
-    if(v){ v.setAttribute('playsinline',''); v.play().catch(function(){}); }
-    var btns=document.querySelectorAll('button,.jw-icon-playback');
-    for(var i=0;i<btns.length;i++){
-      if(/phát|play/i.test(btns[i].textContent||btns[i].ariaLabel||'')){
-        btns[i].click(); break;
+    if(v){ v.setAttribute('playsinline',''); }
+    
+    if ($startSec > 0) {
+      function formatTime(sec) {
+        var m = Math.floor(sec / 60);
+        var s = Math.floor(sec % 60);
+        return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
       }
+      
+      var userChoice = null;
+      var hasSeeked = false;
+      var applySeek = function() {
+        if (!hasSeeked && (userChoice === 'go' || userChoice === null)) {
+           hasSeeked = true;
+           try {
+              if (window.jwplayer) {
+                 jwplayer().seek($startSec);
+              } else {
+                 var vid = document.querySelector('video');
+                 if (vid) vid.currentTime = $startSec;
+              }
+           } catch(e) {}
+        }
+      };
+
+      // 1. Reliably hook the player's time event
+      var hookedPlayer = false;
+      var playerInterval = setInterval(function() {
+         if (!hookedPlayer) {
+             try {
+               if (window.jwplayer && typeof jwplayer === 'function' && jwplayer().on) {
+                   hookedPlayer = true;
+                   jwplayer().on('time', applySeek);
+                   clearInterval(playerInterval);
+               } else if (document.querySelector('video')) {
+                   hookedPlayer = true;
+                   document.querySelector('video').addEventListener('timeupdate', applySeek);
+                   clearInterval(playerInterval);
+               }
+             } catch(e) {}
+         }
+      }, 100);
+      
+      // 2. Reliably hook and update the UI modal when it appears
+      var hookedUI = false;
+      var uiInterval = setInterval(function() {
+         var rzModal = document.getElementById('resumeModal');
+         if (rzModal && window.getComputedStyle(rzModal).display !== 'none' && !hookedUI) {
+             hookedUI = true;
+             clearInterval(uiInterval);
+             
+             var rzTime = document.getElementById('rzTime');
+             if (rzTime) rzTime.innerText = formatTime($startSec);
+             
+             var rzGo = document.getElementById('rzGo');
+             var rzAgain = document.getElementById('rzAgain');
+             if (rzGo) rzGo.addEventListener('click', function() { userChoice = 'go'; });
+             if (rzAgain) rzAgain.addEventListener('click', function() { userChoice = 'again'; });
+         }
+      }, 100);
+      
+      setTimeout(function() { clearInterval(playerInterval); clearInterval(uiInterval); }, 15000);
+      
+    } else {
+       // If startSec == 0, just auto play
+       if(v){ v.play().catch(function(){}); }
+       var btns=document.querySelectorAll('button,.jw-icon-playback');
+       for(var i=0;i<btns.length;i++){
+         if(/phát|play/i.test(btns[i].textContent||btns[i].ariaLabel||'')){
+           btns[i].click(); break;
+         }
+       }
     }
   } catch(e) {}
 })();
 ''';
+  }
 
   String _safeAreaJs(double bottomPx) {
     final pad = bottomPx.ceil().clamp(0, 72);
@@ -171,11 +242,13 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WakelockPlus.enable();
     _playUrl = widget.playUrl;
     _embedUrl = widget.embedUrl;
     _episodeSlug = widget.episodeSlug;
     _episodeName = widget.episodeName;
     _serverName = widget.serverName;
+    _currentStartSec = widget.startPositionSec ?? 0;
     WidgetsBinding.instance.addObserver(this);
     unawaited(PhoneOrientation.unlockForPlayer());
     _initPlayer();
@@ -251,7 +324,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
             if (!mounted) return;
             final bottom = MediaQuery.viewPaddingOf(context).bottom +
                 (_nextEpisode != null ? 56.0 : 0);
-            final js = '$_bootJs${_safeAreaJs(bottom)}';
+            final js = '${_bootJs(_currentStartSec)}${_safeAreaJs(bottom)}';
             unawaited((() async {
               try {
                 if (!mounted) return;
@@ -305,6 +378,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
       _episodeName = next.name;
       _serverName = _nextServerName ?? _serverName;
       _lastSavedSec = -1;
+      _currentStartSec = 0;
       _ended = false;
       _nearEnd = false;
       _loading = true;
@@ -369,25 +443,43 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     }
     try {
       final raw = await web.runJavaScriptReturningResult(
-        '(function(){var v=document.querySelector("video");'
-        'if(!v||!v.duration||!isFinite(v.duration))'
-        'return JSON.stringify({t:0,d:0,e:0,n:0});'
-        'var t=v.currentTime||0,d=v.duration||0;'
-        'var left=d-t;'
-        'var near=(d>60&&left<=142)||(d>0&&t/d>=0.92);'
-        'var ended=v.ended||(d>0&&t/d>=0.985);'
-        'return JSON.stringify({t:Math.floor(t),d:Math.floor(d),'
-        'e:ended?1:0,n:near?1:0});})()',
+        '(function(){'
+        'var t=0,d=0,ended=0,near=0,err="";'
+        'try {'
+        '  if(window.jwplayer && typeof window.jwplayer==="function" && jwplayer() && typeof jwplayer().getPosition==="function") {'
+        '    var p=jwplayer();'
+        '    t=p.getPosition()||0;'
+        '    d=p.getDuration()||0;'
+        '    var state=p.getState();'
+        '    ended=(state==="complete"||(d>0&&t/d>=0.985))?1:0;'
+        '    near=((d>60&&(d-t)<=142)||(d>0&&t/d>=0.92))?1:0;'
+        '  } else {'
+        '    var v=document.querySelector("video");'
+        '    if(v) {'
+        '      t=v.currentTime||0;'
+        '      d=isFinite(v.duration)?v.duration:0;'
+        '      ended=(v.ended||(d>0&&t/d>=0.985))?1:0;'
+        '      near=((d>60&&(d-t)<=142)||(d>0&&t/d>=0.92))?1:0;'
+        '    } else { err="no_video_tag"; }'
+        '  }'
+        '} catch(e) { err=e.toString(); }'
+        'return JSON.stringify({t:Math.floor(t),d:Math.floor(d),e:ended,n:near,err:err});'
+        '})()',
       );
-      final src = '$raw';
-      int read(String key) {
-        final m = RegExp('$key["\\s:]*([0-9]+)').firstMatch(src);
-        return m == null ? 0 : (int.tryParse(m.group(1)!) ?? 0);
+      var src = '$raw';
+      if (src.startsWith('"') && src.endsWith('"')) {
+        try {
+          src = jsonDecode(src);
+        } catch (_) {}
       }
+      Map<String, dynamic> data = {};
+      try {
+        data = jsonDecode(src);
+      } catch (_) {}
 
-      final sec = read('t');
-      final ended = read('e') == 1;
-      final near = read('n') == 1;
+      final sec = (data['t'] as num?)?.toInt() ?? 0;
+      final ended = (data['e'] as num?)?.toInt() == 1;
+      final near = (data['n'] as num?)?.toInt() == 1;
       final hasNext = _nextEpisode != null;
 
       if (!mounted) return;
@@ -424,7 +516,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
         episodeSlug.isEmpty) {
       return;
     }
-    final sec = positionOverride ?? widget.startPositionSec ?? 0;
+    final sec = positionOverride ?? (_lastSavedSec > 0 ? _lastSavedSec : (widget.startPositionSec ?? 0));
     if (!force && (sec - _lastSavedSec).abs() < 5) return;
     _lastSavedSec = sec;
     try {
@@ -495,6 +587,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    WakelockPlus.disable();
     _saveTimer?.cancel();
     _loadingTimeout?.cancel();
     _cancelAutoNext();
