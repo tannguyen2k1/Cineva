@@ -220,6 +220,29 @@ class EpisodeServer {
   }
 }
 
+class WatchProgressInfo {
+  const WatchProgressInfo({
+    required this.episodeSlug,
+    this.episodeName,
+    this.serverName,
+    this.positionSec,
+  });
+
+  final String episodeSlug;
+  final String? episodeName;
+  final String? serverName;
+  final int? positionSec;
+
+  factory WatchProgressInfo.fromJson(Map<String, dynamic> json) {
+    return WatchProgressInfo(
+      episodeSlug: (json['episodeSlug'] ?? '').toString(),
+      episodeName: json['episodeName'] as String?,
+      serverName: json['serverName'] as String?,
+      positionSec: (json['positionSec'] as num?)?.toInt(),
+    );
+  }
+}
+
 class FilmDetail extends FilmCard {
   const FilmDetail({
     required super.slug,
@@ -240,12 +263,14 @@ class FilmDetail extends FilmCard {
     this.casts,
     this.episodes = const [],
     this.inWatchlist = false,
+    this.watchProgress,
   });
 
   final String? director;
   final String? casts;
   final List<EpisodeServer> episodes;
   final bool inWatchlist;
+  final WatchProgressInfo? watchProgress;
 
   FilmDetail copyWith({bool? inWatchlist, bool? isHidden}) {
     return FilmDetail(
@@ -267,11 +292,13 @@ class FilmDetail extends FilmCard {
       casts: casts,
       episodes: episodes,
       inWatchlist: inWatchlist ?? this.inWatchlist,
+      watchProgress: watchProgress,
     );
   }
 
   factory FilmDetail.fromJson(Map<String, dynamic> json) {
     final rawEps = json['episodes'];
+    final progressRaw = json['watchProgress'];
     return FilmDetail(
       slug: (json['slug'] ?? '').toString(),
       name: (json['name'] ?? '').toString(),
@@ -298,6 +325,9 @@ class FilmDetail extends FilmCard {
                 .toList()
           : const [],
       inWatchlist: json['inWatchlist'] == true,
+      watchProgress: progressRaw is Map
+          ? WatchProgressInfo.fromJson(Map<String, dynamic>.from(progressRaw))
+          : null,
     );
   }
 }

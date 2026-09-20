@@ -61,8 +61,13 @@ class _FilmDetailScreenState extends State<FilmDetailScreen> {
     }
   }
 
-  void _play(FilmDetail film, EpisodeServer? server, EpisodeItem ep) {
-    context.push(
+  Future<void> _play(
+    FilmDetail film,
+    EpisodeServer? server,
+    EpisodeItem ep, {
+    int? positionSec,
+  }) async {
+    await context.push(
       '/xem/${film.slug}',
       extra: {
         'title': film.name,
@@ -71,8 +76,61 @@ class _FilmDetailScreenState extends State<FilmDetailScreen> {
         'episodeSlug': ep.slug,
         'episodeName': ep.name,
         'serverName': server?.serverName,
+        if (positionSec != null && positionSec > 0) 'positionSec': positionSec,
       },
     );
+    if (!mounted) return;
+    setState(() {
+      _future = context.read<ApiClient>().filmDetail(widget.slug);
+    });
+  }
+
+  /// Resolve episode to resume from [film.watchProgress], else first episode.
+  ({EpisodeServer? server, EpisodeItem ep, bool isContinue})? _primaryPlay(
+    FilmDetail film,
+    List<EpisodeServer> servers,
+    EpisodeServer? selectedServer,
+  ) {
+    final progress = film.watchProgress;
+    if (progress != null && progress.episodeSlug.isNotEmpty) {
+      // Prefer matching server, then any server that has the episode.
+      final preferred = <EpisodeServer>[
+        if (progress.serverName != null && progress.serverName!.isNotEmpty)
+          ...servers.where((s) => s.serverName == progress.serverName),
+        ...servers,
+      ];
+      for (final s in preferred) {
+        for (final ep in s.items) {
+          if (ep.slug == progress.episodeSlug) {
+            return (server: s, ep: ep, isContinue: true);
+          }
+        }
+      }
+      // Episode slug gone from catalog — still label continue with stored name.
+      if (selectedServer?.items.isNotEmpty == true) {
+        return (
+          server: selectedServer,
+          ep: selectedServer!.items.first,
+          isContinue: true,
+        );
+      }
+    }
+
+    if (selectedServer?.items.isNotEmpty == true) {
+      return (
+        server: selectedServer,
+        ep: selectedServer!.items.first,
+        isContinue: false,
+      );
+    }
+    return null;
+  }
+
+  String _episodeButtonLabel(EpisodeItem ep, {required bool isContinue}) {
+    final raw = ep.name.trim();
+    final epLabel = RegExp(r'^\d+$').hasMatch(raw) ? 'Tập $raw' : raw;
+    if (!isContinue) return 'Xem $epLabel';
+    return epLabel.isEmpty ? 'Xem tiếp' : 'Xem tiếp · $epLabel';
   }
 
   @override
@@ -114,9 +172,7 @@ class _FilmDetailScreenState extends State<FilmDetailScreen> {
                 orElse: () => servers.isNotEmpty ? servers.first : null,
               ) ??
               (servers.isNotEmpty ? servers.first : null);
-          final firstEp = server?.items.isNotEmpty == true
-              ? server!.items.first
-              : null;
+          final primary = _primaryPlay(film, servers, server);
 
           return CustomScrollView(
             slivers: [
@@ -206,12 +262,24 @@ class _FilmDetailScreenState extends State<FilmDetailScreen> {
                           ),
                         ],
                       ),
-                      if (firstEp != null) ...[
+                      if (primary != null) ...[
                         const SizedBox(height: 18),
                         FilledButton.icon(
-                          onPressed: () => _play(film, server, firstEp),
+                          onPressed: () => _play(
+                            film,
+                            primary.server,
+                            primary.ep,
+                            positionSec: primary.isContinue
+                                ? film.watchProgress?.positionSec
+                                : null,
+                          ),
                           icon: const Icon(Icons.play_arrow_rounded),
-                          label: Text('Xem ${firstEp.name}'),
+                          label: Text(
+                            _episodeButtonLabel(
+                              primary.ep,
+                              isContinue: primary.isContinue,
+                            ),
+                          ),
                         ),
                       ],
                       const SizedBox(height: 10),

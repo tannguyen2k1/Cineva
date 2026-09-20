@@ -391,6 +391,14 @@ async def get_detail(
         follow = await eng_repo.get_follow(db, user_id=user_id, film_id=film.id)
         payload["inWatchlist"] = watch is not None
         payload["isFollowing"] = follow is not None
+        progress = await eng_repo.get_progress(db, user_id=user_id, film_id=film.id)
+        if progress and progress.episode_slug:
+            payload["watchProgress"] = {
+                "episodeSlug": progress.episode_slug,
+                "episodeName": progress.episode_name,
+                "serverName": progress.server_name,
+                "positionSec": progress.position_sec,
+            }
 
     return {"success": True, "data": payload}
 

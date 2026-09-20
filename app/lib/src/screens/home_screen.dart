@@ -66,9 +66,12 @@ class _HomeScreenState extends State<HomeScreen> {
     _taxonomiesFuture = api.taxonomies().then((t) {
       _taxonomies = t;
       return t;
+    }).catchError((Object e) {
+      // Filters stay empty; don't surface as unhandled async error.
+      return const Taxonomies();
     });
     _loadCatalog(reset: true);
-  }
+  } 
 
   @override
   void dispose() {
@@ -441,7 +444,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 future: _continueFuture,
                 onLogin: () => context.push('/login'),
                 onRefresh: () async => _reloadContinue(),
-                onOpen: _openContinue,
+                onOpenDetail: (item) => context.push('/phim/${item.slug}'),
+                onPlay: _openContinue,
               ),
             },
           ),
@@ -851,14 +855,16 @@ class _ContinueFeed extends StatelessWidget {
     required this.future,
     required this.onLogin,
     required this.onRefresh,
-    required this.onOpen,
+    required this.onOpenDetail,
+    required this.onPlay,
   });
 
   final bool loggedIn;
   final Future<List<ContinueItem>>? future;
   final VoidCallback onLogin;
   final Future<void> Function() onRefresh;
-  final ValueChanged<ContinueItem> onOpen;
+  final ValueChanged<ContinueItem> onOpenDetail;
+  final ValueChanged<ContinueItem> onPlay;
 
   @override
   Widget build(BuildContext context) {
@@ -947,7 +953,7 @@ class _ContinueFeed extends StatelessWidget {
                       color: const Color(0xFF141416),
                       borderRadius: BorderRadius.circular(14),
                       child: InkWell(
-                        onTap: () => onOpen(item),
+                        onTap: () => onOpenDetail(item),
                         borderRadius: BorderRadius.circular(14),
                         child: Padding(
                           padding: const EdgeInsets.all(10),
@@ -1012,10 +1018,14 @@ class _ContinueFeed extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                              const Icon(
-                                Icons.play_circle_fill_rounded,
-                                color: CinevaColors.accent,
-                                size: 32,
+                              IconButton(
+                                tooltip: 'Xem tiếp',
+                                onPressed: () => onPlay(item),
+                                icon: const Icon(
+                                  Icons.play_circle_fill_rounded,
+                                  color: CinevaColors.accent,
+                                  size: 32,
+                                ),
                               ),
                             ],
                           ),
