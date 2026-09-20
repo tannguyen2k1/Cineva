@@ -562,15 +562,16 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     if (_stopping) return;
     _stopping = true;
     final web = _web;
+    if (web != null) {
+      try {
+        await web.runJavaScript(_stopPlaybackJs);
+      } catch (_) {}
+      try {
+        await web.loadRequest(Uri.parse('about:blank'));
+      } catch (_) {}
+    }
     _web = null;
     if (mounted) setState(() {});
-    if (web == null) return;
-    try {
-      await web.runJavaScript(_stopPlaybackJs);
-    } catch (_) {}
-    try {
-      await web.loadRequest(Uri.parse('about:blank'));
-    } catch (_) {}
   }
 
   Future<void> _leaveWatch() async {
@@ -591,18 +592,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     _saveTimer?.cancel();
     _loadingTimeout?.cancel();
     _cancelAutoNext();
-    final web = _web;
     _web = null;
-    if (web != null) {
-      unawaited(() async {
-        try {
-          await web.runJavaScript(_stopPlaybackJs);
-        } catch (_) {}
-        try {
-          await web.loadRequest(Uri.parse('about:blank'));
-        } catch (_) {}
-      }());
-    }
     unawaited(_saveProgress(force: true));
     unawaited(PhoneOrientation.lockPortrait());
     super.dispose();
@@ -759,20 +749,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
                     child: CircularProgressIndicator(color: CinevaColors.accent),
                   ),
                 ),
-              if (_cinema)
-                Positioned(
-                  top: MediaQuery.paddingOf(context).top + 8,
-                  left: 8,
-                  child: Material(
-                    color: Colors.black54,
-                    shape: const CircleBorder(),
-                    child: IconButton(
-                      tooltip: 'Thoát',
-                      onPressed: () => unawaited(_leaveWatch()),
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    ),
-                  ),
-                ),
+
               if (showNearEndChip)
                 Positioned(
                   left: 12,
