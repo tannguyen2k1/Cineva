@@ -70,6 +70,20 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
   EpisodeItem? _nextEpisode;
   String? _nextServerName;
 
+  /// JS to pre-seed PhimAPI localStorage so the native resume modal appears.
+  /// Key format: `rz_${btoa(unescape(encodeURIComponent(url)))}_progress`
+  String _seedLocalStorageJs(String videoUrl, int startSec) {
+    if (startSec <= 0) return '';
+    return '''
+(function(){
+  try {
+    var key = 'rz_' + btoa(unescape(encodeURIComponent('$videoUrl'))) + '_progress';
+    localStorage.setItem(key, '$startSec');
+  } catch(e){}
+})();
+''';
+  }
+
   String _bootJs(int startSec) {
     return '''
 (function(){
@@ -78,79 +92,39 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     if(ld) ld.classList.add('hide');
     var v=document.querySelector('video');
     if(v){ v.setAttribute('playsinline',''); }
-    
-    if ($startSec > 0) {
-      function formatTime(sec) {
-        var m = Math.floor(sec / 60);
-        var s = Math.floor(sec % 60);
-        return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
-      }
-      
-      var userChoice = null;
-      var hasSeeked = false;
-      var applySeek = function() {
-        if (!hasSeeked && (userChoice === 'go' || userChoice === null)) {
-           hasSeeked = true;
-           try {
-              if (window.jwplayer) {
-                 jwplayer().seek($startSec);
-              } else {
-                 var vid = document.querySelector('video');
-                 if (vid) vid.currentTime = $startSec;
-              }
-           } catch(e) {}
-        }
-      };
 
-      // 1. Reliably hook the player's time event
-      var hookedPlayer = false;
-      var playerInterval = setInterval(function() {
-         if (!hookedPlayer) {
-             try {
-               if (window.jwplayer && typeof jwplayer === 'function' && jwplayer().on) {
-                   hookedPlayer = true;
-                   jwplayer().on('time', applySeek);
-                   clearInterval(playerInterval);
-               } else if (document.querySelector('video')) {
-                   hookedPlayer = true;
-                   document.querySelector('video').addEventListener('timeupdate', applySeek);
-                   clearInterval(playerInterval);
-               }
-             } catch(e) {}
-         }
-      }, 100);
-      
-      // 2. Reliably hook and update the UI modal when it appears
-      var hookedUI = false;
-      var uiInterval = setInterval(function() {
-         var rzModal = document.getElementById('resumeModal');
-         if (rzModal && window.getComputedStyle(rzModal).display !== 'none' && !hookedUI) {
-             hookedUI = true;
-             clearInterval(uiInterval);
-             
-             var rzTime = document.getElementById('rzTime');
-             if (rzTime) rzTime.innerText = formatTime($startSec);
-             
-             var rzGo = document.getElementById('rzGo');
-             var rzAgain = document.getElementById('rzAgain');
-             if (rzGo) rzGo.addEventListener('click', function() { userChoice = 'go'; });
-             if (rzAgain) rzAgain.addEventListener('click', function() { userChoice = 'again'; });
-         }
-      }, 100);
-      
-      setTimeout(function() { clearInterval(playerInterval); clearInterval(uiInterval); }, 15000);
-      
-    } else {
-       // If startSec == 0, just auto play
-       if(v){ v.play().catch(function(){}); }
-       var btns=document.querySelectorAll('button,.jw-icon-playback');
-       for(var i=0;i<btns.length;i++){
-         if(/phát|play/i.test(btns[i].textContent||btns[i].ariaLabel||'')){
-           btns[i].click(); break;
-         }
-       }
+    var start = $startSec;
+
+    if (start > 0) {
+      // After user clicks play / resume, verify seek position is correct
+      var hasSeeked = false;
+      var checkIntv = setInterval(function(){
+        if (hasSeeked) { clearInterval(checkIntv); return; }
+        try {
+          if (window.jwplayer && typeof jwplayer === 'function') {
+            var p = jwplayer();
+            if (p && p.getPosition && p.getDuration && p.getDuration() > 0) {
+              if (Math.abs(p.getPosition() - start) < 3) {
+                hasSeeked = true;
+              } else if (p.getPosition() > 1) {
+                p.seek(start);
+                hasSeeked = true;
+              }
+            }
+          } else {
+            var vid = document.querySelector('video');
+            if (vid && vid.duration > 0 && vid.currentTime > 0.5) {
+              if (Math.abs(vid.currentTime - start) > 3) {
+                vid.currentTime = start;
+              }
+              hasSeeked = true;
+            }
+          }
+        } catch(e){}
+      }, 500);
+      setTimeout(function(){ clearInterval(checkIntv); }, 15000);
     }
-  } catch(e) {}
+  } catch(e){}
 })();
 ''';
   }
@@ -159,19 +133,10 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     final pad = bottomPx.ceil().clamp(0, 72);
     return '''
 (function(){
-  var pad=$pad;
-  var css=document.getElementById('cineva-safe');
-  if(!css){
-    css=document.createElement('style');
-    css.id='cineva-safe';
-    (document.head||document.documentElement).appendChild(css);
-  }
-  css.textContent=[
-    '.jw-controlbar,.jw-controls,.jw-controls-bottom,',
-    '.jw-display-controls,.vjs-control-bar,video::-webkit-media-controls-panel{',
-    'padding-bottom:'+pad+'px!important;',
-    'box-sizing:border-box!important;}'
-  ].join('');
+  try {
+    var c=document.querySelector('.jw-wrapper,.jwplayer,video');
+    if(c) c.style.paddingBottom='${pad}px';
+  } catch(e){}
 })();
 ''';
   }
@@ -199,17 +164,10 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
   void _resolveNext() {
     EpisodeItem? next;
     String? nextServer;
-    final currentSlug = _episodeSlug;
-    if (currentSlug != null && currentSlug.isNotEmpty && _servers.isNotEmpty) {
-      final ordered = <EpisodeServer>[
-        if (_serverName != null && _serverName!.isNotEmpty)
-          ..._servers.where((s) => s.serverName == _serverName),
-        ..._servers,
-      ];
-      for (final server in ordered) {
-        final idx = server.items.indexWhere((e) => e.slug == currentSlug);
-        if (idx >= 0 && idx + 1 < server.items.length) {
-          next = server.items[idx + 1];
+    for (final server in _servers) {
+      for (var i = 0; i < server.items.length; i++) {
+        if (server.items[i].slug == _episodeSlug && i + 1 < server.items.length) {
+          next = server.items[i + 1];
           nextServer = server.serverName;
           break;
         }
@@ -306,6 +264,9 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
       return;
     }
 
+    // Determine the raw video URL for localStorage seeding
+    final rawVideoUrl = _playUrl.trim();
+
     final controller = WebViewController.fromPlatformCreationParams(
       _platformParams(),
     );
@@ -318,6 +279,16 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
         NavigationDelegate(
           onPageStarted: (_) {
             if (mounted) setState(() => _loading = true);
+            // Pre-seed localStorage BEFORE PhimAPI's JS reads it
+            if (_currentStartSec > 0 && rawVideoUrl.isNotEmpty) {
+              unawaited((() async {
+                try {
+                  await controller.runJavaScript(
+                    _seedLocalStorageJs(rawVideoUrl, _currentStartSec),
+                  );
+                } catch (_) {}
+              })());
+            }
           },
           onPageFinished: (_) {
             _loadingTimeout?.cancel();
