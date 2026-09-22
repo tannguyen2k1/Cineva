@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import RedirectResponse
@@ -54,7 +54,7 @@ app = FastAPI(
     version="1.0.0",
     docs_url=None,
     redoc_url=None,
-    openapi_url="/api/openapi.json",
+    openapi_url=None if settings.environment == "production" else "/api/openapi.json",
     lifespan=lifespan,
 )
 
@@ -133,11 +133,15 @@ app.openapi = custom_openapi
 
 @app.get("/api", include_in_schema=False)
 async def api_root():
+    if settings.environment == "production":
+        raise HTTPException(status_code=404, detail="Not Found")
     return RedirectResponse(url="/api/docs")
 
 
 @app.get("/api/docs", include_in_schema=False)
 async def scalar_docs():
+    if settings.environment == "production":
+        raise HTTPException(status_code=404, detail="Not Found")
     return get_scalar_api_reference(
         openapi_url=app.openapi_url,
         title=app.title,
