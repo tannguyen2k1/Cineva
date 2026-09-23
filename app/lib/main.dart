@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +11,7 @@ import 'src/theme/cineva_theme.dart';
 
 import 'src/services/topxx_client.dart';
 import 'src/state/app_mode_state.dart';
+import 'src/widgets/cineva_brand_mark.dart';
 
 /// Material tablet breakpoint (shortest side).
 const _tabletShortestSide = 600.0;
@@ -73,9 +75,114 @@ class _CinevaAppState extends State<CinevaApp> {
         theme: buildCinevaTheme(),
         routerConfig: _router,
         builder: (context, child) {
-          return _OrientationBinder(child: child ?? const SizedBox.shrink());
+          return _OrientationBinder(
+            child: _PrivacyShield(
+              child: child ?? const SizedBox.shrink(),
+            ),
+          );
         },
       ),
+    );
+  }
+}
+
+/// Banking-style privacy blur overlay when app is inactive or in multitasking switcher.
+class _PrivacyShield extends StatefulWidget {
+  const _PrivacyShield({required this.child});
+  final Widget child;
+
+  @override
+  State<_PrivacyShield> createState() => _PrivacyShieldState();
+}
+
+class _PrivacyShieldState extends State<_PrivacyShield>
+    with WidgetsBindingObserver {
+  bool _isBackgrounded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final isInactive = state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden;
+    if (isInactive != _isBackgrounded) {
+      setState(() => _isBackgrounded = isInactive);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final appMode = context.watch<AppModeState?>();
+    final is18Plus = appMode?.is18Plus == true;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        widget.child,
+        // Chỉ kích hoạt màn che bảo mật khi đang ở chế độ 18+
+        if (_isBackgrounded && is18Plus)
+          Positioned.fill(
+            child: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                child: Container(
+                  color: const Color(0xFF09090B).withValues(alpha: 0.85),
+                  alignment: Alignment.center,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: 0.04),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: CinevaColors.accent.withValues(alpha: 0.22),
+                              blurRadius: 36,
+                              spreadRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: const CinevaBrandMark(
+                          size: 56,
+                          is18Plus: false, // Luôn dùng logo vàng Cineva bình thường để ngụy trang
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      const Text(
+                        'C I N E V A', // Luôn dùng thương hiệu Cineva chuẩn
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 4.5,
+                          decoration: TextDecoration.none,
+                          fontFamily: 'BeVietnamPro',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
