@@ -750,13 +750,22 @@ class ApiClient {
     return AdminPageResult.fromJson(data);
   }
 
-  Future<AdminPageResult> adminListLogs({int page = 1, String? search}) async {
+  Future<AdminPageResult> adminListLogs({
+    int page = 1,
+    String? search,
+    String? category,
+    String? action,
+  }) async {
     final data = await getJson(
       '/api/logs',
       query: {
         'page': '$page',
         'pageSize': '20',
         if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+        if (category != null && category.isNotEmpty && category != 'all')
+          'category': category,
+        if (action != null && action.isNotEmpty && action != 'all')
+          'action': action,
       },
     );
     return AdminPageResult.fromJson(data);

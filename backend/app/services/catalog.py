@@ -46,8 +46,10 @@ async def list_logs(
     page: int = 1,
     page_size: int = 10,
     search: str | None = None,
+    category: str | None = None,
     resource: str | None = None,
     action: str | None = None,
+    user_id: str | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
 ) -> dict:
@@ -56,8 +58,10 @@ async def list_logs(
         page=page,
         page_size=page_size,
         search=search,
+        category=category,
         resource=resource,
         action=action,
+        user_id=user_id,
         start_date=start_date,
         end_date=end_date,
     )
@@ -78,6 +82,9 @@ async def list_logs(
                 "createdAt": log.created_at,
                 "actor": log.user.full_name if log.user else None,
                 "actorUsername": log.user.username if log.user else None,
+                "actorAvatar": log.user.avatar if log.user else None,
+                "actorEmail": log.user.email if log.user else None,
+                "actorId": log.user.id if log.user else None,
             }
         )
     return {

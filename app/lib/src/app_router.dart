@@ -6,6 +6,7 @@ import 'screens/admin_featured_screen.dart';
 import 'screens/admin_films_screen.dart';
 import 'screens/admin_home_screen.dart';
 import 'screens/admin_logs_screen.dart';
+import 'screens/admin_modules_screen.dart';
 import 'screens/admin_roles_screen.dart';
 import 'screens/admin_sync_screen.dart';
 import 'screens/admin_users_screen.dart';
@@ -67,6 +68,11 @@ GoRouter createRouter(AuthState auth) {
         path: '/admin',
         pageBuilder: (context, state) =>
             cinevaPage(state: state, child: const AdminHomeScreen()),
+      ),
+      GoRoute(
+        path: '/admin/modules',
+        pageBuilder: (context, state) =>
+            cinevaPage(state: state, child: const AdminModulesScreen()),
       ),
       GoRoute(
         path: '/admin/films',

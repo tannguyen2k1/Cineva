@@ -17,6 +17,7 @@ class AdminHomeScreen extends StatefulWidget {
 class _AdminHomeScreenState extends State<AdminHomeScreen> {
   Map<String, dynamic>? _stats;
   Map<String, dynamic>? _lastSync;
+  List<Map<String, dynamic>>? _traffic;
   bool _loading = true;
   String? _error;
 
@@ -42,10 +43,17 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       final data = await context.read<ApiClient>().dashboardStats();
       final stats = data['stats'];
       final sync = data['lastSync'];
+      final rawTraffic = data['traffic'];
       if (!mounted) return;
       setState(() {
         _stats = stats is Map ? Map<String, dynamic>.from(stats) : null;
         _lastSync = sync is Map ? Map<String, dynamic>.from(sync) : null;
+        _traffic = rawTraffic is List
+            ? rawTraffic
+                .whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList()
+            : null;
         _loading = false;
       });
     } catch (e) {
@@ -65,65 +73,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     final name = auth.user?.fullName?.isNotEmpty == true
         ? auth.user!.fullName!
         : auth.user?.username ?? 'Admin';
-
-    final modules = <_AdminModule>[
-      if (auth.hasPermission('read:films'))
-        const _AdminModule(
-          icon: Icons.movie_filter_outlined,
-          title: 'Phim',
-          subtitle: 'Ẩn / hiện phim công khai',
-          route: '/admin/films',
-        ),
-      if (auth.hasPermission('read:sync'))
-        const _AdminModule(
-          icon: Icons.sync_rounded,
-          title: 'Đồng bộ',
-          subtitle: 'Chạy sync & xem lịch sử',
-          route: '/admin/sync',
-        ),
-      if (auth.hasPermission('read:banners'))
-        const _AdminModule(
-          icon: Icons.view_carousel_outlined,
-          title: 'Banner',
-          subtitle: 'Hero / banner trang chủ',
-          route: '/admin/banners',
-        ),
-      if (auth.hasPermission('read:featured'))
-        const _AdminModule(
-          icon: Icons.local_fire_department_outlined,
-          title: 'Nổi bật',
-          subtitle: 'Phim hot trên trang chủ',
-          route: '/admin/featured',
-        ),
-      if (auth.hasPermission('read:comments'))
-        const _AdminModule(
-          icon: Icons.chat_bubble_outline_rounded,
-          title: 'Bình luận',
-          subtitle: 'Ẩn bình luận vi phạm',
-          route: '/admin/comments',
-        ),
-      if (auth.hasPermission('read:users'))
-        const _AdminModule(
-          icon: Icons.people_outline_rounded,
-          title: 'Người dùng',
-          subtitle: 'Danh sách thành viên',
-          route: '/admin/users',
-        ),
-      if (auth.hasPermission('read:roles'))
-        const _AdminModule(
-          icon: Icons.shield_outlined,
-          title: 'Vai trò',
-          subtitle: 'Roles & quyền',
-          route: '/admin/roles',
-        ),
-      if (auth.hasPermission('read:logs'))
-        const _AdminModule(
-          icon: Icons.receipt_long_outlined,
-          title: 'Nhật ký',
-          subtitle: 'System / audit log',
-          route: '/admin/logs',
-        ),
-    ];
 
     return Scaffold(
       backgroundColor: CinevaColors.bg,
@@ -169,9 +118,56 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 ),
               )
             else ...[
-              const Text(
-                'Tổng quan',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Tổng quan',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+                  ),
+                  InkWell(
+                    onTap: () => context.push('/admin/modules'),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: CinevaColors.surface,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.12),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.dashboard_customize_outlined,
+                            size: 15,
+                            color: CinevaColors.accent,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            'Quản lý',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 11,
+                            color: CinevaColors.muted,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               GridView.count(
@@ -208,53 +204,20 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   ),
                 ],
               ),
+              if (_traffic != null && _traffic!.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                _TrafficCard(traffic: _traffic!),
+              ],
               if (_lastSync != null) ...[
                 const SizedBox(height: 14),
                 _SyncBanner(sync: _lastSync!),
               ],
             ],
-            const SizedBox(height: 28),
-            const Text(
-              'Quản lý',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
-            ),
-            const SizedBox(height: 12),
-            if (modules.isEmpty)
-              const Text(
-                'Không có module nào trong quyền của bạn.',
-                style: TextStyle(color: CinevaColors.muted),
-              )
-            else
-              ...modules.map(
-                (m) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _AdminTile(
-                    icon: m.icon,
-                    title: m.title,
-                    subtitle: m.subtitle,
-                    onTap: () => context.push(m.route),
-                  ),
-                ),
-              ),
           ],
         ),
       ),
     );
   }
-}
-
-class _AdminModule {
-  const _AdminModule({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.route,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final String route;
 }
 
 class _StatCard extends StatelessWidget {
@@ -365,76 +328,230 @@ class _SyncBanner extends StatelessWidget {
   }
 }
 
-class _AdminTile extends StatelessWidget {
-  const _AdminTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
+class _TrafficCard extends StatelessWidget {
+  const _TrafficCard({required this.traffic});
 
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
+  final List<Map<String, dynamic>> traffic;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: CinevaColors.surface,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-          ),
-          child: Row(
+    int totalViews = 0;
+    int totalVisitors = 0;
+    int totalLogins = 0;
+    int maxVal = 1;
+
+    for (final day in traffic) {
+      final views = (day['pageViews'] as num?)?.toInt() ?? 0;
+      final visitors = (day['uniqueVisitors'] as num?)?.toInt() ?? 0;
+      final logins = (day['logins'] as num?)?.toInt() ?? 0;
+      totalViews += views;
+      totalVisitors += visitors;
+      totalLogins += logins;
+      if (views > maxVal) maxVal = views;
+      if (visitors > maxVal) maxVal = visitors;
+      if (logins > maxVal) maxVal = logins;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: CinevaColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: CinevaColors.accent.withValues(alpha: 0.12),
-                ),
-                child: Icon(icon, color: CinevaColors.accent),
+              Icon(
+                Icons.insights_rounded,
+                color: Color(0xFF5B8CFF),
+                size: 20,
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        color: CinevaColors.muted,
-                        fontSize: 13,
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
-                ),
+              SizedBox(width: 8),
+              Text(
+                'Lưu lượng truy cập',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: CinevaColors.muted,
+              Spacer(),
+              Text(
+                '7 ngày qua',
+                style: TextStyle(color: CinevaColors.muted, fontSize: 11),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _TrafficStatItem(
+                  label: 'Lượt xem',
+                  value: '$totalViews',
+                  color: const Color(0xFF5B8CFF),
+                ),
+              ),
+              Expanded(
+                child: _TrafficStatItem(
+                  label: 'Khách duy nhất',
+                  value: '$totalVisitors',
+                  color: const Color(0xFF3DDC97),
+                ),
+              ),
+              Expanded(
+                child: _TrafficStatItem(
+                  label: 'Đăng nhập',
+                  value: '$totalLogins',
+                  color: const Color(0xFFF5A524),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            height: 115,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: traffic.map((d) {
+                final dateStr = d['date']?.toString() ?? '';
+                final parts = dateStr.split('-');
+                final label = parts.length >= 3 ? '${parts[2]}/${parts[1]}' : dateStr;
+                final views = (d['pageViews'] as num?)?.toDouble() ?? 0;
+                final visitors = (d['uniqueVisitors'] as num?)?.toDouble() ?? 0;
+                final logins = (d['logins'] as num?)?.toDouble() ?? 0;
+
+                final vH = maxVal > 0 ? (views / maxVal * 74).clamp(4.0, 74.0) : 4.0;
+                final uH = maxVal > 0 ? (visitors / maxVal * 74).clamp(4.0, 74.0) : 4.0;
+                final lH = maxVal > 0 ? (logins / maxVal * 74).clamp(4.0, 74.0) : 4.0;
+
+                return Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: vH,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF5B8CFF),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          ),
+                          const SizedBox(width: 2.5),
+                          Container(
+                            width: 6,
+                            height: uH,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF3DDC97),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          ),
+                          const SizedBox(width: 2.5),
+                          Container(
+                            width: 6,
+                            height: lH,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5A524),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        label,
+                        style: const TextStyle(
+                          color: CinevaColors.muted,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 10),
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _LegendDot(color: Color(0xFF5B8CFF), label: 'Xem'),
+              SizedBox(width: 14),
+              _LegendDot(color: Color(0xFF3DDC97), label: 'Khách'),
+              SizedBox(width: 14),
+              _LegendDot(color: Color(0xFFF5A524), label: 'Đăng nhập'),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
+
+class _TrafficStatItem extends StatelessWidget {
+  const _TrafficStatItem({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(color: CinevaColors.muted, fontSize: 11),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 18,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: const TextStyle(color: CinevaColors.muted, fontSize: 10),
+        ),
+      ],
+    );
+  }
+}
+

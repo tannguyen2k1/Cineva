@@ -48,6 +48,17 @@ async def add_to_watchlist(db: AsyncSession, *, user_id: str, slug: str) -> dict
             db, WatchlistItem(user_id=user_id, film_id=film.id)
         )
         await db.commit()
+        await write_system_log(
+            db,
+            user_id=user_id,
+            action="ADD_WATCHLIST",
+            resource="Watchlist",
+            details={
+                "filmName": film.name,
+                "filmSlug": film.source_slug,
+                "posterUrl": film.poster_url or film.thumb_url,
+            },
+        )
     return {"success": True, "message": "Đã thêm vào tủ phim"}
 
 
@@ -59,6 +70,16 @@ async def remove_from_watchlist(db: AsyncSession, *, user_id: str, slug: str) ->
     if existing:
         await eng_repo.delete_watchlist(db, existing)
         await db.commit()
+        await write_system_log(
+            db,
+            user_id=user_id,
+            action="REMOVE_WATCHLIST",
+            resource="Watchlist",
+            details={
+                "filmName": film.name,
+                "filmSlug": film.source_slug,
+            },
+        )
     return {"success": True, "message": "Đã xóa khỏi tủ phim"}
 
 
@@ -87,6 +108,17 @@ async def follow_film(db: AsyncSession, *, user_id: str, slug: str) -> dict:
     if not existing:
         await eng_repo.add_follow(db, FilmFollow(user_id=user_id, film_id=film.id))
         await db.commit()
+        await write_system_log(
+            db,
+            user_id=user_id,
+            action="FOLLOW_FILM",
+            resource="Follow",
+            details={
+                "filmName": film.name,
+                "filmSlug": film.source_slug,
+                "posterUrl": film.poster_url or film.thumb_url,
+            },
+        )
     return {"success": True, "message": "Đã theo dõi phim"}
 
 
@@ -98,6 +130,16 @@ async def unfollow_film(db: AsyncSession, *, user_id: str, slug: str) -> dict:
     if existing:
         await eng_repo.delete_follow(db, existing)
         await db.commit()
+        await write_system_log(
+            db,
+            user_id=user_id,
+            action="UNFOLLOW_FILM",
+            resource="Follow",
+            details={
+                "filmName": film.name,
+                "filmSlug": film.source_slug,
+            },
+        )
     return {"success": True, "message": "Đã bỏ theo dõi"}
 
 
@@ -115,6 +157,21 @@ async def save_progress(
         position_sec=body.position_sec,
     )
     await db.commit()
+    await write_system_log(
+        db,
+        user_id=user_id,
+        action="WATCH_FILM",
+        resource="Film",
+        details={
+            "filmName": film.name,
+            "filmSlug": film.source_slug,
+            "posterUrl": film.poster_url or film.thumb_url,
+            "episodeSlug": body.episode_slug,
+            "episodeName": body.episode_name,
+            "serverName": body.server_name,
+            "positionSec": body.position_sec,
+        },
+    )
     return {
         "success": True,
         "data": {
@@ -227,6 +284,18 @@ async def add_comment(
         )
 
     await db.commit()
+    await write_system_log(
+        db,
+        user_id=user_id,
+        action="POST_COMMENT",
+        resource="Comment",
+        details={
+            "filmName": film.name,
+            "filmSlug": film.source_slug,
+            "posterUrl": film.poster_url or film.thumb_url,
+            "content": text[:120],
+        },
+    )
     comment = await eng_repo.get_comment(db, comment_id=comment.id)
     assert comment is not None
     return {

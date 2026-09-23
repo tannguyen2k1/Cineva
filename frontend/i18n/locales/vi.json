@@ -169,7 +169,21 @@
     "actor": "Người thực hiện",
     "resource": "Tài nguyên",
     "details": "Chi tiết",
-    "system": "Hệ thống"
+    "system": "Hệ thống",
+    "category": "Phân loại",
+    "categoryAll": "Tất cả",
+    "categoryWatch": "Xem phim",
+    "categoryEngagement": "Tương tác",
+    "categoryAuth": "Đăng nhập",
+    "categorySystem": "Quản trị",
+    "inspectTitle": "Chi tiết hoạt động",
+    "filterByUser": "Xem lịch sử user",
+    "clearUserFilter": "Bỏ lọc user",
+    "watching": "Đang xem",
+    "episode": "Tập",
+    "position": "Thời lượng",
+    "copyPayload": "Sao chép JSON",
+    "copied": "Đã sao chép!"
   },
   "sync": {
     "actionsTitle": "Chạy đồng bộ",

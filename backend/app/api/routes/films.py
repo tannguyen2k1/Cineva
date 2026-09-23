@@ -20,6 +20,7 @@ from app.services import film_sync as film_sync_service
 from app.services import films as films_service
 from app.services import notifications as notifications_service
 from app.services import traffic as traffic_service
+from app.services.system_log import write_system_log
 
 public_router = APIRouter(prefix="/public", tags=["Public Films"])
 me_router = APIRouter(prefix="/me", tags=["My Films"])
@@ -57,8 +58,9 @@ async def public_list_films(
     type: str | None = None,
     sort: str = Query("newest", pattern="^(newest|name|year)$"),
     db: AsyncSession = Depends(get_db),
+    current: CurrentUser | None = Depends(get_optional_user),
 ):
-    return await films_service.list_films(
+    res = await films_service.list_films(
         db,
         page=page,
         page_size=pageSize,
@@ -69,6 +71,15 @@ async def public_list_films(
         film_type=type,
         sort=sort,
     )
+    if q and q.strip() and len(q.strip()) >= 2 and current and page == 1:
+        await write_system_log(
+            db,
+            user_id=current.id,
+            action="SEARCH_FILM",
+            resource="Film",
+            details={"keyword": q.strip(), "resultsCount": res.get("total", 0)},
+        )
+    return res
 
 
 @public_router.get("/sitemap")
