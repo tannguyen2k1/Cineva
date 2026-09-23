@@ -8,6 +8,9 @@ import 'src/services/api_client.dart';
 import 'src/state/auth_state.dart';
 import 'src/theme/cineva_theme.dart';
 
+import 'src/services/topxx_client.dart';
+import 'src/state/app_mode_state.dart';
+
 /// Material tablet breakpoint (shortest side).
 const _tabletShortestSide = 600.0;
 
@@ -28,15 +31,25 @@ Future<void> main() async {
 
   final api = ApiClient();
   final auth = AuthState(api);
+  final appMode = AppModeState();
+  final topxx = TopxxClient();
   await auth.bootstrap();
-  runApp(CinevaApp(api: api, auth: auth));
+  runApp(CinevaApp(api: api, auth: auth, appMode: appMode, topxx: topxx));
 }
 
 class CinevaApp extends StatefulWidget {
-  const CinevaApp({super.key, required this.api, required this.auth});
+  const CinevaApp({
+    super.key,
+    required this.api,
+    required this.auth,
+    required this.appMode,
+    required this.topxx,
+  });
 
   final ApiClient api;
   final AuthState auth;
+  final AppModeState appMode;
+  final TopxxClient topxx;
 
   @override
   State<CinevaApp> createState() => _CinevaAppState();
@@ -51,6 +64,8 @@ class _CinevaAppState extends State<CinevaApp> {
       providers: [
         Provider.value(value: widget.api),
         ChangeNotifierProvider.value(value: widget.auth),
+        ChangeNotifierProvider.value(value: widget.appMode),
+        Provider.value(value: widget.topxx),
       ],
       child: MaterialApp.router(
         title: 'Cineva',

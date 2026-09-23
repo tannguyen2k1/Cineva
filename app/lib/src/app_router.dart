@@ -12,6 +12,8 @@ import 'screens/admin_sync_screen.dart';
 import 'screens/admin_users_screen.dart';
 import 'screens/film_detail_screen.dart';
 import 'screens/home_screen.dart';
+import 'models/topxx_models.dart';
+import 'screens/adult_film_detail_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/register_screen.dart';
@@ -20,7 +22,7 @@ import 'state/auth_state.dart';
 import 'utils/cineva_page.dart';
 
 const _publicExact = {'/', '/login', '/register'};
-const _publicPrefixes = ['/phim', '/xem'];
+const _publicPrefixes = ['/phim', '/phim-18', '/xem'];
 
 bool _isPublicPath(String path) {
   if (_publicExact.contains(path)) return true;
@@ -113,6 +115,17 @@ GoRouter createRouter(AuthState auth) {
         path: '/admin/logs',
         pageBuilder: (context, state) =>
             cinevaPage(state: state, child: const AdminLogsScreen()),
+      ),
+      GoRoute(
+        path: '/phim-18/:code',
+        pageBuilder: (context, state) => cinevaPage(
+          state: state,
+          child: AdultFilmDetailScreen(
+            code: state.pathParameters['code']!,
+            initialMovie:
+                state.extra is TopxxMovie ? state.extra as TopxxMovie : null,
+          ),
+        ),
       ),
       GoRoute(
         path: '/phim/:slug',

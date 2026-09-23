@@ -34,6 +34,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/brand/cineva-mark.svg
+    - assets/brand/cineva-18-mark.svg
     - assets/brand/cineva-mark.png
     - assets/brand/cineva-logo.png
     - assets/brand/film-poster-placeholder.png

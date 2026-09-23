@@ -9,8 +9,10 @@ import '../models/home_payload.dart';
 import '../models/models.dart';
 import '../models/taxonomies.dart';
 import '../services/api_client.dart';
+import '../state/app_mode_state.dart';
 import '../state/auth_state.dart';
 import '../theme/cineva_theme.dart';
+import 'adult_home_screen.dart';
 import '../widgets/catalog_filter_sheet.dart';
 import '../widgets/cineva_bottom_nav.dart';
 import '../widgets/cineva_header.dart';
@@ -368,6 +370,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final appMode = context.watch<AppModeState>();
+    if (appMode.is18Plus) {
+      return const AdultHomeScreen();
+    }
+
     final loggedIn = context.watch<AuthState>().isLoggedIn;
     if (loggedIn && _tab == 3 && _continueFuture == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {

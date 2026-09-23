@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Cineva 18+">
+  <defs>
+    <linearGradient id="bg18" x1="4" y1="0" x2="60" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF5CA8"/>
+      <stop offset="0.32" stop-color="#FF1475"/>
+      <stop offset="0.72" stop-color="#BD0076"/>
+      <stop offset="1" stop-color="#6C00B0"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="12" y1="-4" x2="40" y2="36" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <mask id="cMask">
+      <!-- Bold C body -->
+      <path
+        fill="#fff"
+        d="M44.2 14.8c-2.7-1.95-5.95-2.95-9.7-2.95-11.55 0-19.9 8.15-19.9 20.15S22.95 52.15 34.5 52.15c3.75 0 7-1 9.7-2.95l-4.35-5.35c-1.5 1.05-3.35 1.65-5.35 1.65-6.85 0-11.4-5.1-11.4-13.5s4.55-13.5 11.4-13.5c2 0 3.85.6 5.35 1.65l4.35-5.35z"
+      />
+      <!-- Play triangle -->
+      <path fill="#fff" d="M41.2 24.6v14.8l12.6-7.4-12.6-7.4z"/>
+      <!-- Film sprocket notches (cut into C) -->
+      <circle cx="20.6" cy="26.4" r="2.35" fill="#000"/>
+      <circle cx="20.6" cy="37.6" r="2.35" fill="#000"/>
+    </mask>
+  </defs>
+
+  <rect width="64" height="64" rx="16" fill="url(#bg18)"/>
+  <rect width="64" height="64" rx="16" fill="url(#sheen)"/>
+  <rect x="1.4" y="1.4" width="61.2" height="61.2" rx="14.6"
+        fill="none" stroke="#FFFFFF" stroke-opacity="0.32" stroke-width="1.2"/>
+
+  <rect width="64" height="64" fill="#0B060F" mask="url(#cMask)"/>
+</svg>
