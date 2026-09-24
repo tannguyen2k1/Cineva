@@ -26,6 +26,7 @@ dependencies:
   webview_flutter_wkwebview: ^3.26.1
   wakelock_plus: ^1.8.0
   window_manager: ^0.4.3
+  webview_win_floating: ^3.0.3
 dev_dependencies:
   flutter_test:
     sdk: flutter

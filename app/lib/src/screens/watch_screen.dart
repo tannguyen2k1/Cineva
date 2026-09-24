@@ -209,8 +209,12 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     _currentStartSec = widget.startPositionSec ?? 0;
     WidgetsBinding.instance.addObserver(this);
     unawaited(PhoneOrientation.unlockForPlayer());
-    _initPlayer();
-    unawaited(_loadEpisodeCatalog());
+    // context / WebView are not ready inside initState.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_initPlayer());
+      unawaited(_loadEpisodeCatalog());
+    });
   }
 
   @override
@@ -252,7 +256,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _initPlayer() async {
-    _api = context.read<ApiClient>();
+    _api ??= context.read<ApiClient>();
     _loggedIn = context.read<AuthState>().isLoggedIn;
 
     final uri = _uriFor(playUrl: _playUrl, embedUrl: _embedUrl);

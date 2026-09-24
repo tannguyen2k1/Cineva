@@ -38,6 +38,13 @@ class _HomeHeroDeckState extends State<HomeHeroDeck> {
   static const _posterAspect = 1.32;
 
   @override
+  void _onPageScroll() {
+    // Rebuild transforms while scrolling. Called by PageController listener
+    // AFTER the layout pass — safe to call setState here.
+    if (mounted) setState(() {});
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Create once with the correct viewportFraction. Orientation changes remount
@@ -45,10 +52,12 @@ class _HomeHeroDeckState extends State<HomeHeroDeck> {
     if (_booted) return;
     _booted = true;
     final m = _metrics(MediaQuery.sizeOf(context));
-    _pageCtrl = PageController(
+    final ctrl = PageController(
       initialPage: widget.index.clamp(0, math.max(0, widget.slides.length - 1)),
       viewportFraction: m.fraction,
     );
+    ctrl.addListener(_onPageScroll);
+    _pageCtrl = ctrl;
   }
 
   @override
@@ -69,6 +78,7 @@ class _HomeHeroDeckState extends State<HomeHeroDeck> {
 
   @override
   void dispose() {
+    _pageCtrl?.removeListener(_onPageScroll);
     _pageCtrl?.dispose();
     super.dispose();
   }
@@ -123,30 +133,21 @@ class _HomeHeroDeckState extends State<HomeHeroDeck> {
     return SizedBox(
       height: m.heroH,
       width: double.infinity,
-      child: NotificationListener<ScrollNotification>(
-        onNotification: (notification) {
-          // Rebuild transforms while dragging — safe outside build phase.
-          if (notification is ScrollUpdateNotification ||
-              notification is ScrollEndNotification) {
-            setState(() {});
-          }
-          return false;
-        },
-        child: Builder(
-          builder: (context) {
-            final page = _page;
-            final activeIndex = page.round().clamp(0, slides.length - 1);
-            final active = slides[activeIndex];
-            final hasPrev = activeIndex > 0;
-            final hasNext = activeIndex < slides.length - 1;
+      child: Builder(
+        builder: (context) {
+          final page = _page;
+          final activeIndex = page.round().clamp(0, slides.length - 1);
+          final active = slides[activeIndex];
+          final hasPrev = activeIndex > 0;
+          final hasNext = activeIndex < slides.length - 1;
 
-            return MouseRegion(
-              onEnter: (_) => setState(() => _isHovering = true),
-              onExit: (_) => setState(() => _isHovering = false),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Positioned.fill(
+          return MouseRegion(
+            onEnter: (_) => setState(() => _isHovering = true),
+            onExit: (_) => setState(() => _isHovering = false),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Positioned.fill(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 480),
                     switchInCurve: Curves.easeOutCubic,
@@ -258,9 +259,8 @@ class _HomeHeroDeckState extends State<HomeHeroDeck> {
                   ),
               ],
             ),
-            );
-          },
-        ),
+          );
+        },
       ),
     );
   }
