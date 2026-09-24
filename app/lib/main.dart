@@ -58,7 +58,7 @@ class CinevaApp extends StatefulWidget {
 }
 
 class _CinevaAppState extends State<CinevaApp> {
-  late final GoRouter _router = createRouter(widget.auth);
+  late final GoRouter _router = createRouter(widget.auth, widget.api);
 
   @override
   Widget build(BuildContext context) {
@@ -161,12 +161,12 @@ class _PrivacyShieldState extends State<_PrivacyShield>
                         ),
                         child: const CinevaBrandMark(
                           size: 56,
-                          is18Plus: false, // Luôn dùng logo vàng Cineva bình thường để ngụy trang
+                          is18Plus: false,
                         ),
                       ),
                       const SizedBox(height: 18),
                       const Text(
-                        'C I N E V A', // Luôn dùng thương hiệu Cineva chuẩn
+                        'C I N E V A',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 15,

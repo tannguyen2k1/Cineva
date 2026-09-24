@@ -854,6 +854,18 @@ class ApiClient {
     return MediaType('image', 'jpeg');
   }
 
+  Future<void> recordTrafficHit(String path) async {
+    try {
+      await _client.post(
+        _uri('/api/traffic/hit'),
+        headers: _headers(),
+        body: jsonEncode({'path': path}),
+      ).timeout(const Duration(seconds: 5));
+    } catch (_) {
+      // Ignore background errors for analytics
+    }
+  }
+
   List<Map<String, dynamic>> _mapList(dynamic raw) {
     if (raw is! List) return const [];
     return raw

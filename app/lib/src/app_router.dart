@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 import 'screens/admin_banners_screen.dart';
@@ -19,6 +20,7 @@ import 'screens/profile_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/watch_screen.dart';
 import 'state/auth_state.dart';
+import 'services/api_client.dart';
 import 'utils/cineva_page.dart';
 
 const _publicExact = {'/', '/login', '/register'};
@@ -32,10 +34,40 @@ bool _isPublicPath(String path) {
 bool _isAdminPath(String path) =>
     path == '/admin' || path.startsWith('/admin/');
 
-GoRouter createRouter(AuthState auth) {
+class TrafficObserver extends NavigatorObserver {
+  TrafficObserver(this.api);
+  final ApiClient api;
+
+  void _record(Route<dynamic>? route) {
+    if (route != null && route.settings.name != null) {
+      api.recordTrafficHit(route.settings.name!);
+    }
+  }
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    _record(route);
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    _record(newRoute);
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPop(route, previousRoute);
+    _record(previousRoute);
+  }
+}
+
+GoRouter createRouter(AuthState auth, ApiClient api) {
   return GoRouter(
     initialLocation: '/',
     refreshListenable: auth,
+    observers: [TrafficObserver(api)],
     redirect: (context, state) {
       if (auth.booting) return null;
       final path = state.matchedLocation;
