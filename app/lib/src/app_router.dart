@@ -12,7 +12,7 @@ import 'screens/admin_roles_screen.dart';
 import 'screens/admin_sync_screen.dart';
 import 'screens/admin_users_screen.dart';
 import 'screens/film_detail_screen.dart';
-import 'screens/home_screen.dart';
+import 'layouts/app_shell.dart';
 import 'models/topxx_models.dart';
 import 'screens/adult_film_detail_screen.dart';
 import 'screens/login_screen.dart';
@@ -91,7 +91,7 @@ GoRouter createRouter(AuthState auth, ApiClient api) {
       GoRoute(
         path: '/',
         pageBuilder: (context, state) =>
-            cinevaPage(state: state, child: const HomeScreen()),
+            cinevaPage(state: state, child: const AppShell()),
       ),
       GoRoute(
         path: '/profile',

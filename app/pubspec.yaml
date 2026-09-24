@@ -25,10 +25,19 @@ dependencies:
   webview_flutter_android: ^4.14.1
   webview_flutter_wkwebview: ^3.26.1
   wakelock_plus: ^1.8.0
+  window_manager: ^0.4.3
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_native_splash: ^2.4.1
+
+flutter_native_splash:
+  color: "#09090B"
+  image: "assets/brand/cineva-mark.png"
+  android_12:
+    image: "assets/brand/cineva-mark.png"
+    icon_background_color: "#09090B"
 
 flutter:
   uses-material-design: true
