@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'dart:ui';
+import 'package:flutter/gestures.dart';
 
 import 'package:flutter/material.dart';
 
@@ -29,6 +30,7 @@ class HomeHeroDeck extends StatefulWidget {
 class _HomeHeroDeckState extends State<HomeHeroDeck> {
   PageController? _pageCtrl;
   bool _booted = false;
+  bool _isHovering = false;
 
   static const _arcDrop = 42.0;
   static const _arcPeak = 14.0;
@@ -88,38 +90,17 @@ class _HomeHeroDeckState extends State<HomeHeroDeck> {
   })
   _metrics(Size size) {
     final screenW = size.width;
-    final screenH = size.height;
-    final landscape = screenW > screenH * 1.05;
 
-    if (landscape) {
-      // Wide cinematic banner — fills most of the content height.
-      final maxHero = (screenH - 120).clamp(360.0, 640.0);
-      final arcPad = _arcDrop + _arcPeak + 20;
-      var cardH = (maxHero - arcPad).clamp(280.0, 520.0);
-      var cardW = cardH * 1.78; // ~16:9
-      final maxCardW = (screenW * 0.78).clamp(520.0, 920.0);
-      if (cardW > maxCardW) {
-        cardW = maxCardW;
-        cardH = cardW / 1.78;
-      }
-      final heroH = cardH + arcPad;
-      final fraction = (cardW / screenW * 1.02).clamp(0.55, 0.86);
-      return (
-        cardW: cardW,
-        cardH: cardH,
-        heroH: heroH,
-        fraction: fraction,
-        landscape: true,
-      );
-    }
-
-    // Portrait phone/tablet: compact poster + info stack (tighter on small screens).
-    final cardW = (screenW * 0.50).clamp(150.0, 300.0);
+    // We only have portrait posters from the API, so we always use the portrait card layout,
+    // but we scale the viewport fraction so that desktop shows a nice multi-card cover flow.
+    final cardW = (screenW * 0.45).clamp(160.0, 320.0);
     final posterH = cardW * _posterAspect;
     final cardH = posterH + _infoHPortrait;
-    // Lean top pad — cards sit bottom-aligned; only need room for arc peak.
-    final heroH = cardH + _arcDrop + _arcPeak + 2;
-    final fraction = (cardW / screenW * 1.08).clamp(0.46, 0.58);
+    final heroH = cardH + _arcDrop + _arcPeak + 16;
+    
+    // Fraction of the viewport each page takes. On desktop this becomes smaller (~0.3)
+    final fraction = (cardW / screenW * 1.15).clamp(0.25, 0.60);
+    
     return (
       cardW: cardW,
       cardH: cardH,
@@ -156,11 +137,16 @@ class _HomeHeroDeckState extends State<HomeHeroDeck> {
             final page = _page;
             final activeIndex = page.round().clamp(0, slides.length - 1);
             final active = slides[activeIndex];
+            final hasPrev = activeIndex > 0;
+            final hasNext = activeIndex < slides.length - 1;
 
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                Positioned.fill(
+            return MouseRegion(
+              onEnter: (_) => setState(() => _isHovering = true),
+              onExit: (_) => setState(() => _isHovering = false),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Positioned.fill(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 480),
                     switchInCurve: Curves.easeOutCubic,
@@ -236,7 +222,42 @@ class _HomeHeroDeckState extends State<HomeHeroDeck> {
                     );
                   },
                 ),
+                if (_isHovering && hasPrev)
+                  Positioned(
+                    left: 24,
+                    top: 0,
+                    bottom: 0,
+                    child: Center(
+                      child: _NavButton(
+                        icon: Icons.chevron_left_rounded,
+                        onTap: () {
+                          _pageCtrl?.previousPage(
+                            duration: const Duration(milliseconds: 320),
+                            curve: Curves.easeOutCubic,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                if (_isHovering && hasNext)
+                  Positioned(
+                    right: 24,
+                    top: 0,
+                    bottom: 0,
+                    child: Center(
+                      child: _NavButton(
+                        icon: Icons.chevron_right_rounded,
+                        onTap: () {
+                          _pageCtrl?.nextPage(
+                            duration: const Duration(milliseconds: 320),
+                            curve: Curves.easeOutCubic,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
               ],
+            ),
             );
           },
         ),
@@ -715,6 +736,30 @@ class _Chip extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),
+      ),
+    );
+  }
+}
+
+class _NavButton extends StatelessWidget {
+  const _NavButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.5),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+      ),
+      child: IconButton(
+        icon: Icon(icon, size: 36, color: Colors.white),
+        onPressed: onTap,
+        padding: const EdgeInsets.all(12),
+        hoverColor: CinevaColors.accent.withValues(alpha: 0.2),
       ),
     );
   }

@@ -38,22 +38,11 @@ class AdaptiveScaffold extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (Platform.isWindows || Platform.isMacOS || Platform.isLinux)
-              SizedBox(
+              const SizedBox(
                 height: 32,
-                child: DragToMoveArea(
-                  child: Container(
-                    color: CinevaColors.bg,
-                    alignment: Alignment.topRight,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const WindowCaption(
-                          brightness: Brightness.dark,
-                          backgroundColor: Colors.transparent,
-                        ),
-                      ],
-                    ),
-                  ),
+                child: WindowCaption(
+                  brightness: Brightness.dark,
+                  backgroundColor: CinevaColors.bg,
                 ),
               ),
             Expanded(
