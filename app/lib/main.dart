@@ -40,15 +40,13 @@ Future<void> main() async {
       size: Size(1280, 800),
       minimumSize: Size(800, 600),
       center: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Color(0xFF09090B),
       skipTaskbar: false,
       titleBarStyle: TitleBarStyle.hidden,
       title: 'Cineva',
     );
-    await windowManager.waitUntilReadyToShow(windowOptions, () async {
-      await windowManager.show();
-      await windowManager.focus();
-    });
+    // Keep window hidden until Flutter renders the first frame → no white flash.
+    await windowManager.waitUntilReadyToShow(windowOptions);
   }
 
   final api = ApiClient();
@@ -79,6 +77,17 @@ class CinevaApp extends StatefulWidget {
 
 class _CinevaAppState extends State<CinevaApp> {
   late final GoRouter _router = createRouter(widget.auth, widget.api);
+
+  @override
+  void initState() {
+    super.initState();
+    if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await windowManager.show();
+        await windowManager.focus();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
