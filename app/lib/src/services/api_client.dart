@@ -857,7 +857,7 @@ class ApiClient {
   Future<void> recordTrafficHit(String path) async {
     try {
       await _client.post(
-        _uri('/api/traffic/hit'),
+        _uri('/api/public/traffic/hit'),
         headers: _headers(),
         body: jsonEncode({'path': path}),
       ).timeout(const Duration(seconds: 5));
