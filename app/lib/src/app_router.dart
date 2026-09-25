@@ -186,6 +186,7 @@ GoRouter createRouter(AuthState auth, ApiClient api) {
               startPositionSec: (map['positionSec'] is num)
                   ? (map['positionSec'] as num).toInt()
                   : int.tryParse('${map['positionSec'] ?? ''}'),
+              posterUrl: map['posterUrl']?.toString(),
             ),
           );
         },

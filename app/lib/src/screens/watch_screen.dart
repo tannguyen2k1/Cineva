@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:provider/provider.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -12,10 +15,11 @@ import '../models/models.dart';
 import '../services/api_client.dart';
 import '../state/auth_state.dart';
 import '../theme/cineva_theme.dart';
+import '../widgets/cineva_network_image.dart';
 import '../utils/phone_orientation.dart';
 import '../widgets/left_edge_swipe_back.dart';
 
-/// Watch via JW / phimapi embed in a WebView.
+/// Phim thường phát HLS native. 18+ vẫn mở trang embed trong WebView.
 /// Rotation unlocked on this screen; rest of app stays portrait-locked.
 class WatchScreen extends StatefulWidget {
   const WatchScreen({
@@ -28,6 +32,7 @@ class WatchScreen extends StatefulWidget {
     this.episodeName,
     this.serverName,
     this.startPositionSec,
+    this.posterUrl,
   });
 
   final String slug;
@@ -38,13 +43,33 @@ class WatchScreen extends StatefulWidget {
   final String? episodeName;
   final String? serverName;
   final int? startPositionSec;
+  final String? posterUrl;
 
   @override
   State<WatchScreen> createState() => _WatchScreenState();
 }
 
 class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
+  static const _resumeAskSec = 30;
+  static const _hlsHeaders = {
+    'Referer': 'https://player.phimapi.com/',
+    'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+  };
+
   WebViewController? _web;
+  Player? _player;
+  VideoController? _video;
+  StreamSubscription<Duration>? _posSub;
+  StreamSubscription<Duration>? _durSub;
+  StreamSubscription<bool>? _doneSub;
+  StreamSubscription<String>? _errSub;
+  String? _hlsUrl;
+  bool _askResume = false;
+  Timer? _resumeTimer;
+  int _resumeLeft = 0;
+  Duration _position = Duration.zero;
+  Duration _mediaDuration = Duration.zero;
   String? _error;
   bool _loading = true;
   bool _cinema = false;
@@ -154,6 +179,163 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     return Uri.tryParse(play);
   }
 
+  /// Direct HLS for the normal catalog. 18+ embed pages return null.
+  String? _directHls(String playUrl, String? embedUrl) {
+    final play = playUrl.trim();
+    if (play.contains('.m3u8')) return play;
+    final nested = Uri.tryParse(embedUrl?.trim() ?? '')?.queryParameters['url'];
+    if (nested != null && nested.contains('.m3u8')) return nested;
+    return null;
+  }
+
+  bool get _useNative => _hlsUrl != null;
+
+  String _clock(int sec) {
+    final h = sec ~/ 3600;
+    final m = (sec % 3600) ~/ 60;
+    final s = sec % 60;
+    final mm = m.toString().padLeft(2, '0');
+    final ss = s.toString().padLeft(2, '0');
+    if (h > 0) return '$h:$mm:$ss';
+    return '$m:$ss';
+  }
+
+  void _bindNative(Player player) {
+    _posSub = player.stream.position.listen((pos) {
+      _position = pos;
+      _notePlayback();
+    });
+    _durSub = player.stream.duration.listen((dur) {
+      _mediaDuration = dur;
+      if (dur > Duration.zero && _loading && mounted && !_askResume) {
+        setState(() => _loading = false);
+      }
+    });
+    _doneSub = player.stream.completed.listen((done) {
+      if (!done || !mounted || _askResume || _ended) return;
+      setState(() => _ended = true);
+      if (_nextEpisode != null) _startAutoNextCountdown();
+    });
+    _errSub = player.stream.error.listen((msg) {
+      if (!mounted || msg.isEmpty || _mediaDuration > Duration.zero) return;
+      setState(() {
+        _error = 'Không phát được phim';
+        _loading = false;
+      });
+    });
+  }
+
+  void _notePlayback() {
+    if (!mounted || _askResume) return;
+    final d = _mediaDuration.inSeconds;
+    if (d <= 0) return;
+    final t = _position.inSeconds;
+    final near = (d > 60 && (d - t) <= 142) || (t / d >= 0.92);
+    if (near == _nearEnd) return;
+    setState(() => _nearEnd = near);
+  }
+
+  void _cancelResumeTimer() {
+    _resumeTimer?.cancel();
+    _resumeTimer = null;
+    _resumeLeft = 0;
+  }
+
+  void _startResumeCountdown() {
+    _cancelResumeTimer();
+    _resumeLeft = 8;
+    _resumeTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
+      if (_resumeLeft <= 1) {
+        t.cancel();
+        _resumeTimer = null;
+        unawaited(_confirmResume(continueWatching: true));
+        return;
+      }
+      setState(() => _resumeLeft -= 1);
+    });
+  }
+
+  Future<void> _seekWhenReady(int sec) async {
+    if (sec <= 0) return;
+    final player = _player;
+    if (player == null) return;
+    for (var i = 0; i < 20; i++) {
+      if (_mediaDuration > Duration.zero) break;
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+    }
+    await player.seek(Duration(seconds: sec));
+  }
+
+  Future<void> _confirmResume({required bool continueWatching}) async {
+    _cancelResumeTimer();
+    final sec = continueWatching ? _currentStartSec : 0;
+    if (mounted) setState(() => _askResume = false);
+    final player = _player;
+    if (player == null) return;
+    if (sec > 0) await _seekWhenReady(sec);
+    await player.play();
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _openNative(String url, {required int resumeSec}) async {
+    final player = _player;
+    if (player == null) return;
+    final ask = resumeSec >= _resumeAskSec;
+    _position = Duration.zero;
+    _mediaDuration = Duration.zero;
+    _cancelResumeTimer();
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _error = null;
+        _ended = false;
+        _nearEnd = false;
+        _askResume = ask;
+        _resumeLeft = ask ? 8 : 0;
+      });
+    }
+    await player.open(
+      Media(url, httpHeaders: _hlsHeaders),
+      play: !ask,
+    );
+    _loadingTimeout?.cancel();
+    if (!ask) {
+      _loadingTimeout = Timer(const Duration(seconds: 14), () {
+        if (mounted && _loading) setState(() => _loading = false);
+      });
+    }
+    if (ask) {
+      await player.pause();
+      if (mounted) _startResumeCountdown();
+      return;
+    }
+    if (resumeSec > 0) await _seekWhenReady(resumeSec);
+  }
+
+  Future<void> _initNative() async {
+    final url = _hlsUrl;
+    if (url == null) return;
+    _player ??= Player();
+    _video ??= VideoController(_player!);
+    if (_posSub == null) _bindNative(_player!);
+    try {
+      await _openNative(url, resumeSec: _currentStartSec);
+      _startProgressLoop();
+      unawaited(_saveProgress(force: true));
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _error = 'Không mở được trình phát';
+          _loading = false;
+        });
+      }
+    }
+  }
+
   String _epLabel(EpisodeItem ep) {
     final raw = ep.name.trim();
     if (raw.isEmpty) return 'tập tiếp';
@@ -259,6 +441,12 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     _api ??= context.read<ApiClient>();
     _loggedIn = context.read<AuthState>().isLoggedIn;
 
+    _hlsUrl = _directHls(_playUrl, _embedUrl);
+    if (_useNative) {
+      await _initNative();
+      return;
+    }
+
     final uri = _uriFor(playUrl: _playUrl, embedUrl: _embedUrl);
     if (uri == null) {
       setState(() {
@@ -360,6 +548,24 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
       _resolveNext();
     });
 
+    _hlsUrl = _directHls(_playUrl, _embedUrl);
+    if (_useNative) {
+      final url = _hlsUrl;
+      if (url == null) return;
+      try {
+        await _openNative(url, resumeSec: 0);
+        unawaited(_saveProgress(force: true, positionOverride: 0));
+      } catch (_) {
+        if (mounted) {
+          setState(() {
+            _error = 'Không mở được tập tiếp theo';
+            _loading = false;
+          });
+        }
+      }
+      return;
+    }
+
     final web = _web;
     final uri = _uriFor(playUrl: _playUrl, embedUrl: _embedUrl);
     if (web == null || uri == null) {
@@ -411,6 +617,11 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _pollAndSave() async {
+    if (_useNative) {
+      if (_askResume) return;
+      await _saveProgress(positionOverride: _position.inSeconds);
+      return;
+    }
     final web = _web;
     if (web == null || !mounted) {
       await _saveProgress();
@@ -536,6 +747,13 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
   Future<void> _stopPlayer() async {
     if (_stopping) return;
     _stopping = true;
+    _cancelResumeTimer();
+    if (_useNative) {
+      try {
+        await _player?.pause();
+      } catch (_) {}
+      return;
+    }
     final web = _web;
     if (web != null) {
       try {
@@ -567,6 +785,15 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     _saveTimer?.cancel();
     _loadingTimeout?.cancel();
     _cancelAutoNext();
+    _cancelResumeTimer();
+    _posSub?.cancel();
+    _durSub?.cancel();
+    _doneSub?.cancel();
+    _errSub?.cancel();
+    final player = _player;
+    _player = null;
+    _video = null;
+    if (player != null) unawaited(player.dispose());
     _web = null;
     unawaited(_saveProgress(force: true));
     unawaited(PhoneOrientation.lockPortrait());
@@ -634,9 +861,321 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     );
   }
 
+  Widget _hidePlayerSpinner(BuildContext _) => const SizedBox.shrink();
+
+  Widget _resumeBackdrop() {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        CinevaNetworkImage(
+          url: widget.posterUrl,
+          fit: BoxFit.cover,
+          alignment: Alignment.topCenter,
+        ),
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0x33000000),
+                Color(0x66000000),
+                Color(0xFF000000),
+              ],
+              stops: [0, 0.38, 0.68],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  ButtonStyle _resumeButtonStyle({
+    required Color background,
+    required Color foreground,
+  }) {
+    return FilledButton.styleFrom(
+      backgroundColor: background,
+      foregroundColor: foreground,
+      minimumSize: const Size.fromHeight(48),
+      padding: EdgeInsets.zero,
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      iconSize: 20,
+      textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    );
+  }
+
+  Widget _resumeContinueButton() {
+    return FilledButton.icon(
+      style: _resumeButtonStyle(
+        background: CinevaColors.accent,
+        foreground: CinevaColors.onAccent,
+      ),
+      onPressed: () => unawaited(_confirmResume(continueWatching: true)),
+      icon: const Icon(Icons.play_arrow_rounded, size: 20),
+      label: const Text('Xem tiếp'),
+    );
+  }
+
+  Widget _resumeRestartButton() {
+    return FilledButton.icon(
+      style: _resumeButtonStyle(
+        background: const Color(0xFF2A2A32),
+        foreground: Colors.white,
+      ),
+      onPressed: () => unawaited(_confirmResume(continueWatching: false)),
+      icon: const Icon(Icons.replay_rounded, size: 20),
+      label: const Text('Xem từ đầu'),
+    );
+  }
+
+  Widget _resumeCountdown(int left, double progress, {required bool compact}) {
+    final label = Text(
+      left > 0 ? 'Tự xem tiếp sau $left giây' : 'Đang mở lại…',
+      style: const TextStyle(color: CinevaColors.mutedSoft, fontSize: 12),
+    );
+    final bar = ClipRRect(
+      borderRadius: BorderRadius.circular(99),
+      child: LinearProgressIndicator(
+        value: progress,
+        minHeight: 2,
+        backgroundColor: Colors.white.withValues(alpha: 0.12),
+        color: CinevaColors.accent,
+      ),
+    );
+    if (compact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          bar,
+          const SizedBox(height: 8),
+          label,
+        ],
+      );
+    }
+    return Row(
+      children: [
+        Expanded(child: bar),
+        const SizedBox(width: 12),
+        label,
+      ],
+    );
+  }
+
+  Widget _resumeCard() {
+    final left = _resumeLeft.clamp(0, 8);
+    final progress = (8 - left) / 8;
+    final episode = _episodeName?.trim();
+    final bottom = MediaQuery.viewPaddingOf(context).bottom;
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 520;
+          final header = compact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'TIẾP TỤC XEM',
+                      style: TextStyle(
+                        color: CinevaColors.accent,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      widget.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        height: 1.2,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    if (episode != null && episode.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        episode,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: CinevaColors.muted,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Text(
+                          _clock(_currentStartSec),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            height: 1,
+                            fontWeight: FontWeight.w800,
+                            fontFeatures: [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        const Text(
+                          'đã xem tới',
+                          style: TextStyle(
+                            color: CinevaColors.muted,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'TIẾP TỤC XEM',
+                            style: TextStyle(
+                              color: CinevaColors.accent,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            widget.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 26,
+                              height: 1.15,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          if (episode != null && episode.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              episode,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: CinevaColors.muted,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 28),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          _clock(_currentStartSec),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
+                            height: 1,
+                            fontWeight: FontWeight.w800,
+                            fontFeatures: [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'đã xem tới',
+                          style: TextStyle(
+                            color: CinevaColors.muted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+          final actions = compact
+              ? Column(
+                  children: [
+                    SizedBox(
+                      height: 48,
+                      width: double.infinity,
+                      child: _resumeContinueButton(),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 48,
+                      width: double.infinity,
+                      child: _resumeRestartButton(),
+                    ),
+                  ],
+                )
+              : SizedBox(
+                  height: 48,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: _resumeContinueButton()),
+                      const SizedBox(width: 12),
+                      Expanded(child: _resumeRestartButton()),
+                    ],
+                  ),
+                );
+          return DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  Colors.black.withValues(alpha: 0.72),
+                  Colors.black,
+                ],
+                stops: const [0, 0.42, 1],
+              ),
+            ),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                compact ? 20 : 32,
+                compact ? 64 : 88,
+                compact ? 20 : 32,
+                (compact ? 16 : 24) + bottom,
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 760),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    header,
+                    const SizedBox(height: 22),
+                    actions,
+                    const SizedBox(height: 14),
+                    _resumeCountdown(left, progress, compact: compact),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final web = _web;
+    final video = _video;
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     final topMask =
         _cinema ? MediaQuery.paddingOf(context).top + 52 : 56.0;
@@ -698,6 +1237,32 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
                     ),
                   ),
                 )
+              else if (_useNative && video != null)
+                Padding(
+                  padding: EdgeInsets.only(
+                    bottom: bottomInset + (showNearEndChip ? 58 : 0),
+                  ),
+                  child: MaterialVideoControlsTheme(
+                    normal: MaterialVideoControlsThemeData(
+                      seekBarPositionColor: CinevaColors.accent,
+                      seekBarThumbColor: CinevaColors.accent,
+                      bufferingIndicatorBuilder:
+                          _askResume ? _hidePlayerSpinner : null,
+                    ),
+                    fullscreen: MaterialVideoControlsThemeData(
+                      seekBarPositionColor: CinevaColors.accent,
+                      seekBarThumbColor: CinevaColors.accent,
+                      bufferingIndicatorBuilder:
+                          _askResume ? _hidePlayerSpinner : null,
+                    ),
+                    child: Video(
+                      controller: video,
+                      fill: Colors.black,
+                      fit: BoxFit.contain,
+                      controls: MaterialVideoControls,
+                    ),
+                  ),
+                )
               else if (web != null)
                 Padding(
                   padding: EdgeInsets.only(
@@ -707,7 +1272,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
                 )
               else
                 const SizedBox.shrink(),
-              if (web != null && _error == null)
+              if (!_useNative && web != null && _error == null)
                 Positioned(
                   top: 0,
                   left: 0,
@@ -717,13 +1282,18 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
                     child: ColoredBox(color: Colors.black),
                   ),
                 ),
-              if (_loading && _error == null)
+              if (_loading && _error == null && !_askResume)
                 const ColoredBox(
                   color: Colors.black,
                   child: Center(
                     child: CircularProgressIndicator(color: CinevaColors.accent),
                   ),
                 ),
+              if (_askResume && _error == null) ...[
+                const Positioned.fill(child: ColoredBox(color: Colors.black)),
+                Positioned.fill(child: _resumeBackdrop()),
+                Positioned.fill(child: _resumeCard()),
+              ],
 
               if (showNearEndChip)
                 Positioned(

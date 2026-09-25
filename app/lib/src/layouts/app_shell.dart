@@ -199,6 +199,7 @@ class _AppShellState extends State<AppShell> {
           'episodeName': ep.name,
           'serverName': server?.serverName,
           'positionSec': item.positionSec,
+          'posterUrl': detail.imageUrl,
         },
       );
     } catch (e) {

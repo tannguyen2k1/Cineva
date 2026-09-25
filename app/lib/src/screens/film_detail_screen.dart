@@ -76,6 +76,7 @@ class _FilmDetailScreenState extends State<FilmDetailScreen> {
         'episodeSlug': ep.slug,
         'episodeName': ep.name,
         'serverName': server?.serverName,
+        'posterUrl': film.imageUrl,
         if (positionSec != null && positionSec > 0) 'positionSec': positionSec,
       },
     );
