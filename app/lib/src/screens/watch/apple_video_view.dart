@@ -49,11 +49,15 @@ class AppleVideoController {
   Future<void> pause() => _channel.invokeMethod('pause');
 
   Future<void> seek(Duration position) {
-    return _channel.invokeMethod('seek', {'positionMs': position.inMilliseconds});
+    return _channel.invokeMethod('seek', {
+      'positionMs': position.inMilliseconds,
+    });
   }
 
   Future<void> setVolume(double volume) {
-    return _channel.invokeMethod('setVolume', {'volume': volume.clamp(0.0, 1.0)});
+    return _channel.invokeMethod('setVolume', {
+      'volume': volume.clamp(0.0, 1.0),
+    });
   }
 
   Future<void> stop() => _channel.invokeMethod('stop');
@@ -115,27 +119,42 @@ class _AppleVideoViewState extends State<AppleVideoView> {
   bool _ready = false;
   bool _holdVolume = false;
   bool _scrubbing = false;
+  bool _chrome = true;
   double _scrubSec = 0;
+  Timer? _chromeTimer;
 
   @override
   void initState() {
     super.initState();
-    _subs.add(widget.controller.position.listen((value) {
-      if (!mounted || _scrubbing) return;
-      setState(() => _position = value);
-    }));
-    _subs.add(widget.controller.duration.listen((value) {
-      if (!mounted) return;
-      setState(() => _duration = value);
-    }));
-    _subs.add(widget.controller.playing.listen((value) {
-      if (!mounted) return;
-      setState(() => _playing = value);
-    }));
-    _subs.add(widget.controller.volumes.listen((value) {
-      if (!mounted || _holdVolume) return;
-      setState(() => _volume = value);
-    }));
+    _subs.add(
+      widget.controller.position.listen((value) {
+        if (!mounted || _scrubbing) return;
+        setState(() => _position = value);
+      }),
+    );
+    _subs.add(
+      widget.controller.duration.listen((value) {
+        if (!mounted) return;
+        setState(() => _duration = value);
+      }),
+    );
+    _subs.add(
+      widget.controller.playing.listen((value) {
+        if (!mounted || value == _playing) return;
+        setState(() => _playing = value);
+        if (value) {
+          _armChromeTimer();
+        } else {
+          _holdChrome();
+        }
+      }),
+    );
+    _subs.add(
+      widget.controller.volumes.listen((value) {
+        if (!mounted || _holdVolume) return;
+        setState(() => _volume = value);
+      }),
+    );
     unawaited(_readLevels());
   }
 
@@ -151,7 +170,9 @@ class _AppleVideoViewState extends State<AppleVideoView> {
 
   Future<void> _setBrightness(double value) async {
     try {
-      await _brightnessApi.setApplicationScreenBrightness(value.clamp(0.0, 1.0));
+      await _brightnessApi.setApplicationScreenBrightness(
+        value.clamp(0.0, 1.0),
+      );
     } catch (_) {}
   }
 
@@ -161,8 +182,35 @@ class _AppleVideoViewState extends State<AppleVideoView> {
     } catch (_) {}
   }
 
+  /// Player state arrives about twice a second. Only a play/pause change may
+  /// arm this timer, otherwise it never reaches the hide deadline.
+  void _armChromeTimer() {
+    _chromeTimer?.cancel();
+    if (!_playing || _scrubbing) return;
+    _chromeTimer = Timer(const Duration(seconds: 3), () {
+      if (!mounted || !_playing || _scrubbing) return;
+      setState(() => _chrome = false);
+    });
+  }
+
+  void _holdChrome() {
+    _chromeTimer?.cancel();
+    if (!_chrome && mounted) setState(() => _chrome = true);
+  }
+
+  void _onVideoTap() {
+    if (_chrome && _playing && !_scrubbing) {
+      _chromeTimer?.cancel();
+      setState(() => _chrome = false);
+      return;
+    }
+    _holdChrome();
+    _armChromeTimer();
+  }
+
   @override
   void dispose() {
+    _chromeTimer?.cancel();
     for (final sub in _subs) {
       unawaited(sub.cancel());
     }
@@ -182,112 +230,127 @@ class _AppleVideoViewState extends State<AppleVideoView> {
           gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{},
           creationParamsCodec: StandardMessageCodec(),
         ),
-        if (_ready)
-          PlaybackGestures(
-            position: () => _position,
-            duration: () => _duration,
-            volume: () => _volume,
-            brightness: () => _brightness,
-            onSeek: (position) {
-              _position = position;
-              unawaited(widget.controller.seek(position));
-            },
-            onVolume: (value) {
-              _holdVolume = true;
-              _volume = value;
-              unawaited(widget.controller.setVolume(value));
-            },
-            onVolumeEnd: () => _holdVolume = false,
-            onBrightness: (value) {
-              _brightness = value;
-              unawaited(_setBrightness(value));
-            },
-            bottomReserve: 84,
-            child: const SizedBox.expand(),
-          ),
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: DecoratedBox(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0x00000000), Color(0xE6000000)],
-              ),
+        Column(
+          children: [
+            Expanded(
+              child: _ready
+                  ? PlaybackGestures(
+                      position: () => _position,
+                      duration: () => _duration,
+                      volume: () => _volume,
+                      brightness: () => _brightness,
+                      onSeek: (position) {
+                        _position = position;
+                        unawaited(widget.controller.seek(position));
+                      },
+                      onVolume: (value) {
+                        _holdVolume = true;
+                        _volume = value;
+                        unawaited(widget.controller.setVolume(value));
+                      },
+                      onVolumeEnd: () => _holdVolume = false,
+                      onBrightness: (value) {
+                        _brightness = value;
+                        unawaited(_setBrightness(value));
+                      },
+                      onTap: _onVideoTap,
+                      child: const SizedBox.expand(),
+                    )
+                  : const SizedBox.expand(),
             ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(4, 18, 8, 8),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () {
-                      if (_playing) {
-                        unawaited(widget.controller.pause());
-                      } else {
-                        unawaited(widget.controller.play());
-                      }
-                    },
-                    icon: Icon(_playing ? Icons.pause : Icons.play_arrow),
-                    color: Colors.white,
-                  ),
-                  Text(
-                    clockLabel(shown.inSeconds),
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                  Expanded(
-                    child: SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        activeTrackColor: CinevaColors.accent,
-                        inactiveTrackColor: const Color(0x55FFFFFF),
-                        thumbColor: CinevaColors.accent,
-                        overlayShape: SliderComponentShape.noOverlay,
-                        trackHeight: 3,
-                      ),
-                      child: Slider(
-                        value: totalSec <= 0
-                            ? 0
-                            : (shown.inMilliseconds / 1000).clamp(0, totalSec).toDouble(),
-                        max: totalSec <= 0 ? 1 : totalSec,
-                        onChanged: totalSec <= 0
-                            ? null
-                            : (value) {
-                                setState(() {
-                                  _scrubbing = true;
-                                  _scrubSec = value;
-                                });
-                              },
-                        onChangeEnd: (value) {
-                          final target = Duration(milliseconds: (value * 1000).round());
-                          setState(() {
-                            _scrubbing = false;
-                            _position = target;
-                          });
-                          unawaited(widget.controller.seek(target));
-                        },
-                      ),
-                    ),
-                  ),
-                  Text(
-                    clockLabel(_duration.inSeconds),
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                  const SizedBox(width: 4),
-                  const SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: UiKitView(
-                      viewType: 'cineva/apple-route',
-                      creationParamsCodec: StandardMessageCodec(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+            if (_chrome) _chromeBar(shown, totalSec),
+          ],
         ),
       ],
+    );
+  }
+
+  Widget _chromeBar(Duration shown, double totalSec) {
+    return SizedBox(
+      height: 52,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0x00000000), Color(0xCC000000)],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.only(right: 4),
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: () {
+                  if (_playing) {
+                    unawaited(widget.controller.pause());
+                  } else {
+                    unawaited(widget.controller.play());
+                  }
+                },
+                icon: Icon(_playing ? Icons.pause : Icons.play_arrow),
+                color: Colors.white,
+              ),
+              Text(
+                clockLabel(shown.inSeconds),
+                style: const TextStyle(color: Colors.white, fontSize: 12),
+              ),
+              Expanded(
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: CinevaColors.accent,
+                    inactiveTrackColor: const Color(0x55FFFFFF),
+                    thumbColor: CinevaColors.accent,
+                    overlayShape: SliderComponentShape.noOverlay,
+                    trackHeight: 3,
+                  ),
+                  child: Slider(
+                    value: totalSec <= 0
+                        ? 0
+                        : (shown.inMilliseconds / 1000)
+                              .clamp(0, totalSec)
+                              .toDouble(),
+                    max: totalSec <= 0 ? 1 : totalSec,
+                    onChanged: totalSec <= 0
+                        ? null
+                        : (value) {
+                            _chromeTimer?.cancel();
+                            setState(() {
+                              _scrubbing = true;
+                              _scrubSec = value;
+                            });
+                          },
+                    onChangeEnd: (value) {
+                      final target = Duration(
+                        milliseconds: (value * 1000).round(),
+                      );
+                      setState(() {
+                        _scrubbing = false;
+                        _position = target;
+                      });
+                      unawaited(widget.controller.seek(target));
+                      _armChromeTimer();
+                    },
+                  ),
+                ),
+              ),
+              Text(
+                clockLabel(_duration.inSeconds),
+                style: const TextStyle(color: Colors.white, fontSize: 12),
+              ),
+              const SizedBox(width: 4),
+              const SizedBox(
+                width: 44,
+                height: 44,
+                child: UiKitView(
+                  viewType: 'cineva/apple-route',
+                  creationParamsCodec: StandardMessageCodec(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

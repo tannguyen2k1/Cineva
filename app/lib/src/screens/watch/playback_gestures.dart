@@ -17,6 +17,7 @@ class PlaybackGestures extends StatefulWidget {
     required this.onVolume,
     required this.onBrightness,
     this.onVolumeEnd,
+    this.onTap,
     this.bottomReserve = 0,
     required this.child,
   });
@@ -29,6 +30,7 @@ class PlaybackGestures extends StatefulWidget {
   final ValueChanged<double> onVolume;
   final ValueChanged<double> onBrightness;
   final VoidCallback? onVolumeEnd;
+  final VoidCallback? onTap;
   final double bottomReserve;
   final Widget child;
 
@@ -71,6 +73,7 @@ class _PlaybackGesturesState extends State<PlaybackGestures> {
             onVerticalDragEnd: (_) => _onSlideEnd(),
             onVerticalDragCancel: _onSlideEnd,
             onDoubleTapDown: _onDoubleTapDown,
+            onTap: widget.onTap,
             child: const SizedBox.expand(),
           ),
         ),
