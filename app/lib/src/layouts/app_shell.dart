@@ -186,10 +186,11 @@ class _AppShellState extends State<AppShell> {
       }
       if (!mounted) return;
       if (ep == null || (ep.embed.isEmpty && ep.playUrl.isEmpty)) {
-        context.push('/phim/${item.slug}');
+        await context.push('/phim/${item.slug}');
+        if (mounted) unawaited(_reloadContinue());
         return;
       }
-      context.push(
+      await context.push(
         '/xem/${item.slug}',
         extra: {
           'title': detail.name,
@@ -202,6 +203,7 @@ class _AppShellState extends State<AppShell> {
           'posterUrl': detail.imageUrl,
         },
       );
+      if (mounted) unawaited(_reloadContinue());
     } catch (e) {
       if (!mounted) return;
       showCinevaToast(context, 'Không mở được tập: $e', error: true);
@@ -459,7 +461,12 @@ class _AppShellState extends State<AppShell> {
                 future: _continueFuture,
                 onLogin: () => context.push('/login'),
                 onRefresh: () async => _reloadContinue(),
-                onOpenDetail: (item) => context.push('/phim/${item.slug}'),
+                onOpenDetail: (item) {
+                  unawaited(() async {
+                    await context.push('/phim/${item.slug}');
+                    if (mounted) unawaited(_reloadContinue());
+                  }());
+                },
                 onPlay: _openContinue,
               ),
             },

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
@@ -15,9 +14,13 @@ import '../models/models.dart';
 import '../services/api_client.dart';
 import '../state/auth_state.dart';
 import '../theme/cineva_theme.dart';
-import '../widgets/cineva_network_image.dart';
 import '../utils/phone_orientation.dart';
 import '../widgets/left_edge_swipe_back.dart';
+import 'watch/embed_scripts.dart';
+import 'watch/episode_chrome.dart';
+import 'watch/hls_source.dart';
+import 'watch/native_video_view.dart';
+import 'watch/resume_overlay.dart';
 
 /// Phim thường phát HLS native. 18+ vẫn mở trang embed trong WebView.
 /// Rotation unlocked on this screen; rest of app stays portrait-locked.
@@ -50,13 +53,6 @@ class WatchScreen extends StatefulWidget {
 }
 
 class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
-  static const _resumeAskSec = 30;
-  static const _hlsHeaders = {
-    'Referer': 'https://player.phimapi.com/',
-    'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-  };
-
   WebViewController? _web;
   Player? _player;
   VideoController? _video;
@@ -95,110 +91,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
   EpisodeItem? _nextEpisode;
   String? _nextServerName;
 
-  /// JS to pre-seed PhimAPI localStorage so the native resume modal appears.
-  /// Key format: `rz_${btoa(unescape(encodeURIComponent(url)))}_progress`
-  String _seedLocalStorageJs(String videoUrl, int startSec) {
-    if (startSec <= 0) return '';
-    return '''
-(function(){
-  try {
-    var key = 'rz_' + btoa(unescape(encodeURIComponent('$videoUrl'))) + '_progress';
-    localStorage.setItem(key, '$startSec');
-  } catch(e){}
-})();
-''';
-  }
-
-  String _bootJs(int startSec) {
-    return '''
-(function(){
-  try {
-    var ld=document.getElementById('loading');
-    if(ld) ld.classList.add('hide');
-    var v=document.querySelector('video');
-    if(v){ v.setAttribute('playsinline',''); }
-
-    var start = $startSec;
-
-    if (start > 0) {
-      // After user clicks play / resume, verify seek position is correct
-      var hasSeeked = false;
-      var checkIntv = setInterval(function(){
-        if (hasSeeked) { clearInterval(checkIntv); return; }
-        try {
-          if (window.jwplayer && typeof jwplayer === 'function') {
-            var p = jwplayer();
-            if (p && p.getPosition && p.getDuration && p.getDuration() > 0) {
-              if (Math.abs(p.getPosition() - start) < 3) {
-                hasSeeked = true;
-              } else if (p.getPosition() > 1) {
-                p.seek(start);
-                hasSeeked = true;
-              }
-            }
-          } else {
-            var vid = document.querySelector('video');
-            if (vid && vid.duration > 0 && vid.currentTime > 0.5) {
-              if (Math.abs(vid.currentTime - start) > 3) {
-                vid.currentTime = start;
-              }
-              hasSeeked = true;
-            }
-          }
-        } catch(e){}
-      }, 500);
-      setTimeout(function(){ clearInterval(checkIntv); }, 15000);
-    }
-  } catch(e){}
-})();
-''';
-  }
-
-  String _safeAreaJs(double bottomPx) {
-    final pad = bottomPx.ceil().clamp(0, 72);
-    return '''
-(function(){
-  try {
-    var c=document.querySelector('.jw-wrapper,.jwplayer,video');
-    if(c) c.style.paddingBottom='${pad}px';
-  } catch(e){}
-})();
-''';
-  }
-
-  Uri? _uriFor({required String playUrl, String? embedUrl}) {
-    final embed = embedUrl?.trim() ?? '';
-    if (embed.isNotEmpty) return Uri.tryParse(embed);
-    final play = playUrl.trim();
-    if (play.isEmpty) return null;
-    if (play.contains('.m3u8')) {
-      return Uri.parse(
-        'https://player.phimapi.com/player/?url=${Uri.encodeComponent(play)}',
-      );
-    }
-    return Uri.tryParse(play);
-  }
-
-  /// Direct HLS for the normal catalog. 18+ embed pages return null.
-  String? _directHls(String playUrl, String? embedUrl) {
-    final play = playUrl.trim();
-    if (play.contains('.m3u8')) return play;
-    final nested = Uri.tryParse(embedUrl?.trim() ?? '')?.queryParameters['url'];
-    if (nested != null && nested.contains('.m3u8')) return nested;
-    return null;
-  }
-
   bool get _useNative => _hlsUrl != null;
-
-  String _clock(int sec) {
-    final h = sec ~/ 3600;
-    final m = (sec % 3600) ~/ 60;
-    final s = sec % 60;
-    final mm = m.toString().padLeft(2, '0');
-    final ss = s.toString().padLeft(2, '0');
-    if (h > 0) return '$h:$mm:$ss';
-    return '$m:$ss';
-  }
 
   void _bindNative(Player player) {
     _posSub = player.stream.position.listen((pos) {
@@ -284,7 +177,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
   Future<void> _openNative(String url, {required int resumeSec}) async {
     final player = _player;
     if (player == null) return;
-    final ask = resumeSec >= _resumeAskSec;
+    final ask = resumeSec >= resumeAskSec;
     _position = Duration.zero;
     _mediaDuration = Duration.zero;
     _cancelResumeTimer();
@@ -299,7 +192,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
       });
     }
     await player.open(
-      Media(url, httpHeaders: _hlsHeaders),
+      Media(url, httpHeaders: hlsHeaders),
       play: !ask,
     );
     _loadingTimeout?.cancel();
@@ -334,13 +227,6 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
         });
       }
     }
-  }
-
-  String _epLabel(EpisodeItem ep) {
-    final raw = ep.name.trim();
-    if (raw.isEmpty) return 'tập tiếp';
-    if (RegExp(r'^\d+$').hasMatch(raw)) return 'Tập $raw';
-    return raw;
   }
 
   void _resolveNext() {
@@ -441,13 +327,13 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     _api ??= context.read<ApiClient>();
     _loggedIn = context.read<AuthState>().isLoggedIn;
 
-    _hlsUrl = _directHls(_playUrl, _embedUrl);
+    _hlsUrl = directHls(_playUrl, _embedUrl);
     if (_useNative) {
       await _initNative();
       return;
     }
 
-    final uri = _uriFor(playUrl: _playUrl, embedUrl: _embedUrl);
+    final uri = embedUri(playUrl: _playUrl, embedUrl: _embedUrl);
     if (uri == null) {
       setState(() {
         _error = 'Không có link phát';
@@ -476,7 +362,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
               unawaited((() async {
                 try {
                   await controller.runJavaScript(
-                    _seedLocalStorageJs(rawVideoUrl, _currentStartSec),
+                    seedLocalStorageJs(rawVideoUrl, _currentStartSec),
                   );
                 } catch (_) {}
               })());
@@ -487,7 +373,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
             if (!mounted) return;
             final bottom = MediaQuery.viewPaddingOf(context).bottom +
                 (_nextEpisode != null ? 56.0 : 0);
-            final js = '${_bootJs(_currentStartSec)}${_safeAreaJs(bottom)}';
+            final js = '${bootJs(_currentStartSec)}${safeAreaJs(bottom)}';
             unawaited((() async {
               try {
                 if (!mounted) return;
@@ -548,7 +434,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
       _resolveNext();
     });
 
-    _hlsUrl = _directHls(_playUrl, _embedUrl);
+    _hlsUrl = directHls(_playUrl, _embedUrl);
     if (_useNative) {
       final url = _hlsUrl;
       if (url == null) return;
@@ -567,7 +453,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     }
 
     final web = _web;
-    final uri = _uriFor(playUrl: _playUrl, embedUrl: _embedUrl);
+    final uri = embedUri(playUrl: _playUrl, embedUrl: _embedUrl);
     if (web == null || uri == null) {
       await _initPlayer();
       return;
@@ -716,31 +602,6 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     } catch (_) {}
   }
 
-  static const _stopPlaybackJs = r'''
-(function(){
-  try {
-    document.querySelectorAll('video,audio').forEach(function(m){
-      try {
-        m.pause();
-        m.muted = true;
-        m.removeAttribute('src');
-        while (m.firstChild) m.removeChild(m.firstChild);
-        m.load();
-      } catch (e) {}
-    });
-    try {
-      if (window.jwplayer) {
-        var p = jwplayer();
-        if (p) {
-          if (p.pause) p.pause(true);
-          if (p.stop) p.stop();
-          if (p.remove) p.remove();
-        }
-      }
-    } catch (e) {}
-  } catch (e) {}
-})();
-''';
 
   bool _stopping = false;
 
@@ -757,7 +618,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     final web = _web;
     if (web != null) {
       try {
-        await web.runJavaScript(_stopPlaybackJs);
+        await web.runJavaScript(stopPlaybackJs);
       } catch (_) {}
       try {
         await web.loadRequest(Uri.parse('about:blank'));
@@ -800,377 +661,6 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  Widget _nextBar({required bool prominent}) {
-    final next = _nextEpisode;
-    if (next == null) return const SizedBox.shrink();
-    final label = _epLabel(next);
-    final countdown =
-        prominent && _autoNextSec > 0 ? ' (${_autoNextSec}s)' : '';
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          _cancelAutoNext();
-          unawaited(_playNext());
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Ink(
-          decoration: BoxDecoration(
-            color: prominent
-                ? CinevaColors.accent
-                : Colors.black.withValues(alpha: 0.78),
-            borderRadius: BorderRadius.circular(12),
-            border: prominent
-                ? null
-                : Border.all(
-                    color: CinevaColors.accent.withValues(alpha: 0.55),
-                  ),
-          ),
-          padding: EdgeInsets.symmetric(
-            horizontal: prominent ? 18 : 14,
-            vertical: prominent ? 14 : 10,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.skip_next_rounded,
-                color: prominent ? CinevaColors.onAccent : CinevaColors.accent,
-                size: prominent ? 26 : 22,
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  prominent
-                      ? 'Tập tiếp theo · $label$countdown'
-                      : 'Tập tiếp · $label',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color:
-                        prominent ? CinevaColors.onAccent : CinevaColors.accent,
-                    fontWeight: FontWeight.w700,
-                    fontSize: prominent ? 15 : 13,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _hidePlayerSpinner(BuildContext _) => const SizedBox.shrink();
-
-  Widget _resumeBackdrop() {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        CinevaNetworkImage(
-          url: widget.posterUrl,
-          fit: BoxFit.cover,
-          alignment: Alignment.topCenter,
-        ),
-        const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0x33000000),
-                Color(0x66000000),
-                Color(0xFF000000),
-              ],
-              stops: [0, 0.38, 0.68],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  ButtonStyle _resumeButtonStyle({
-    required Color background,
-    required Color foreground,
-  }) {
-    return FilledButton.styleFrom(
-      backgroundColor: background,
-      foregroundColor: foreground,
-      minimumSize: const Size.fromHeight(48),
-      padding: EdgeInsets.zero,
-      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      iconSize: 20,
-      textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    );
-  }
-
-  Widget _resumeContinueButton() {
-    return FilledButton.icon(
-      style: _resumeButtonStyle(
-        background: CinevaColors.accent,
-        foreground: CinevaColors.onAccent,
-      ),
-      onPressed: () => unawaited(_confirmResume(continueWatching: true)),
-      icon: const Icon(Icons.play_arrow_rounded, size: 20),
-      label: const Text('Xem tiếp'),
-    );
-  }
-
-  Widget _resumeRestartButton() {
-    return FilledButton.icon(
-      style: _resumeButtonStyle(
-        background: const Color(0xFF2A2A32),
-        foreground: Colors.white,
-      ),
-      onPressed: () => unawaited(_confirmResume(continueWatching: false)),
-      icon: const Icon(Icons.replay_rounded, size: 20),
-      label: const Text('Xem từ đầu'),
-    );
-  }
-
-  Widget _resumeCountdown(int left, double progress, {required bool compact}) {
-    final label = Text(
-      left > 0 ? 'Tự xem tiếp sau $left giây' : 'Đang mở lại…',
-      style: const TextStyle(color: CinevaColors.mutedSoft, fontSize: 12),
-    );
-    final bar = ClipRRect(
-      borderRadius: BorderRadius.circular(99),
-      child: LinearProgressIndicator(
-        value: progress,
-        minHeight: 2,
-        backgroundColor: Colors.white.withValues(alpha: 0.12),
-        color: CinevaColors.accent,
-      ),
-    );
-    if (compact) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          bar,
-          const SizedBox(height: 8),
-          label,
-        ],
-      );
-    }
-    return Row(
-      children: [
-        Expanded(child: bar),
-        const SizedBox(width: 12),
-        label,
-      ],
-    );
-  }
-
-  Widget _resumeCard() {
-    final left = _resumeLeft.clamp(0, 8);
-    final progress = (8 - left) / 8;
-    final episode = _episodeName?.trim();
-    final bottom = MediaQuery.viewPaddingOf(context).bottom;
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxWidth < 520;
-          final header = compact
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'TIẾP TỤC XEM',
-                      style: TextStyle(
-                        color: CinevaColors.accent,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        height: 1.2,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    if (episode != null && episode.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        episode,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: CinevaColors.muted,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Text(
-                          _clock(_currentStartSec),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            height: 1,
-                            fontWeight: FontWeight.w800,
-                            fontFeatures: [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        const Text(
-                          'đã xem tới',
-                          style: TextStyle(
-                            color: CinevaColors.muted,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                )
-              : Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'TIẾP TỤC XEM',
-                            style: TextStyle(
-                              color: CinevaColors.accent,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.4,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            widget.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 26,
-                              height: 1.15,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          if (episode != null && episode.isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              episode,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: CinevaColors.muted,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 28),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          _clock(_currentStartSec),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 32,
-                            height: 1,
-                            fontWeight: FontWeight.w800,
-                            fontFeatures: [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'đã xem tới',
-                          style: TextStyle(
-                            color: CinevaColors.muted,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                );
-          final actions = compact
-              ? Column(
-                  children: [
-                    SizedBox(
-                      height: 48,
-                      width: double.infinity,
-                      child: _resumeContinueButton(),
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      height: 48,
-                      width: double.infinity,
-                      child: _resumeRestartButton(),
-                    ),
-                  ],
-                )
-              : SizedBox(
-                  height: 48,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(child: _resumeContinueButton()),
-                      const SizedBox(width: 12),
-                      Expanded(child: _resumeRestartButton()),
-                    ],
-                  ),
-                );
-          return DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.transparent,
-                  Colors.black.withValues(alpha: 0.72),
-                  Colors.black,
-                ],
-                stops: const [0, 0.42, 1],
-              ),
-            ),
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                compact ? 20 : 32,
-                compact ? 64 : 88,
-                compact ? 20 : 32,
-                (compact ? 16 : 24) + bottom,
-              ),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 760),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    header,
-                    const SizedBox(height: 22),
-                    actions,
-                    const SizedBox(height: 14),
-                    _resumeCountdown(left, progress, compact: compact),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -1238,30 +728,10 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
                   ),
                 )
               else if (_useNative && video != null)
-                Padding(
-                  padding: EdgeInsets.only(
-                    bottom: bottomInset + (showNearEndChip ? 58 : 0),
-                  ),
-                  child: MaterialVideoControlsTheme(
-                    normal: MaterialVideoControlsThemeData(
-                      seekBarPositionColor: CinevaColors.accent,
-                      seekBarThumbColor: CinevaColors.accent,
-                      bufferingIndicatorBuilder:
-                          _askResume ? _hidePlayerSpinner : null,
-                    ),
-                    fullscreen: MaterialVideoControlsThemeData(
-                      seekBarPositionColor: CinevaColors.accent,
-                      seekBarThumbColor: CinevaColors.accent,
-                      bufferingIndicatorBuilder:
-                          _askResume ? _hidePlayerSpinner : null,
-                    ),
-                    child: Video(
-                      controller: video,
-                      fill: Colors.black,
-                      fit: BoxFit.contain,
-                      controls: MaterialVideoControls,
-                    ),
-                  ),
+                NativeVideoView(
+                  controller: video,
+                  bottomPadding: bottomInset + (showNearEndChip ? 58 : 0),
+                  hideBuffering: _askResume,
                 )
               else if (web != null)
                 Padding(
@@ -1291,10 +761,22 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
                 ),
               if (_askResume && _error == null) ...[
                 const Positioned.fill(child: ColoredBox(color: Colors.black)),
-                Positioned.fill(child: _resumeBackdrop()),
-                Positioned.fill(child: _resumeCard()),
+                Positioned.fill(
+                  child: ResumeBackdrop(posterUrl: widget.posterUrl),
+                ),
+                Positioned.fill(
+                  child: ResumeOverlay(
+                    title: widget.title,
+                    episodeName: _episodeName,
+                    positionSec: _currentStartSec,
+                    secondsLeft: _resumeLeft,
+                    onContinue: () =>
+                        unawaited(_confirmResume(continueWatching: true)),
+                    onRestart: () =>
+                        unawaited(_confirmResume(continueWatching: false)),
+                  ),
+                ),
               ],
-
               if (showNearEndChip)
                 Positioned(
                   left: 12,
@@ -1302,58 +784,32 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
                   bottom: bottomInset + 10,
                   child: Align(
                     alignment: Alignment.centerRight,
-                    child: _nextBar(prominent: false),
+                    child: NextEpisodeBar(
+                      label: episodeLabel(_nextEpisode!),
+                      prominent: false,
+                      onTap: () {
+                        _cancelAutoNext();
+                        unawaited(_playNext());
+                      },
+                    ),
                   ),
                 ),
               if (showEndedOverlay)
                 Positioned.fill(
-                  child: ColoredBox(
-                    color: Colors.black.withValues(alpha: 0.78),
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              'Hết tập',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _autoNextSec > 0
-                                  ? 'Tự phát tập tiếp sau $_autoNextSec giây'
-                                  : 'Sẵn sàng xem tập tiếp theo',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: CinevaColors.muted,
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            _nextBar(prominent: true),
-                            const SizedBox(height: 12),
-                            TextButton(
-                              onPressed: () {
-                                _cancelAutoNext();
-                                setState(() {
-                                  _ended = false;
-                                  _nearEnd = false;
-                                });
-                              },
-                              child: const Text(
-                                'Hủy',
-                                style: TextStyle(color: CinevaColors.muted),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                  child: EndedEpisodeOverlay(
+                    countdownSec: _autoNextSec,
+                    label: episodeLabel(_nextEpisode!),
+                    onPlayNext: () {
+                      _cancelAutoNext();
+                      unawaited(_playNext());
+                    },
+                    onCancel: () {
+                      _cancelAutoNext();
+                      setState(() {
+                        _ended = false;
+                        _nearEnd = false;
+                      });
+                    },
                   ),
                 ),
             ],
