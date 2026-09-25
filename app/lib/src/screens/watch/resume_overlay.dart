@@ -59,7 +59,6 @@ class ResumeOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final left = secondsLeft.clamp(0, 8);
-    final progress = (8 - left) / 8;
     final episode = episodeName?.trim();
     final bottom = MediaQuery.viewPaddingOf(context).bottom;
     return Align(
@@ -108,7 +107,6 @@ class ResumeOverlay extends StatelessWidget {
                     const SizedBox(height: 14),
                     _ResumeCountdown(
                       left: left,
-                      progress: progress,
                       compact: compact,
                     ),
                   ],
@@ -308,33 +306,62 @@ class _ResumeActions extends StatelessWidget {
   }
 }
 
-class _ResumeCountdown extends StatelessWidget {
+class _ResumeCountdown extends StatefulWidget {
   const _ResumeCountdown({
     required this.left,
-    required this.progress,
     required this.compact,
   });
 
   final int left;
-  final double progress;
   final bool compact;
 
   @override
+  State<_ResumeCountdown> createState() => _ResumeCountdownState();
+}
+
+class _ResumeCountdownState extends State<_ResumeCountdown>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _fill;
+
+  @override
+  void initState() {
+    super.initState();
+    _fill = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 8),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _fill.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final left = widget.left;
     final label = Text(
       left > 0 ? 'Tự xem tiếp sau $left giây' : 'Đang mở lại…',
       style: const TextStyle(color: CinevaColors.mutedSoft, fontSize: 12),
     );
-    final bar = ClipRRect(
-      borderRadius: BorderRadius.circular(99),
-      child: LinearProgressIndicator(
-        value: progress,
-        minHeight: 2,
-        backgroundColor: Colors.white.withValues(alpha: 0.12),
-        color: CinevaColors.accent,
-      ),
+    final bar = AnimatedBuilder(
+      animation: _fill,
+      builder: (context, _) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(99),
+          child: LinearProgressIndicator(
+            value: _fill.value,
+            minHeight: 2,
+            backgroundColor: Colors.white.withValues(alpha: 0.12),
+            color: CinevaColors.accent,
+            trackGap: 0,
+            stopIndicatorRadius: 0,
+          ),
+        );
+      },
     );
-    if (compact) {
+    if (widget.compact) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
