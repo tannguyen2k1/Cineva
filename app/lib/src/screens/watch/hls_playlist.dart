@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
@@ -7,16 +8,50 @@ import 'hls_source.dart';
 /// Downloads the episode playlist and drops spliced ad segments that sit
 /// outside the episode's own HLS folder (`3500kb/hls/…`).
 ///
-/// Returns a local playlist path. Throws if the source cannot be read, so
-/// the player can fall back to the original URL.
+/// iOS receives an `http://127.0.0.1` URL. AVPlayer rejects a `file://`
+/// playlist whose segments stay on the CDN. Other platforms get a temp file.
+/// Throws if the source cannot be read, so the player can fall back to the
+/// original URL.
 Future<String> prepareHlsPlayback(String url) async {
   final media = await _loadMediaPlaylist(Uri.parse(url));
   final filtered = _stripOutsideSegments(media.playlistUrl, media.body);
+  if (Platform.isIOS) return _iosPlaylistHost.publish(filtered);
   final file = File(
     '${Directory.systemTemp.path}${Platform.pathSeparator}cineva-playback.m3u8',
   );
   await file.writeAsString(filtered);
   return file.path;
+}
+
+final _iosPlaylistHost = _LocalPlaylistHost();
+
+/// Serves the latest rewritten playlist so AVPlayer can load it over HTTP.
+class _LocalPlaylistHost {
+  HttpServer? _server;
+  String _body = '';
+  var _listening = false;
+
+  Future<String> publish(String playlist) async {
+    _body = playlist;
+    final server = _server ??= await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    if (!_listening) {
+      _listening = true;
+      server.listen((request) async {
+        final response = request.response;
+        final bytes = utf8.encode(_body);
+        response.statusCode = HttpStatus.ok;
+        response.headers.set(
+          HttpHeaders.contentTypeHeader,
+          'application/vnd.apple.mpegurl',
+        );
+        response.headers.set(HttpHeaders.cacheControlHeader, 'no-store');
+        response.contentLength = bytes.length;
+        response.add(bytes);
+        await response.close();
+      });
+    }
+    return 'http://127.0.0.1:${server.port}/cineva-playback.m3u8';
+  }
 }
 
 class _LoadedPlaylist {

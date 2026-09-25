@@ -181,7 +181,10 @@ final class AppleSession: NSObject {
     let item = AVPlayerItem(asset: asset)
     statusObserver = item.observe(\.status, options: [.new]) { [weak self] item, _ in
       if item.status == .failed {
-        self?.publish(error: item.error?.localizedDescription ?? "Không phát được phim")
+        self?.publish(
+          completed: false,
+          error: item.error?.localizedDescription ?? "Không phát được phim"
+        )
       } else if item.status == .readyToPlay {
         self?.publish(completed: false)
       }
