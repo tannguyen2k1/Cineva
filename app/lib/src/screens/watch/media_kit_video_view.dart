@@ -5,11 +5,12 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 
 import '../../theme/cineva_theme.dart';
+import 'playback_gestures.dart';
 
 Widget hidePlayerSpinner(BuildContext _) => const SizedBox.shrink();
 
-class NativeVideoView extends StatefulWidget {
-  const NativeVideoView({
+class MediaKitVideoView extends StatefulWidget {
+  const MediaKitVideoView({
     super.key,
     required this.controller,
     required this.bottomPadding,
@@ -21,10 +22,10 @@ class NativeVideoView extends StatefulWidget {
   final bool hideBuffering;
 
   @override
-  State<NativeVideoView> createState() => _NativeVideoViewState();
+  State<MediaKitVideoView> createState() => _MediaKitVideoViewState();
 }
 
-class _NativeVideoViewState extends State<NativeVideoView> {
+class _MediaKitVideoViewState extends State<MediaKitVideoView> {
   final _brightness = ScreenBrightness();
   double _level = 1;
   bool _ready = false;
@@ -58,10 +59,15 @@ class _NativeVideoViewState extends State<NativeVideoView> {
   }
 
   @override
+  void dispose() {
+    unawaited(_resetBrightness());
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     if (!_ready) return const SizedBox.expand();
-    final volume =
-        (widget.controller.player.state.volume / 100).clamp(0.0, 1.0);
+    final player = widget.controller.player;
     final theme = MaterialVideoControlsThemeData(
       seekBarPositionColor: CinevaColors.accent,
       seekBarThumbColor: CinevaColors.accent,
@@ -71,36 +77,40 @@ class _NativeVideoViewState extends State<NativeVideoView> {
         right: 8,
         bottom: 16,
       ),
-      seekGesture: true,
-      seekOnDoubleTap: true,
-      seekOnDoubleTapEnabledWhileControlsVisible: true,
-      gesturesEnabledWhileControlsVisible: true,
-      volumeGesture: true,
-      initialVolume: volume,
-      onVolumeChanged: (value) {
-        widget.controller.player.setVolume(value * 100);
-      },
-      brightnessGesture: true,
-      initialBrightness: _level,
-      onBrightnessChanged: (value) {
-        unawaited(_setBrightness(value));
-      },
-      onBrightnessReset: () {
-        unawaited(_resetBrightness());
-      },
+      seekGesture: false,
+      seekOnDoubleTap: false,
+      volumeGesture: false,
+      brightnessGesture: false,
       bufferingIndicatorBuilder:
           widget.hideBuffering ? hidePlayerSpinner : null,
     );
     return Padding(
       padding: EdgeInsets.only(bottom: widget.bottomPadding),
-      child: MaterialVideoControlsTheme(
-        normal: theme,
-        fullscreen: theme,
-        child: Video(
-          controller: widget.controller,
-          fill: Colors.black,
-          fit: BoxFit.contain,
-          controls: MaterialVideoControls,
+      child: PlaybackGestures(
+        position: () => player.state.position,
+        duration: () => player.state.duration,
+        volume: () => (player.state.volume / 100).clamp(0.0, 1.0),
+        brightness: () => _level,
+        onSeek: (position) {
+          unawaited(player.seek(position));
+        },
+        onVolume: (value) {
+          unawaited(player.setVolume(value * 100));
+        },
+        onBrightness: (value) {
+          _level = value;
+          unawaited(_setBrightness(value));
+        },
+        bottomReserve: 96,
+        child: MaterialVideoControlsTheme(
+          normal: theme,
+          fullscreen: theme,
+          child: Video(
+            controller: widget.controller,
+            fill: Colors.black,
+            fit: BoxFit.contain,
+            controls: MaterialVideoControls,
+          ),
         ),
       ),
     );

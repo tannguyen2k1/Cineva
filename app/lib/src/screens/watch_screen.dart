@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
@@ -18,8 +19,9 @@ import '../utils/phone_orientation.dart';
 import 'watch/embed_scripts.dart';
 import 'watch/episode_chrome.dart';
 import 'watch/hls_playlist.dart';
+import 'watch/apple_video_view.dart';
 import 'watch/hls_source.dart';
-import 'watch/native_video_view.dart';
+import 'watch/media_kit_video_view.dart';
 import 'watch/resume_overlay.dart';
 
 /// Phim thường phát HLS native. 18+ vẫn mở trang embed trong WebView.
@@ -56,6 +58,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
   WebViewController? _web;
   Player? _player;
   VideoController? _video;
+  AppleVideoController? _ios;
   StreamSubscription<Duration>? _posSub;
   StreamSubscription<Duration>? _durSub;
   StreamSubscription<bool>? _doneSub;
@@ -152,21 +155,56 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     });
   }
 
+  void _bindIos(AppleVideoController player) {
+    _posSub = player.position.listen((pos) {
+      _position = pos;
+      _notePlayback();
+    });
+    _durSub = player.duration.listen((dur) {
+      _mediaDuration = dur;
+      if (dur > Duration.zero && _loading && mounted && !_askResume) {
+        setState(() => _loading = false);
+      }
+    });
+    _doneSub = player.completed.listen((done) {
+      if (!done || !mounted || _askResume || _ended) return;
+      setState(() => _ended = true);
+      if (_nextEpisode != null) _startAutoNextCountdown();
+    });
+    _errSub = player.errors.listen((msg) {
+      if (!mounted || msg.isEmpty || _mediaDuration > Duration.zero) return;
+      setState(() {
+        _error = 'Không phát được phim';
+        _loading = false;
+      });
+    });
+  }
+
   Future<void> _seekWhenReady(int sec) async {
     if (sec <= 0) return;
-    final player = _player;
-    if (player == null) return;
     for (var i = 0; i < 20; i++) {
       if (_mediaDuration > Duration.zero) break;
       await Future<void>.delayed(const Duration(milliseconds: 150));
     }
-    await player.seek(Duration(seconds: sec));
+    final ios = _ios;
+    if (ios != null) {
+      await ios.seek(Duration(seconds: sec));
+      return;
+    }
+    await _player?.seek(Duration(seconds: sec));
   }
 
   Future<void> _confirmResume({required bool continueWatching}) async {
     _cancelResumeTimer();
     final sec = continueWatching ? _currentStartSec : 0;
     if (mounted) setState(() => _askResume = false);
+    final ios = _ios;
+    if (ios != null) {
+      if (sec > 0) await _seekWhenReady(sec);
+      await ios.play();
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
     final player = _player;
     if (player == null) return;
     if (sec > 0) await _seekWhenReady(sec);
@@ -175,8 +213,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _openNative(String url, {required int resumeSec}) async {
-    final player = _player;
-    if (player == null) return;
+    if (_ios == null && _player == null) return;
     final ask = resumeSec >= resumeAskSec;
     _position = Duration.zero;
     _mediaDuration = Duration.zero;
@@ -195,10 +232,15 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     try {
       source = await prepareHlsPlayback(url);
     } catch (_) {}
-    await player.open(
-      Media(source, httpHeaders: hlsHeaders),
-      play: !ask,
-    );
+    final ios = _ios;
+    if (ios != null) {
+      await ios.open(url: source, headers: hlsHeaders, play: !ask);
+    } else {
+      await _player?.open(
+        Media(source, httpHeaders: hlsHeaders),
+        play: !ask,
+      );
+    }
     _loadingTimeout?.cancel();
     if (!ask) {
       _loadingTimeout = Timer(const Duration(seconds: 14), () {
@@ -206,7 +248,11 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
       });
     }
     if (ask) {
-      await player.pause();
+      if (ios != null) {
+        await ios.pause();
+      } else {
+        await _player?.pause();
+      }
       if (mounted) _startResumeCountdown();
       return;
     }
@@ -216,9 +262,15 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
   Future<void> _initNative() async {
     final url = _hlsUrl;
     if (url == null) return;
-    _player ??= Player();
-    _video ??= VideoController(_player!);
-    if (_posSub == null) _bindNative(_player!);
+    if (Platform.isIOS) {
+      _ios ??= AppleVideoController();
+      if (mounted) setState(() {});
+      if (_posSub == null) _bindIos(_ios!);
+    } else {
+      _player ??= Player();
+      _video ??= VideoController(_player!);
+      if (_posSub == null) _bindNative(_player!);
+    }
     try {
       await _openNative(url, resumeSec: _currentStartSec);
       _startProgressLoop();
@@ -615,6 +667,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     _cancelResumeTimer();
     if (_useNative) {
       try {
+        await _ios?.pause();
         await _player?.pause();
       } catch (_) {}
       return;
@@ -659,6 +712,9 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     _player = null;
     _video = null;
     if (player != null) unawaited(player.dispose());
+    final ios = _ios;
+    _ios = null;
+    ios?.close();
     _web = null;
     unawaited(_saveProgress(force: true));
     unawaited(PhoneOrientation.lockPortrait());
@@ -670,6 +726,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final web = _web;
     final video = _video;
+    final ios = _ios;
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     final topMask =
         _cinema ? MediaQuery.paddingOf(context).top + 52 : 56.0;
@@ -723,8 +780,15 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
                     ),
                   ),
                 )
+              else if (_useNative && ios != null)
+                Padding(
+                  padding: EdgeInsets.only(
+                    bottom: bottomInset + (showNearEndChip ? 58 : 0),
+                  ),
+                  child: AppleVideoView(controller: ios),
+                )
               else if (_useNative && video != null)
-                NativeVideoView(
+                MediaKitVideoView(
                   controller: video,
                   bottomPadding: bottomInset + (showNearEndChip ? 58 : 0),
                   hideBuffering: _askResume,
