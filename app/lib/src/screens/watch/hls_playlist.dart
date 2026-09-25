@@ -1,0 +1,115 @@
+import 'dart:io';
+
+import 'package:http/http.dart' as http;
+
+import 'hls_source.dart';
+
+/// Downloads the episode playlist and drops spliced ad segments that sit
+/// outside the episode's own HLS folder (`3500kb/hls/…`).
+///
+/// Returns a local playlist path. Throws if the source cannot be read, so
+/// the player can fall back to the original URL.
+Future<String> prepareHlsPlayback(String url) async {
+  final media = await _loadMediaPlaylist(Uri.parse(url));
+  final filtered = _stripOutsideSegments(media.playlistUrl, media.body);
+  final file = File(
+    '${Directory.systemTemp.path}${Platform.pathSeparator}cineva-playback.m3u8',
+  );
+  await file.writeAsString(filtered);
+  return file.path;
+}
+
+class _LoadedPlaylist {
+  const _LoadedPlaylist(this.playlistUrl, this.body);
+  final Uri playlistUrl;
+  final String body;
+}
+
+Future<_LoadedPlaylist> _loadMediaPlaylist(Uri url) async {
+  final first = await _fetch(url);
+  final variant = _variantUri(url, first);
+  if (variant == null) return _LoadedPlaylist(url, first);
+  final body = await _fetch(variant);
+  return _LoadedPlaylist(variant, body);
+}
+
+Future<String> _fetch(Uri url) async {
+  final response = await http
+      .get(url, headers: hlsHeaders)
+      .timeout(const Duration(seconds: 12));
+  if (response.statusCode != 200 || !response.body.contains('#EXTM3U')) {
+    throw StateError('Playlist không đọc được');
+  }
+  return response.body;
+}
+
+/// First media playlist linked from a master playlist, if this body is one.
+Uri? _variantUri(Uri playlistUrl, String body) {
+  final lines = body.split(RegExp(r'\r?\n'));
+  for (var i = 0; i < lines.length; i++) {
+    if (!lines[i].startsWith('#EXT-X-STREAM-INF')) continue;
+    for (var j = i + 1; j < lines.length; j++) {
+      final line = lines[j].trim();
+      if (line.isEmpty) continue;
+      if (line.startsWith('#')) break;
+      return playlistUrl.resolve(line);
+    }
+  }
+  return null;
+}
+
+const _segmentTags = {
+  '#EXTINF',
+  '#EXT-X-BYTERANGE',
+  '#EXT-X-DISCONTINUITY',
+  '#EXT-X-PROGRAM-DATE-TIME',
+  '#EXT-X-GAP',
+};
+
+String _stripOutsideSegments(Uri playlistUrl, String body) {
+  final folder = playlistUrl.resolve('.').path;
+  final lines = body.split(RegExp(r'\r?\n'));
+  final out = <String>[];
+  final pending = <String>[];
+  var kept = 0;
+  var dropped = 0;
+
+  void flushPending(bool keep) {
+    if (keep) out.addAll(pending);
+    pending.clear();
+  }
+
+  for (final raw in lines) {
+    final line = raw.trim();
+    if (line.isEmpty) continue;
+    if (line.startsWith('#')) {
+      final tag = line.split(':').first;
+      if (_segmentTags.contains(tag)) {
+        pending.add(line);
+      } else {
+        flushPending(true);
+        out.add(line);
+      }
+      continue;
+    }
+
+    final resolved = playlistUrl.resolve(line);
+    final keep = resolved.path.startsWith(folder);
+    flushPending(keep);
+    if (keep) {
+      out.add(resolved.toString());
+      kept++;
+    } else {
+      dropped++;
+    }
+  }
+  flushPending(true);
+
+  if (kept == 0 || dropped == 0) {
+    throw StateError('Không có đoạn quảng cáo để bỏ');
+  }
+  if (!out.last.startsWith('#EXT-X-ENDLIST')) {
+    out.add('#EXT-X-ENDLIST');
+  }
+  return '${out.join('\n')}\n';
+}

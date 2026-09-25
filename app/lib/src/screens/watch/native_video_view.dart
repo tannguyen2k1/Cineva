@@ -65,6 +65,12 @@ class _NativeVideoViewState extends State<NativeVideoView> {
     final theme = MaterialVideoControlsThemeData(
       seekBarPositionColor: CinevaColors.accent,
       seekBarThumbColor: CinevaColors.accent,
+      seekBarMargin: const EdgeInsets.only(bottom: 16),
+      bottomButtonBarMargin: const EdgeInsets.only(
+        left: 16,
+        right: 8,
+        bottom: 16,
+      ),
       seekGesture: true,
       seekOnDoubleTap: true,
       seekOnDoubleTapEnabledWhileControlsVisible: true,

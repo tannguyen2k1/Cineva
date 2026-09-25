@@ -17,6 +17,7 @@ import '../theme/cineva_theme.dart';
 import '../utils/phone_orientation.dart';
 import 'watch/embed_scripts.dart';
 import 'watch/episode_chrome.dart';
+import 'watch/hls_playlist.dart';
 import 'watch/hls_source.dart';
 import 'watch/native_video_view.dart';
 import 'watch/resume_overlay.dart';
@@ -190,8 +191,12 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
         _resumeLeft = ask ? 8 : 0;
       });
     }
+    var source = url;
+    try {
+      source = await prepareHlsPlayback(url);
+    } catch (_) {}
     await player.open(
-      Media(url, httpHeaders: hlsHeaders),
+      Media(source, httpHeaders: hlsHeaders),
       play: !ask,
     );
     _loadingTimeout?.cancel();
