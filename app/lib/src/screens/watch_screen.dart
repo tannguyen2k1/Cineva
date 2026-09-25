@@ -15,7 +15,6 @@ import '../services/api_client.dart';
 import '../state/auth_state.dart';
 import '../theme/cineva_theme.dart';
 import '../utils/phone_orientation.dart';
-import '../widgets/left_edge_swipe_back.dart';
 import 'watch/embed_scripts.dart';
 import 'watch/episode_chrome.dart';
 import 'watch/hls_source.dart';
@@ -268,7 +267,6 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    WakelockPlus.enable();
     _playUrl = widget.playUrl;
     _embedUrl = widget.embedUrl;
     _episodeSlug = widget.episodeSlug;
@@ -343,6 +341,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     }
 
     // Determine the raw video URL for localStorage seeding
+    WakelockPlus.enable();
     final rawVideoUrl = _playUrl.trim();
 
     final controller = WebViewController.fromPlatformCreationParams(
@@ -684,15 +683,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
         }
         unawaited(_leaveWatch());
       },
-      child: LeftEdgeSwipeBack(
-        onBack: () {
-          if (_cinema) {
-            unawaited(_exitCinema());
-          } else {
-            unawaited(_leaveWatch());
-          }
-        },
-        child: Scaffold(
+      child: Scaffold(
           backgroundColor: Colors.black,
           appBar: _cinema
               ? null
@@ -815,7 +806,6 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
             ],
           ),
         ),
-      ),
     );
   }
 }
