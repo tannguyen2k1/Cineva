@@ -29,6 +29,9 @@ class _MediaKitVideoViewState extends State<MediaKitVideoView> {
   final _brightness = ScreenBrightness();
   double _level = 1;
   bool _ready = false;
+  bool _locked = false;
+  bool _lockHint = false;
+  Timer? _lockTimer;
 
   @override
   void initState() {
@@ -58,8 +61,42 @@ class _MediaKitVideoViewState extends State<MediaKitVideoView> {
     } catch (_) {}
   }
 
+  void _armLockTimer() {
+    _lockTimer?.cancel();
+    _lockTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _lockHint = false);
+    });
+  }
+
+  void _lock() {
+    setState(() {
+      _locked = true;
+      _lockHint = true;
+    });
+    _armLockTimer();
+  }
+
+  void _unlock() {
+    _lockTimer?.cancel();
+    setState(() {
+      _locked = false;
+      _lockHint = false;
+    });
+  }
+
+  void _onLockedTap() {
+    if (_lockHint) {
+      _lockTimer?.cancel();
+      setState(() => _lockHint = false);
+      return;
+    }
+    setState(() => _lockHint = true);
+    _armLockTimer();
+  }
+
   @override
   void dispose() {
+    _lockTimer?.cancel();
     unawaited(_resetBrightness());
     super.dispose();
   }
@@ -67,7 +104,6 @@ class _MediaKitVideoViewState extends State<MediaKitVideoView> {
   @override
   Widget build(BuildContext context) {
     if (!_ready) return const SizedBox.expand();
-    final player = widget.controller.player;
     final theme = MaterialVideoControlsThemeData(
       seekBarPositionColor: CinevaColors.accent,
       seekBarThumbColor: CinevaColors.accent,
@@ -83,36 +119,84 @@ class _MediaKitVideoViewState extends State<MediaKitVideoView> {
       brightnessGesture: false,
       bufferingIndicatorBuilder:
           widget.hideBuffering ? hidePlayerSpinner : null,
+      topButtonBar: [
+        IconButton(
+          onPressed: _lock,
+          icon: const Icon(Icons.lock_open_rounded),
+          color: Colors.white,
+        ),
+      ],
     );
     return Padding(
       padding: EdgeInsets.only(bottom: widget.bottomPadding),
-      child: PlaybackGestures(
-        position: () => player.state.position,
-        duration: () => player.state.duration,
-        volume: () => (player.state.volume / 100).clamp(0.0, 1.0),
-        brightness: () => _level,
-        onSeek: (position) {
-          unawaited(player.seek(position));
-        },
-        onVolume: (value) {
-          unawaited(player.setVolume(value * 100));
-        },
-        onBrightness: (value) {
-          _level = value;
-          unawaited(_setBrightness(value));
-        },
-        bottomReserve: 96,
-        child: MaterialVideoControlsTheme(
-          normal: theme,
-          fullscreen: theme,
-          child: Video(
-            controller: widget.controller,
-            fill: Colors.black,
-            fit: BoxFit.contain,
-            controls: MaterialVideoControls,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          IgnorePointer(
+            ignoring: _locked,
+            child: _player(theme),
           ),
+          if (_locked)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _onLockedTap,
+              child: Stack(
+                children: [
+                  if (_lockHint)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: Material(
+                          color: const Color(0x66000000),
+                          shape: const CircleBorder(),
+                          clipBehavior: Clip.antiAlias,
+                          child: IconButton(
+                            onPressed: _unlock,
+                            icon: const Icon(Icons.lock_rounded),
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _player(MaterialVideoControlsThemeData theme) {
+    final player = widget.controller.player;
+    return PlaybackGestures(
+      position: () => player.state.position,
+      duration: () => player.state.duration,
+      volume: () => (player.state.volume / 100).clamp(0.0, 1.0),
+      brightness: () => _level,
+      onSeek: (position) {
+        unawaited(player.seek(position));
+      },
+      onVolume: (value) {
+        unawaited(player.setVolume(value * 100));
+      },
+      onBrightness: (value) {
+        _level = value;
+        unawaited(_setBrightness(value));
+      },
+      bottomReserve: 96,
+      child: MaterialVideoControlsTheme(
+        normal: theme,
+        fullscreen: theme,
+        child: Video(
+          controller: widget.controller,
+          fill: Colors.black,
+          fit: BoxFit.contain,
+          controls: _locked ? _hiddenControls : MaterialVideoControls,
         ),
       ),
     );
   }
 }
+
+Widget _hiddenControls(VideoState _) => const SizedBox.shrink();

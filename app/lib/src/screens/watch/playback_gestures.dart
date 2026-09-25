@@ -57,11 +57,8 @@ class _PlaybackGesturesState extends State<PlaybackGestures> {
       fit: StackFit.expand,
       children: [
         widget.child,
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: widget.bottomReserve,
+        Padding(
+          padding: EdgeInsets.only(bottom: widget.bottomReserve),
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
             onHorizontalDragStart: _onSeekStart,
@@ -78,9 +75,7 @@ class _PlaybackGesturesState extends State<PlaybackGestures> {
           ),
         ),
         if (_seekTarget != null || _slideValue != null || _skipLabel != null)
-          IgnorePointer(
-            child: Center(child: _hud()),
-          ),
+          IgnorePointer(child: Center(child: _hud())),
       ],
     );
   }
@@ -101,7 +96,10 @@ class _PlaybackGesturesState extends State<PlaybackGestures> {
     if (width <= 0) return;
     _seekDx += details.delta.dx;
     final deltaMs = total.inMilliseconds * (_seekDx / width);
-    final target = _clamp(from + Duration(milliseconds: deltaMs.round()), total);
+    final target = _clamp(
+      from + Duration(milliseconds: deltaMs.round()),
+      total,
+    );
     setState(() => _seekTarget = target);
     _emitSeek(target);
   }
@@ -129,8 +127,10 @@ class _PlaybackGesturesState extends State<PlaybackGestures> {
     final width = context.size?.width ?? 0;
     if (width <= 0) return;
     _slideVolume = details.localPosition.dx >= width / 2;
-    _slideOrigin = (_slideVolume ? widget.volume() : widget.brightness())
-        .clamp(0.0, 1.0);
+    _slideOrigin = (_slideVolume ? widget.volume() : widget.brightness()).clamp(
+      0.0,
+      1.0,
+    );
     _slideValue = _slideOrigin;
   }
 

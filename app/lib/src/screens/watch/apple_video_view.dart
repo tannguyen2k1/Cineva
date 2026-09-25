@@ -119,6 +119,7 @@ class _AppleVideoViewState extends State<AppleVideoView> {
   bool _ready = false;
   bool _holdVolume = false;
   bool _scrubbing = false;
+  bool _locked = false;
   bool _chrome = true;
   double _scrubSec = 0;
   Timer? _chromeTimer;
@@ -208,6 +209,12 @@ class _AppleVideoViewState extends State<AppleVideoView> {
     _armChromeTimer();
   }
 
+  void _toggleLock() {
+    setState(() => _locked = !_locked);
+    _holdChrome();
+    _armChromeTimer();
+  }
+
   @override
   void dispose() {
     _chromeTimer?.cancel();
@@ -225,43 +232,74 @@ class _AppleVideoViewState extends State<AppleVideoView> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        const UiKitView(
-          viewType: 'cineva/apple-view',
-          gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{},
-          creationParamsCodec: StandardMessageCodec(),
+        const SizedBox.expand(
+          child: UiKitView(
+            viewType: 'cineva/apple-view',
+            gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{},
+            creationParamsCodec: StandardMessageCodec(),
+          ),
         ),
         Column(
           children: [
-            Expanded(
-              child: _ready
-                  ? PlaybackGestures(
-                      position: () => _position,
-                      duration: () => _duration,
-                      volume: () => _volume,
-                      brightness: () => _brightness,
-                      onSeek: (position) {
-                        _position = position;
-                        unawaited(widget.controller.seek(position));
-                      },
-                      onVolume: (value) {
-                        _holdVolume = true;
-                        _volume = value;
-                        unawaited(widget.controller.setVolume(value));
-                      },
-                      onVolumeEnd: () => _holdVolume = false,
-                      onBrightness: (value) {
-                        _brightness = value;
-                        unawaited(_setBrightness(value));
-                      },
-                      onTap: _onVideoTap,
-                      child: const SizedBox.expand(),
-                    )
-                  : const SizedBox.expand(),
-            ),
-            if (_chrome) _chromeBar(shown, totalSec),
+            Expanded(child: _videoSurface()),
+            if (_chrome && !_locked) _chromeBar(shown, totalSec),
           ],
         ),
+        if (_chrome)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: _lockButton(),
+            ),
+          ),
       ],
+    );
+  }
+
+  Widget _videoSurface() {
+    if (!_ready) return const SizedBox.expand();
+    if (_locked) {
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _onVideoTap,
+        child: const SizedBox.expand(),
+      );
+    }
+    return PlaybackGestures(
+      position: () => _position,
+      duration: () => _duration,
+      volume: () => _volume,
+      brightness: () => _brightness,
+      onSeek: (position) {
+        _position = position;
+        unawaited(widget.controller.seek(position));
+      },
+      onVolume: (value) {
+        _holdVolume = true;
+        _volume = value;
+        unawaited(widget.controller.setVolume(value));
+      },
+      onVolumeEnd: () => _holdVolume = false,
+      onBrightness: (value) {
+        _brightness = value;
+        unawaited(_setBrightness(value));
+      },
+      onTap: _onVideoTap,
+      child: const SizedBox.expand(),
+    );
+  }
+
+  Widget _lockButton() {
+    return Material(
+      color: const Color(0x66000000),
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: IconButton(
+        onPressed: _toggleLock,
+        icon: Icon(_locked ? Icons.lock_rounded : Icons.lock_open_rounded),
+        color: Colors.white,
+      ),
     );
   }
 
