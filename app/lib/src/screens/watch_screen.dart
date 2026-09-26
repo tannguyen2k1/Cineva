@@ -71,6 +71,8 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
   Duration _mediaDuration = Duration.zero;
   String? _error;
   bool _loading = true;
+  int _playbackTries = 0;
+  bool _recovering = false;
   bool _cinema = false;
   bool _ended = false;
   bool _nearEnd = false;
@@ -103,6 +105,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     });
     _durSub = player.stream.duration.listen((dur) {
       _mediaDuration = dur;
+      if (dur > Duration.zero) _playbackTries = 0;
       if (dur > Duration.zero && _loading && mounted && !_askResume) {
         setState(() => _loading = false);
       }
@@ -113,11 +116,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
       if (_nextEpisode != null) _startAutoNextCountdown();
     });
     _errSub = player.stream.error.listen((msg) {
-      if (!mounted || msg.isEmpty || _mediaDuration > Duration.zero) return;
-      setState(() {
-        _error = 'Không phát được phim';
-        _loading = false;
-      });
+      _onPlaybackError(msg);
     });
   }
 
@@ -162,6 +161,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     });
     _durSub = player.duration.listen((dur) {
       _mediaDuration = dur;
+      if (dur > Duration.zero) _playbackTries = 0;
       if (dur > Duration.zero && _loading && mounted && !_askResume) {
         setState(() => _loading = false);
       }
@@ -172,12 +172,47 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
       if (_nextEpisode != null) _startAutoNextCountdown();
     });
     _errSub = player.errors.listen((msg) {
-      if (!mounted || msg.isEmpty || _mediaDuration > Duration.zero) return;
-      setState(() {
-        _error = 'Không phát được phim';
-        _loading = false;
-      });
+      _onPlaybackError(msg);
     });
+  }
+
+  void _onPlaybackError(String msg) {
+    if (!mounted || msg.isEmpty || _mediaDuration > Duration.zero || _recovering) {
+      return;
+    }
+    final url = _hlsUrl;
+    if (url != null && _playbackTries < 1) {
+      _playbackTries++;
+      _recovering = true;
+      unawaited(() async {
+        try {
+          await _openNative(url, resumeSec: _currentStartSec);
+        } finally {
+          _recovering = false;
+        }
+      }());
+      return;
+    }
+    setState(() {
+      _error = 'Không phát được phim';
+      _loading = false;
+    });
+  }
+
+  Future<void> _retryPlayback() async {
+    _playbackTries = 0;
+    _recovering = false;
+    if (!mounted) return;
+    setState(() {
+      _error = null;
+      _loading = true;
+    });
+    final url = _hlsUrl;
+    if (url == null) {
+      await _initPlayer();
+      return;
+    }
+    await _openNative(url, resumeSec: _currentStartSec);
   }
 
   Future<void> _seekWhenReady(int sec) async {
@@ -243,8 +278,14 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     }
     _loadingTimeout?.cancel();
     if (!ask) {
-      _loadingTimeout = Timer(const Duration(seconds: 14), () {
-        if (mounted && _loading) setState(() => _loading = false);
+      _loadingTimeout = Timer(const Duration(seconds: 20), () {
+        if (!mounted || !_loading || _mediaDuration > Duration.zero || _askResume) {
+          return;
+        }
+        setState(() {
+          _error = 'Không phát được phim';
+          _loading = false;
+        });
       });
     }
     if (ask) {
@@ -773,31 +814,41 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
                 Center(
                   child: Padding(
                     padding: const EdgeInsets.all(24),
-                    child: Text(
-                      _error!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: CinevaColors.muted),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _error!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: CinevaColors.muted),
+                        ),
+                        const SizedBox(height: 16),
+                        FilledButton(
+                          onPressed: () => unawaited(_retryPlayback()),
+                          child: const Text('Thử lại'),
+                        ),
+                      ],
                     ),
                   ),
                 )
               else if (_useNative && ios != null)
                 Padding(
-                  padding: EdgeInsets.only(
-                    bottom: bottomInset + (showNearEndChip ? 58 : 0),
+                  padding: EdgeInsets.only(bottom: bottomInset),
+                  child: AppleVideoView(
+                    controller: ios,
+                    loading: _loading && !_askResume,
                   ),
-                  child: AppleVideoView(controller: ios),
                 )
               else if (_useNative && video != null)
                 MediaKitVideoView(
                   controller: video,
-                  bottomPadding: bottomInset + (showNearEndChip ? 58 : 0),
+                  bottomPadding: bottomInset,
                   hideBuffering: _askResume,
+                  loading: _loading && !_askResume,
                 )
               else if (web != null)
                 Padding(
-                  padding: EdgeInsets.only(
-                    bottom: bottomInset + (showNearEndChip ? 58 : 0),
-                  ),
+                  padding: EdgeInsets.only(bottom: bottomInset),
                   child: WebViewWidget(controller: web),
                 )
               else
@@ -812,11 +863,13 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
                     child: ColoredBox(color: Colors.black),
                   ),
                 ),
-              if (_loading && _error == null && !_askResume)
-                const ColoredBox(
-                  color: Colors.black,
-                  child: Center(
-                    child: CircularProgressIndicator(color: CinevaColors.accent),
+              if (_loading && _error == null && !_askResume && !_useNative)
+                const Positioned.fill(
+                  child: ColoredBox(
+                    color: Colors.black,
+                    child: Center(
+                      child: CircularProgressIndicator(color: CinevaColors.accent),
+                    ),
                   ),
                 ),
               if (_askResume && _error == null) ...[
@@ -841,7 +894,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
                 Positioned(
                   left: 12,
                   right: 12,
-                  bottom: bottomInset + 10,
+                  bottom: bottomInset + 68,
                   child: Align(
                     alignment: Alignment.centerRight,
                     child: NextEpisodeBar(

@@ -107,7 +107,7 @@ final class AppleHostView: UIView {
 final class AppleSession: NSObject {
   static let shared = AppleSession()
 
-  let player = AVPlayer()
+  var player: AVPlayer = AppleSession.makePlayer()
   let volumeView: MPVolumeView = {
     let view = MPVolumeView(frame: CGRect(x: -200, y: -200, width: 120, height: 20))
     view.alpha = 0.02
@@ -119,12 +119,31 @@ final class AppleSession: NSObject {
   private var timeObserver: Any?
   private var endObserver: NSObjectProtocol?
   private var statusObserver: NSKeyValueObservation?
+  private var openToken = 0
 
   private override init() {
     super.init()
+  }
+
+  private static func makePlayer() -> AVPlayer {
+    let player = AVPlayer()
     player.allowsExternalPlayback = true
     player.usesExternalPlaybackWhileExternalScreenIsActive = true
     player.preventsDisplaySleepDuringVideoPlayback = true
+    return player
+  }
+
+  /// A failed AVPlayer often rejects every later item until the process restarts.
+  private func renewPlayer() {
+    clearItemObservers()
+    if let timeObserver {
+      player.removeTimeObserver(timeObserver)
+      self.timeObserver = nil
+    }
+    player.pause()
+    player.replaceCurrentItem(with: nil)
+    player = AppleSession.makePlayer()
+    viewController?.player = player
   }
 
   func attach(messenger: FlutterBinaryMessenger) {
@@ -174,19 +193,28 @@ final class AppleSession: NSObject {
     let headers = args?["headers"] as? [String: String] ?? [:]
     guard let url = mediaURL(source) else { return }
 
+    if player.status == .failed || player.currentItem?.status == .failed {
+      renewPlayer()
+    }
+    openToken += 1
+    let token = openToken
+
     clearItemObservers()
     let asset = AVURLAsset(url: url, options: [
       "AVURLAssetHTTPHeaderFieldsKey": headers,
     ])
     let item = AVPlayerItem(asset: asset)
     statusObserver = item.observe(\.status, options: [.new]) { [weak self] item, _ in
-      if item.status == .failed {
-        self?.publish(
-          completed: false,
-          error: item.error?.localizedDescription ?? "Không phát được phim"
-        )
-      } else if item.status == .readyToPlay {
-        self?.publish(completed: false)
+      DispatchQueue.main.async {
+        guard let self, token == self.openToken, self.player.currentItem === item else { return }
+        if item.status == .failed {
+          self.publish(
+            completed: false,
+            error: item.error?.localizedDescription ?? "Không phát được phim"
+          )
+        } else if item.status == .readyToPlay {
+          self.publish(completed: false)
+        }
       }
     }
     endObserver = NotificationCenter.default.addObserver(

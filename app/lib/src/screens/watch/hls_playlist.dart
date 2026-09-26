@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -29,28 +30,60 @@ final _iosPlaylistHost = _LocalPlaylistHost();
 class _LocalPlaylistHost {
   HttpServer? _server;
   String _body = '';
-  var _listening = false;
 
   Future<String> publish(String playlist) async {
     _body = playlist;
-    final server = _server ??= await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-    if (!_listening) {
-      _listening = true;
+    if (!await _answers()) {
+      final stale = _server;
+      _server = null;
+      unawaited(stale?.close(force: true));
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      _server = server;
       server.listen((request) async {
-        final response = request.response;
-        final bytes = utf8.encode(_body);
-        response.statusCode = HttpStatus.ok;
-        response.headers.set(
-          HttpHeaders.contentTypeHeader,
-          'application/vnd.apple.mpegurl',
-        );
-        response.headers.set(HttpHeaders.cacheControlHeader, 'no-store');
-        response.contentLength = bytes.length;
-        response.add(bytes);
-        await response.close();
+        try {
+          final response = request.response;
+          final bytes = utf8.encode(_body);
+          response.statusCode = HttpStatus.ok;
+          response.headers.set(
+            HttpHeaders.contentTypeHeader,
+            'application/vnd.apple.mpegurl',
+          );
+          response.headers.set(HttpHeaders.cacheControlHeader, 'no-store');
+          response.contentLength = bytes.length;
+          response.add(bytes);
+          await response.close();
+        } catch (_) {
+          try {
+            await request.response.close();
+          } catch (_) {}
+        }
+      }, onDone: () {
+        if (identical(_server, server)) _server = null;
       });
     }
+    final server = _server;
+    if (server == null) {
+      throw StateError('Không mở được playlist cục bộ');
+    }
     return 'http://127.0.0.1:${server.port}/cineva-playback.m3u8';
+  }
+
+  Future<bool> _answers() async {
+    final server = _server;
+    if (server == null) return false;
+    final client = HttpClient();
+    try {
+      final request = await client
+          .getUrl(Uri.parse('http://127.0.0.1:${server.port}/cineva-playback.m3u8'))
+          .timeout(const Duration(milliseconds: 500));
+      final response = await request.close().timeout(const Duration(milliseconds: 500));
+      await response.drain<void>();
+      return response.statusCode == HttpStatus.ok;
+    } catch (_) {
+      return false;
+    } finally {
+      client.close(force: true);
+    }
   }
 }
 

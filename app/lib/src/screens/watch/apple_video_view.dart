@@ -99,9 +99,14 @@ class AppleVideoController {
 }
 
 class AppleVideoView extends StatefulWidget {
-  const AppleVideoView({super.key, required this.controller});
+  const AppleVideoView({
+    super.key,
+    required this.controller,
+    this.loading = false,
+  });
 
   final AppleVideoController controller;
+  final bool loading;
 
   @override
   State<AppleVideoView> createState() => _AppleVideoViewState();
@@ -251,6 +256,13 @@ class _AppleVideoViewState extends State<AppleVideoView> {
             child: Padding(
               padding: const EdgeInsets.only(left: 8),
               child: _lockButton(),
+            ),
+          ),
+        if (widget.loading)
+          const ColoredBox(
+            color: Colors.black,
+            child: Center(
+              child: CircularProgressIndicator(color: CinevaColors.accent),
             ),
           ),
       ],

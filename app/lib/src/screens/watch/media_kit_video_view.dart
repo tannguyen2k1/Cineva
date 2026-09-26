@@ -15,11 +15,13 @@ class MediaKitVideoView extends StatefulWidget {
     required this.controller,
     required this.bottomPadding,
     required this.hideBuffering,
+    this.loading = false,
   });
 
   final VideoController controller;
   final double bottomPadding;
   final bool hideBuffering;
+  final bool loading;
 
   @override
   State<MediaKitVideoView> createState() => _MediaKitVideoViewState();
@@ -160,6 +162,13 @@ class _MediaKitVideoViewState extends State<MediaKitVideoView> {
                       ),
                     ),
                 ],
+              ),
+            ),
+          if (widget.loading)
+            const ColoredBox(
+              color: Colors.black,
+              child: Center(
+                child: CircularProgressIndicator(color: CinevaColors.accent),
               ),
             ),
         ],
