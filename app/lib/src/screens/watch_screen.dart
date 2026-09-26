@@ -60,6 +60,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
   VideoController? _video;
   AppleVideoController? _ios;
   StreamSubscription<Duration>? _posSub;
+  StreamSubscription<bool>? _playSub;
   StreamSubscription<Duration>? _durSub;
   StreamSubscription<bool>? _doneSub;
   StreamSubscription<String>? _errSub;
@@ -106,10 +107,8 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     _durSub = player.stream.duration.listen((dur) {
       _mediaDuration = dur;
       if (dur > Duration.zero) _playbackTries = 0;
-      if (dur > Duration.zero && _loading && mounted && !_askResume) {
-        setState(() => _loading = false);
-      }
     });
+    _playSub = player.stream.playing.listen(_onPlaybackStarted);
     _doneSub = player.stream.completed.listen((done) {
       if (!done || !mounted || _askResume || _ended) return;
       setState(() => _ended = true);
@@ -162,10 +161,8 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     _durSub = player.duration.listen((dur) {
       _mediaDuration = dur;
       if (dur > Duration.zero) _playbackTries = 0;
-      if (dur > Duration.zero && _loading && mounted && !_askResume) {
-        setState(() => _loading = false);
-      }
     });
+    _playSub = player.playing.listen(_onPlaybackStarted);
     _doneSub = player.completed.listen((done) {
       if (!done || !mounted || _askResume || _ended) return;
       setState(() => _ended = true);
@@ -174,6 +171,11 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     _errSub = player.errors.listen((msg) {
       _onPlaybackError(msg);
     });
+  }
+
+  void _onPlaybackStarted(bool playing) {
+    if (!playing || !mounted || _askResume || !_loading) return;
+    setState(() => _loading = false);
   }
 
   void _onPlaybackError(String msg) {
@@ -237,14 +239,12 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     if (ios != null) {
       if (sec > 0) await _seekWhenReady(sec);
       await ios.play();
-      if (mounted) setState(() => _loading = false);
       return;
     }
     final player = _player;
     if (player == null) return;
     if (sec > 0) await _seekWhenReady(sec);
     await player.play();
-    if (mounted) setState(() => _loading = false);
   }
 
   Future<void> _openNative(String url, {required int resumeSec}) async {
@@ -269,7 +269,14 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     } catch (_) {}
     final ios = _ios;
     if (ios != null) {
-      await ios.open(url: source, headers: hlsHeaders, play: !ask);
+      await ios.open(
+        url: source,
+        externalUrl: source.startsWith('http://127.0.0.1')
+            ? iosAirPlayPlaylistUrl
+            : null,
+        headers: hlsHeaders,
+        play: !ask,
+      );
     } else {
       await _player?.open(
         Media(source, httpHeaders: hlsHeaders),
@@ -746,6 +753,7 @@ class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
     _cancelAutoNext();
     _cancelResumeTimer();
     _posSub?.cancel();
+    _playSub?.cancel();
     _durSub?.cancel();
     _doneSub?.cancel();
     _errSub?.cancel();

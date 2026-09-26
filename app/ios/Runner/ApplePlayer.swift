@@ -47,7 +47,9 @@ final class AppleRouteButton: NSObject, FlutterPlatformView {
     picker.frame = frame
     picker.tintColor = .white
     picker.activeTintColor = UIColor(red: 1, green: 0.839, blue: 0.420, alpha: 1)
+    picker.prioritizesVideoDevices = true
     super.init()
+    picker.delegate = AppleSession.shared
   }
 
   func view() -> UIView { picker }
@@ -120,9 +122,40 @@ final class AppleSession: NSObject {
   private var endObserver: NSObjectProtocol?
   private var statusObserver: NSKeyValueObservation?
   private var openToken = 0
+  private var localURL: URL?
+  private var externalURL: URL?
+  private var httpHeaders: [String: String] = [:]
+  private var externalObserver: NSKeyValueObservation?
+  private var airPlaySwap = false
 
   private override init() {
     super.init()
+    activateAudioSession()
+    observeExternalPlayback()
+  }
+
+  private func activateAudioSession() {
+    let session = AVAudioSession.sharedInstance()
+    try? session.setCategory(.playback, mode: .moviePlayback)
+    try? session.setActive(true)
+  }
+
+  private func observeExternalPlayback() {
+    externalObserver?.invalidate()
+    externalObserver = player.observe(\.isExternalPlaybackActive, options: [.new]) { [weak self] player, _ in
+      DispatchQueue.main.async {
+        guard let self, !self.airPlayRouteActive else { return }
+        self.adopt(self.localURL)
+      }
+    }
+  }
+
+  /// Control Center can leave AirPlay selected after the film is closed.
+  private var airPlayRouteActive: Bool {
+    if player.isExternalPlaybackActive { return true }
+    return AVAudioSession.sharedInstance().currentRoute.outputs.contains {
+      $0.portType == .airPlay
+    }
   }
 
   private static func makePlayer() -> AVPlayer {
@@ -144,6 +177,7 @@ final class AppleSession: NSObject {
     player.replaceCurrentItem(with: nil)
     player = AppleSession.makePlayer()
     viewController?.player = player
+    observeExternalPlayback()
   }
 
   func attach(messenger: FlutterBinaryMessenger) {
@@ -192,15 +226,24 @@ final class AppleSession: NSObject {
     let play = (args?["play"] as? NSNumber)?.boolValue ?? true
     let headers = args?["headers"] as? [String: String] ?? [:]
     guard let url = mediaURL(source) else { return }
+    localURL = url
+    httpHeaders = headers
+    if let external = args?["externalUrl"] as? String {
+      externalURL = mediaURL(external)
+    } else {
+      externalURL = nil
+    }
 
     if player.status == .failed || player.currentItem?.status == .failed {
       renewPlayer()
     }
+    let playbackURL = airPlayRouteActive ? (externalURL ?? url) : url
+    airPlaySwap = playbackURL != url
     openToken += 1
     let token = openToken
 
     clearItemObservers()
-    let asset = AVURLAsset(url: url, options: [
+    let asset = AVURLAsset(url: playbackURL, options: [
       "AVURLAssetHTTPHeaderFieldsKey": headers,
     ])
     let item = AVPlayerItem(asset: asset)
@@ -208,11 +251,17 @@ final class AppleSession: NSObject {
       DispatchQueue.main.async {
         guard let self, token == self.openToken, self.player.currentItem === item else { return }
         if item.status == .failed {
+          if self.airPlaySwap, !self.airPlayRouteActive, let local = self.localURL {
+            self.airPlaySwap = false
+            self.adopt(local)
+            return
+          }
           self.publish(
             completed: false,
             error: item.error?.localizedDescription ?? "Không phát được phim"
           )
         } else if item.status == .readyToPlay {
+          self.airPlaySwap = false
           self.publish(completed: false)
         }
       }
@@ -276,7 +325,7 @@ final class AppleSession: NSObject {
       "positionMs": max(positionMs, 0),
       "durationMs": max(durationMs, 0),
       "completed": completed,
-      "playing": player.timeControlStatus != .paused,
+      "playing": player.timeControlStatus == .playing,
       "volume": Double(AVAudioSession.sharedInstance().outputVolume),
     ]
     if let error, !error.isEmpty {
@@ -285,10 +334,76 @@ final class AppleSession: NSObject {
     channel?.invokeMethod("state", arguments: payload)
   }
 
+  /// Apple TV cannot open `127.0.0.1`. Swap to the phone's Wi-Fi address
+  /// while the route picker is up, and back when AirPlay ends.
+  private func adopt(_ url: URL?) {
+    guard let url, player.currentItem != nil, !assetIs(url) else { return }
+    let time = player.currentTime()
+    let shouldPlay = player.timeControlStatus != .paused
+    let asset = AVURLAsset(url: url, options: [
+      "AVURLAssetHTTPHeaderFieldsKey": httpHeaders,
+    ])
+    let item = AVPlayerItem(asset: asset)
+    let token = openToken
+    clearItemObservers()
+    statusObserver = item.observe(\.status, options: [.new]) { [weak self] item, _ in
+      DispatchQueue.main.async {
+        guard let self, token == self.openToken, self.player.currentItem === item else { return }
+        if item.status == .failed {
+          if self.airPlaySwap, !self.airPlayRouteActive, let local = self.localURL {
+            self.airPlaySwap = false
+            self.adopt(local)
+            return
+          }
+          self.publish(
+            completed: false,
+            error: item.error?.localizedDescription ?? "Không phát được phim"
+          )
+        } else if item.status == .readyToPlay {
+          self.airPlaySwap = false
+          self.publish(completed: false)
+        }
+      }
+    }
+    endObserver = NotificationCenter.default.addObserver(
+      forName: .AVPlayerItemDidPlayToEndTime,
+      object: item,
+      queue: .main
+    ) { [weak self] _ in
+      self?.publish(completed: true)
+    }
+    player.replaceCurrentItem(with: item)
+    if time.isNumeric, time.seconds > 1 {
+      player.seek(to: time, toleranceBefore: .positiveInfinity, toleranceAfter: .positiveInfinity)
+    }
+    if shouldPlay {
+      player.play()
+    }
+  }
+
+  private func assetIs(_ url: URL) -> Bool {
+    guard let asset = player.currentItem?.asset as? AVURLAsset else { return false }
+    return asset.url == url
+  }
+
   private func setSystemVolume(_ volume: Float) {
     let clamped = min(max(volume, 0), 1)
     let slider = volumeView.subviews.compactMap { $0 as? UISlider }.first
     slider?.setValue(clamped, animated: false)
     slider?.sendActions(for: .touchUpInside)
+  }
+}
+
+extension AppleSession: AVRoutePickerViewDelegate {
+  func routePickerViewWillBeginPresentingRoutes(_ routePickerView: AVRoutePickerView) {
+    guard externalURL != nil else { return }
+    airPlaySwap = true
+    adopt(externalURL)
+  }
+
+  func routePickerViewDidEndPresentingRoutes(_ routePickerView: AVRoutePickerView) {
+    guard !airPlayRouteActive else { return }
+    airPlaySwap = false
+    adopt(localURL)
   }
 }

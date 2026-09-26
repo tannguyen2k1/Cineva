@@ -10,7 +10,9 @@ import 'hls_source.dart';
 /// outside the episode's own HLS folder (`3500kb/hls/…`).
 ///
 /// iOS receives an `http://127.0.0.1` URL. AVPlayer rejects a `file://`
-/// playlist whose segments stay on the CDN. Other platforms get a temp file.
+/// playlist whose segments stay on the CDN. The same file is also reachable
+/// on the phone's Wi-Fi address so AirPlay can hand it to an Apple TV.
+/// Other platforms get a temp file.
 /// Throws if the source cannot be read, so the player can fall back to the
 /// original URL.
 Future<String> prepareHlsPlayback(String url) async {
@@ -26,10 +28,14 @@ Future<String> prepareHlsPlayback(String url) async {
 
 final _iosPlaylistHost = _LocalPlaylistHost();
 
+/// Playlist URL an Apple TV can fetch. Null when the phone has no LAN address.
+String? get iosAirPlayPlaylistUrl => _iosPlaylistHost.externalUrl;
+
 /// Serves the latest rewritten playlist so AVPlayer can load it over HTTP.
 class _LocalPlaylistHost {
   HttpServer? _server;
   String _body = '';
+  String? externalUrl;
 
   Future<String> publish(String playlist) async {
     _body = playlist;
@@ -37,7 +43,7 @@ class _LocalPlaylistHost {
       final stale = _server;
       _server = null;
       unawaited(stale?.close(force: true));
-      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final server = await HttpServer.bind(InternetAddress.anyIPv4, 0);
       _server = server;
       server.listen((request) async {
         try {
@@ -65,7 +71,29 @@ class _LocalPlaylistHost {
     if (server == null) {
       throw StateError('Không mở được playlist cục bộ');
     }
+    externalUrl = await _lanPlaylistUrl(server.port);
     return 'http://127.0.0.1:${server.port}/cineva-playback.m3u8';
+  }
+
+  Future<String?> _lanPlaylistUrl(int port) async {
+    try {
+      final interfaces = await NetworkInterface.list(
+        includeLinkLocal: false,
+        type: InternetAddressType.IPv4,
+      );
+      String? fallback;
+      for (final interface in interfaces) {
+        for (final addr in interface.addresses) {
+          if (addr.isLoopback) continue;
+          final url = 'http://${addr.address}:$port/cineva-playback.m3u8';
+          if (interface.name == 'en0') return url;
+          fallback ??= url;
+        }
+      }
+      return fallback;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<bool> _answers() async {

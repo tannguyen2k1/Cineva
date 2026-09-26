@@ -34,11 +34,13 @@ class AppleVideoController {
 
   Future<void> open({
     required String url,
+    String? externalUrl,
     required Map<String, String> headers,
     required bool play,
   }) {
     return _channel.invokeMethod('open', {
       'url': url,
+      'externalUrl': ?externalUrl,
       'headers': headers,
       'play': play,
     });

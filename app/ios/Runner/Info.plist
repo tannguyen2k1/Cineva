@@ -37,6 +37,8 @@
 			<key>NSAllowsLocalNetworking</key>
 			<true/>
 		</dict>
+		<key>NSLocalNetworkUsageDescription</key>
+		<string>Cineva cần mạng nội bộ để phát phim qua AirPlay.</string>
 		<key>NSCameraUsageDescription</key>
 		<string>Cineva cần camera để chụp ảnh đại diện.</string>
 		<key>NSPhotoLibraryAddUsageDescription</key>
