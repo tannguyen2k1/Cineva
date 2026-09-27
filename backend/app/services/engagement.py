@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta
+
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.timeutil import utcnow
+from app.core.timeutil import as_utc, utcnow
 from app.models import FilmComment, FilmFollow, WatchlistItem
 from app.repositories import engagement as eng_repo
 from app.repositories import film as film_repo
@@ -143,10 +145,29 @@ async def unfollow_film(db: AsyncSession, *, user_id: str, slug: str) -> dict:
     return {"success": True, "message": "Đã bỏ theo dõi"}
 
 
+_WATCH_LOG_GAP = timedelta(minutes=30)
+
+
+def _is_new_watch(
+    *,
+    previous_episode: str | None,
+    previous_updated: datetime | None,
+    episode_slug: str,
+) -> bool:
+    if previous_episode is None or previous_episode != episode_slug:
+        return True
+    if previous_updated is None:
+        return True
+    return utcnow() - as_utc(previous_updated) >= _WATCH_LOG_GAP
+
+
 async def save_progress(
     db: AsyncSession, *, user_id: str, body: ProgressUpdate
 ) -> dict:
     film = await _require_visible_film(db, body.slug)
+    previous = await eng_repo.get_progress(db, user_id=user_id, film_id=film.id)
+    previous_episode = previous.episode_slug if previous else None
+    previous_updated = previous.updated_at if previous else None
     item = await eng_repo.upsert_progress(
         db,
         user_id=user_id,
@@ -157,21 +178,26 @@ async def save_progress(
         position_sec=body.position_sec,
     )
     await db.commit()
-    await write_system_log(
-        db,
-        user_id=user_id,
-        action="WATCH_FILM",
-        resource="Film",
-        details={
-            "filmName": film.name,
-            "filmSlug": film.source_slug,
-            "posterUrl": film.poster_url or film.thumb_url,
-            "episodeSlug": body.episode_slug,
-            "episodeName": body.episode_name,
-            "serverName": body.server_name,
-            "positionSec": body.position_sec,
-        },
-    )
+    if _is_new_watch(
+        previous_episode=previous_episode,
+        previous_updated=previous_updated,
+        episode_slug=body.episode_slug,
+    ):
+        await write_system_log(
+            db,
+            user_id=user_id,
+            action="WATCH_FILM",
+            resource="Film",
+            details={
+                "filmName": film.name,
+                "filmSlug": film.source_slug,
+                "posterUrl": film.poster_url or film.thumb_url,
+                "episodeSlug": body.episode_slug,
+                "episodeName": body.episode_name,
+                "serverName": body.server_name,
+                "positionSec": body.position_sec,
+            },
+        )
     return {
         "success": True,
         "data": {
