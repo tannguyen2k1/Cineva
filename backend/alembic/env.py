@@ -15,8 +15,11 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 settings = get_settings()
-# Alembic uses sync driver
-sync_url = settings.database_url.replace("+asyncpg", "")
+# Alembic uses the sync driver already installed in the image.
+# A bare postgresql:// URL now loads psycopg v3, which is not a dependency.
+sync_url = settings.database_url.replace("+asyncpg", "+psycopg2")
+if sync_url.startswith("postgresql://"):
+    sync_url = "postgresql+psycopg2://" + sync_url.removeprefix("postgresql://")
 # ConfigParser treats % as interpolation — escape for passwords / URL-encoding
 config.set_main_option("sqlalchemy.url", sync_url.replace("%", "%%"))
 
