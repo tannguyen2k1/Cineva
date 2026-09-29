@@ -29,7 +29,9 @@ class AdaptiveScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-    final isDesktop = width >= 800;
+    final isDesktopPlatform =
+        Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+    final isDesktop = isDesktopPlatform && width >= 800;
 
     if (isDesktop) {
       return Scaffold(
