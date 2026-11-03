@@ -20,7 +20,7 @@
         <template #header>
           <div :class="styles.cardHeader">
             <span>{{ t('dashboard.overviewTitle') }}</span>
-            <el-button type="primary" link @click="navigateTo('/films/sync')">
+            <el-button type="primary" link @click="navigateTo('/admin/films/sync')">
               {{ t('dashboard.openSync') }}
             </el-button>
           </div>
@@ -193,7 +193,7 @@ const reportRows = computed(() => {
         hidden: s.filmsHidden || 0
       }),
       value: s.films || 0,
-      to: '/films',
+      to: '/admin/films',
       icon: Film
     },
     {
@@ -201,7 +201,7 @@ const reportRows = computed(() => {
       title: t('dashboard.reportHidden'),
       subtitle: t('dashboard.reportHiddenSub'),
       value: s.filmsHidden || 0,
-      to: '/films',
+      to: '/admin/films',
       icon: Hide
     },
     {
@@ -209,7 +209,7 @@ const reportRows = computed(() => {
       title: t('dashboard.reportComments'),
       subtitle: t('dashboard.reportCommentsSub', { hidden: s.commentsHidden || 0 }),
       value: s.comments || 0,
-      to: '/films/comments',
+      to: '/admin/films/comments',
       icon: ChatDotRound
     },
     {
@@ -217,7 +217,7 @@ const reportRows = computed(() => {
       title: t('dashboard.reportBanners'),
       subtitle: t('dashboard.reportBannersSub', { active: s.bannersActive || 0 }),
       value: s.banners || 0,
-      to: '/films/banners',
+      to: '/admin/films/banners',
       icon: Picture
     },
     {
@@ -225,7 +225,7 @@ const reportRows = computed(() => {
       title: t('dashboard.reportFeatured'),
       subtitle: t('dashboard.reportFeaturedSub'),
       value: s.featured || 0,
-      to: '/films/featured',
+      to: '/admin/films/featured',
       icon: Star
     },
     {
@@ -233,7 +233,7 @@ const reportRows = computed(() => {
       title: t('dashboard.reportSync'),
       subtitle: syncStatusLabel.value,
       value: statsData.value?.lastSync?.itemsUpserted ?? '—',
-      to: '/films/sync',
+      to: '/admin/films/sync',
       icon: Refresh
     }
   ]

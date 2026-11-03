@@ -30,7 +30,7 @@
 
         <el-menu-item
           v-if="authStore.hasPermission('read:sync')"
-          index="/films/sync"
+          index="/admin/films/sync"
         >
           <el-icon><Refresh /></el-icon>
           <span>{{ t('nav.sync') }}</span>
@@ -38,7 +38,7 @@
 
         <el-menu-item
           v-if="authStore.hasPermission('read:films')"
-          index="/films"
+          index="/admin/films"
         >
           <el-icon><Film /></el-icon>
           <span>{{ t('nav.adminFilms') }}</span>
@@ -46,7 +46,7 @@
 
         <el-menu-item
           v-if="authStore.hasPermission('read:banners')"
-          index="/films/banners"
+          index="/admin/films/banners"
         >
           <el-icon><Picture /></el-icon>
           <span>{{ t('nav.banners') }}</span>
@@ -54,7 +54,7 @@
 
         <el-menu-item
           v-if="authStore.hasPermission('read:featured')"
-          index="/films/featured"
+          index="/admin/films/featured"
         >
           <el-icon><Star /></el-icon>
           <span>{{ t('nav.featured') }}</span>
@@ -62,7 +62,7 @@
 
         <el-menu-item
           v-if="authStore.hasPermission('read:comments')"
-          index="/films/comments"
+          index="/admin/films/comments"
         >
           <el-icon><ChatDotRound /></el-icon>
           <span>{{ t('nav.commentsAdmin') }}</span>
@@ -125,11 +125,11 @@ const route = useRoute();
 const authStore = useAuthStore();
 
 const activeMenu = computed(() => {
-  if (route.path === '/films' || route.path.startsWith('/films?')) return '/films';
-  if (route.path.startsWith('/films/sync')) return '/films/sync';
-  if (route.path.startsWith('/films/banners')) return '/films/banners';
-  if (route.path.startsWith('/films/featured')) return '/films/featured';
-  if (route.path.startsWith('/films/comments')) return '/films/comments';
+  if (route.path === '/admin/films' || route.path.startsWith('/admin/films?')) return '/admin/films';
+  if (route.path.startsWith('/admin/films/sync')) return '/admin/films/sync';
+  if (route.path.startsWith('/admin/films/banners')) return '/admin/films/banners';
+  if (route.path.startsWith('/admin/films/featured')) return '/admin/films/featured';
+  if (route.path.startsWith('/admin/films/comments')) return '/admin/films/comments';
   if (route.path.startsWith('/systems/roles')) return '/systems/roles';
   if (route.path.startsWith('/systems/users')) return '/systems/users';
   if (route.path.startsWith('/systems/logs')) return '/systems/logs';

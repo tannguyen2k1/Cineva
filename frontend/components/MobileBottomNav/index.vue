@@ -11,7 +11,7 @@
 
     <NuxtLink
       v-if="authStore.hasPermission('read:films')"
-      to="/films"
+      to="/admin/films"
       :class="[styles.navItem, isFilmsActive && styles.active]"
     >
       <el-icon :class="styles.icon"><Film /></el-icon>
@@ -20,8 +20,8 @@
 
     <NuxtLink
       v-if="authStore.hasPermission('read:sync')"
-      to="/films/sync"
-      :class="[styles.navItem, isActive('/films/sync') && styles.active]"
+      to="/admin/films/sync"
+      :class="[styles.navItem, isActive('/admin/films/sync') && styles.active]"
     >
       <el-icon :class="styles.icon"><Refresh /></el-icon>
       <span :class="styles.label">{{ t('nav.sync') }}</span>
@@ -69,7 +69,7 @@ const authStore = useAuthStore()
 const isDrawerOpen = ref(false)
 
 const isFilmsActive = computed(() => {
-  return route.path === '/films'
+  return route.path === '/admin/films'
 })
 
 function isActive(path: string) {

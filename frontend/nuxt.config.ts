@@ -80,6 +80,8 @@ export default defineNuxtConfig({
 
   nitro: {
     routeRules: {
+      '/films': { redirect: { to: '/admin/films', statusCode: 301 } },
+      '/films/**': { redirect: { to: '/admin/films/**', statusCode: 301 } },
       '/api/**': { proxy: `${apiProxy}/api/**` },
       '/uploads/films/**': {
         proxy: `${apiProxy}/uploads/films/**`,

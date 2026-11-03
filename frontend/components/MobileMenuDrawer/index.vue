@@ -51,7 +51,7 @@
           v-if="authStore.hasPermission('read:films')"
           type="button"
           :class="styles.gridCard"
-          @click="goTo('/films')"
+          @click="goTo('/admin/films')"
         >
           <div :class="[styles.iconWrapper, styles.yellow]">
             <el-icon><Film /></el-icon>
@@ -66,7 +66,7 @@
           v-if="authStore.hasPermission('read:sync')"
           type="button"
           :class="styles.gridCard"
-          @click="goTo('/films/sync')"
+          @click="goTo('/admin/films/sync')"
         >
           <div :class="[styles.iconWrapper, styles.green]">
             <el-icon><Refresh /></el-icon>
@@ -81,7 +81,7 @@
           v-if="authStore.hasPermission('read:banners')"
           type="button"
           :class="styles.gridCard"
-          @click="goTo('/films/banners')"
+          @click="goTo('/admin/films/banners')"
         >
           <div :class="[styles.iconWrapper, styles.purple]">
             <el-icon><Picture /></el-icon>
@@ -96,7 +96,7 @@
           v-if="authStore.hasPermission('read:featured')"
           type="button"
           :class="styles.gridCard"
-          @click="goTo('/films/featured')"
+          @click="goTo('/admin/films/featured')"
         >
           <div :class="[styles.iconWrapper, styles.pink]">
             <el-icon><Star /></el-icon>
@@ -111,7 +111,7 @@
           v-if="authStore.hasPermission('read:comments')"
           type="button"
           :class="styles.gridCard"
-          @click="goTo('/films/comments')"
+          @click="goTo('/admin/films/comments')"
         >
           <div :class="[styles.iconWrapper, styles.teal]">
             <el-icon><ChatDotRound /></el-icon>
